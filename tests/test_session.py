@@ -102,3 +102,15 @@ def test_create_session_bridge_unavailable(tmp_path: Path, monkeypatch):
         session = create_session("fallback-test")
         assert session.name == "fallback-test"
         assert (tmp_path / "sessions" / "fallback-test.json").exists()
+
+
+def test_close_session_bridge_unavailable(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr("core.session.SESSIONS_DIR", tmp_path / "sessions")
+    session = create_session("close-fallback")
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.session._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        close_session(session)
+        assert session.status == "completed"
+        # Verify local JSON was still written
+        loaded = load_session("close-fallback")
+        assert loaded.status == "completed"

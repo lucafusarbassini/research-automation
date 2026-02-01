@@ -116,3 +116,29 @@ def test_select_thinking_mode_bridge_oracle_complex():
 def test_select_thinking_mode_keywords_fallback():
     assert _select_thinking_mode_keywords("format table") == "none"
     assert _select_thinking_mode_keywords("validate results") == "ultrathink"
+
+
+def test_check_budget_bridge_unavailable():
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.tokens._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        budget = TokenBudget(session_limit=1000, daily_limit=5000, current_session=500)
+        result = check_budget(budget, estimated_cost=100)
+        assert result["can_proceed"] is True
+        # Budget values unchanged (no bridge data)
+        assert budget.current_session == 500
+
+
+def test_select_thinking_mode_bridge_unavailable():
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.tokens._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        assert select_thinking_mode("validate the paper") == "ultrathink"
+        assert select_thinking_mode("debug something") == "extended"
+        assert select_thinking_mode("format the output") == "none"
+        assert select_thinking_mode("process data") == "standard"
+
+
+def test_select_thinking_mode_bridge_workhorse():
+    mock_bridge = MagicMock()
+    mock_bridge.route_model.return_value = {"tier": "workhorse", "complexity": "medium"}
+    with patch("core.tokens._get_bridge", return_value=mock_bridge):
+        assert select_thinking_mode("implement a feature") == "standard"

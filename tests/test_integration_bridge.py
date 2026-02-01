@@ -86,6 +86,80 @@ class TestBridgeSessionLifecycle:
         assert end_result is not None
 
 
+class TestConfTestFixture:
+    """Verify the conftest mock_bridge fixture works end-to-end."""
+
+    def test_mock_bridge_fixture_agents(self, mock_bridge):
+        from unittest.mock import patch
+
+        from core.agents import AgentType, execute_agent_task
+
+        mock_bridge.spawn_agent.return_value = {
+            "status": "success", "output": "fixture test", "tokens_used": 50,
+        }
+        with patch("core.agents._get_bridge", return_value=mock_bridge):
+            result = execute_agent_task(AgentType.RESEARCHER, "find papers")
+            assert result.status == "success"
+            assert result.output == "fixture test"
+
+    def test_mock_bridge_fixture_knowledge(self, mock_bridge, tmp_path):
+        from unittest.mock import patch
+
+        from core.knowledge import search_knowledge
+
+        mock_bridge.query_memory.return_value = {
+            "results": [{"text": "fixture semantic result", "score": 0.9}]
+        }
+        enc = tmp_path / "ENC.md"
+        enc.write_text("# Test\n")
+        with patch("core.knowledge._get_bridge", return_value=mock_bridge):
+            results = search_knowledge("anything", encyclopedia_path=enc)
+            assert "fixture semantic result" in results
+
+    def test_mock_bridge_fixture_tokens(self, mock_bridge):
+        from unittest.mock import patch
+
+        from core.tokens import estimate_tokens
+
+        mock_bridge.get_metrics.return_value = {"tokens_used": 999}
+        with patch("core.tokens._get_bridge", return_value=mock_bridge):
+            assert estimate_tokens("text") == 999
+
+    def test_mock_bridge_fixture_model_router(self, mock_bridge):
+        from unittest.mock import patch
+
+        from core.model_router import DEFAULT_MODELS, route_to_model
+
+        mock_bridge.route_model.return_value = {"model": "claude-sonnet-4-20250514"}
+        with patch("core.model_router._get_bridge", return_value=mock_bridge):
+            model = route_to_model("write some code")
+            assert model.name == DEFAULT_MODELS["claude-sonnet"].name
+
+    def test_mock_bridge_fixture_security(self, mock_bridge, tmp_path):
+        from unittest.mock import patch
+
+        from core.security import scan_for_secrets
+
+        mock_bridge.scan_security.return_value = {"findings": []}
+        f = tmp_path / "clean.py"
+        f.write_text("x = 1\n")
+        with patch("core.security._get_bridge", return_value=mock_bridge):
+            findings = scan_for_secrets(f)
+            assert findings == []
+
+    def test_mock_bridge_fixture_session(self, mock_bridge, tmp_path, monkeypatch):
+        from unittest.mock import patch
+
+        from core.session import create_session, close_session
+
+        monkeypatch.setattr("core.session.SESSIONS_DIR", tmp_path / "sessions")
+        with patch("core.session._get_bridge", return_value=mock_bridge):
+            session = create_session("fixture-session")
+            mock_bridge.start_session.assert_called_once_with("fixture-session")
+            close_session(session)
+            mock_bridge.end_session.assert_called_once_with("fixture-session")
+
+
 class TestBridgeUnavailableGracefully:
     """These tests run without claude-flow and verify graceful degradation."""
 
