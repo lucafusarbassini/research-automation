@@ -1,8 +1,10 @@
-"""Agent orchestration: task routing, budget management, and supervision."""
+"""Agent orchestration: task routing, budget management, DAG execution, and supervision."""
 
 import json
 import logging
 import subprocess
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -72,6 +74,21 @@ class TaskResult:
     tokens_used: int = 0
     started: str = field(default_factory=lambda: datetime.now().isoformat())
     ended: Optional[str] = None
+
+
+@dataclass
+class Task:
+    id: str
+    description: str
+    agent: Optional[AgentType] = None
+    deps: list[str] = field(default_factory=list)
+    parallel: bool = True
+    status: str = "pending"  # pending, running, success, failure
+    result: Optional[TaskResult] = None
+
+
+# Active agents tracker
+_active_agents: dict[str, dict] = {}
 
 
 def route_task(task_description: str) -> AgentType:
@@ -183,6 +200,172 @@ def run_pipeline(
             break
 
     return results
+
+
+def build_task_dag(tasks: list[Task]) -> dict[str, list[str]]:
+    """Build a dependency graph from a list of tasks.
+
+    Args:
+        tasks: List of Task objects with deps.
+
+    Returns:
+        Dict mapping task_id -> list of task_ids that depend on it.
+    """
+    dependents: dict[str, list[str]] = defaultdict(list)
+    for task in tasks:
+        for dep in task.deps:
+            dependents[dep].append(task.id)
+    return dict(dependents)
+
+
+def _get_ready_tasks(tasks: dict[str, Task], completed: set[str]) -> list[Task]:
+    """Find tasks whose dependencies are all completed."""
+    ready = []
+    for task in tasks.values():
+        if task.status == "pending" and all(d in completed for d in task.deps):
+            ready.append(task)
+    return ready
+
+
+def execute_parallel_tasks(
+    tasks: list[Task],
+    *,
+    max_workers: int = 3,
+    dangerously_skip_permissions: bool = False,
+    executor_fn=None,
+) -> dict[str, TaskResult]:
+    """Execute tasks respecting dependencies, parallelizing where possible.
+
+    Args:
+        tasks: List of Task objects.
+        max_workers: Maximum parallel executions.
+        dangerously_skip_permissions: Skip permission checks.
+        executor_fn: Optional callable(task) -> TaskResult for testing.
+
+    Returns:
+        Dict mapping task_id -> TaskResult.
+    """
+    task_map = {t.id: t for t in tasks}
+    completed: set[str] = set()
+    results: dict[str, TaskResult] = {}
+
+    if executor_fn is None:
+        def executor_fn(t: Task) -> TaskResult:
+            agent = t.agent or route_task(t.description)
+            return execute_agent_task(
+                agent, t.description,
+                dangerously_skip_permissions=dangerously_skip_permissions,
+            )
+
+    while len(completed) < len(tasks):
+        ready = _get_ready_tasks(task_map, completed)
+        if not ready:
+            # Check for deadlock
+            pending = [t for t in task_map.values() if t.status == "pending"]
+            if pending:
+                logger.error("Deadlock detected: %d tasks blocked", len(pending))
+                for t in pending:
+                    t.status = "failure"
+                    results[t.id] = TaskResult(
+                        agent=t.agent or AgentType.CODER,
+                        task=t.description,
+                        status="failure",
+                        output="Deadlocked: unresolvable dependencies",
+                    )
+                    completed.add(t.id)
+            break
+
+        with ThreadPoolExecutor(max_workers=min(max_workers, len(ready))) as pool:
+            future_to_task = {}
+            for task in ready:
+                task.status = "running"
+                _active_agents[task.id] = {
+                    "task_id": task.id,
+                    "agent": (task.agent or route_task(task.description)).value,
+                    "description": task.description[:80],
+                    "started": datetime.now().isoformat(),
+                }
+                future_to_task[pool.submit(executor_fn, task)] = task
+
+            for future in as_completed(future_to_task):
+                task = future_to_task[future]
+                try:
+                    result = future.result()
+                except Exception as e:
+                    result = TaskResult(
+                        agent=task.agent or AgentType.CODER,
+                        task=task.description,
+                        status="failure",
+                        output=str(e),
+                    )
+                task.status = result.status
+                task.result = result
+                results[task.id] = result
+                completed.add(task.id)
+                _active_agents.pop(task.id, None)
+
+    return results
+
+
+def plan_execute_iterate(
+    goal: str,
+    *,
+    plan_fn=None,
+    max_iterations: int = 5,
+    dangerously_skip_permissions: bool = False,
+) -> list[TaskResult]:
+    """Plan-execute-iterate loop: plan tasks, execute, check results, re-plan if needed.
+
+    Args:
+        goal: High-level goal description.
+        plan_fn: Callable(goal, iteration, previous_results) -> list[Task].
+                 If None, creates a single task for the goal.
+        max_iterations: Max planning iterations.
+        dangerously_skip_permissions: Skip permissions.
+
+    Returns:
+        All accumulated TaskResults.
+    """
+    all_results: list[TaskResult] = []
+
+    if plan_fn is None:
+        # Default: single task
+        def plan_fn(g, iteration, prev):
+            if iteration == 0:
+                agent = route_task(g)
+                return [Task(id=f"task-{iteration}-0", description=g, agent=agent)]
+            return []
+
+    for iteration in range(max_iterations):
+        tasks = plan_fn(goal, iteration, all_results)
+        if not tasks:
+            logger.info("No more tasks to execute at iteration %d", iteration)
+            break
+
+        results = execute_parallel_tasks(
+            tasks,
+            dangerously_skip_permissions=dangerously_skip_permissions,
+        )
+        all_results.extend(results.values())
+
+        # Check if all succeeded
+        if all(r.status == "success" for r in results.values()):
+            logger.info("All tasks succeeded at iteration %d", iteration)
+            break
+        else:
+            failed = [tid for tid, r in results.items() if r.status != "success"]
+            logger.warning("Failed tasks at iteration %d: %s", iteration, failed)
+
+    return all_results
+
+
+def get_active_agents_status() -> list[dict]:
+    """Get status of currently running agents.
+
+    Returns:
+        List of dicts with task_id, agent, description, started.
+    """
+    return list(_active_agents.values())
 
 
 def _log_result(result: TaskResult) -> None:
