@@ -10,6 +10,15 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from core.onboarding import (
+    OnboardingAnswers,
+    collect_answers,
+    load_settings,
+    setup_workspace,
+    write_goal_file,
+    write_settings,
+)
+
 app = typer.Typer(help="Scientific Research Automation")
 console = Console()
 
@@ -22,7 +31,7 @@ def init(
     project_name: str,
     path: Path = typer.Option(Path.cwd(), help="Where to create project"),
 ):
-    """Initialize a new research project."""
+    """Initialize a new research project with full onboarding."""
     project_path = path / project_name
 
     if project_path.exists():
@@ -30,32 +39,29 @@ def init(
         raise typer.Exit(1)
 
     console.print(f"[bold]Creating project: {project_name}[/bold]")
-
-    # Interactive onboarding
     console.print("\n[bold cyan]Project Setup[/bold cyan]")
 
-    goal = typer.prompt("What is the main goal of this project?")
+    # Full onboarding questionnaire
+    def _prompt(prompt, default=""):
+        return typer.prompt(prompt, default=default) if default else typer.prompt(prompt)
 
-    project_type = typer.prompt(
-        "Project type",
-        type=typer.Choice(["ml-research", "data-analysis", "paper-writing", "general"]),
-        default="ml-research",
-    )
+    answers = collect_answers(project_name, prompt_fn=_prompt)
 
     # Copy templates
     shutil.copytree(TEMPLATE_DIR, project_path)
 
-    # Customize GOAL.md
-    goal_file = project_path / "knowledge" / "GOAL.md"
-    goal_content = goal_file.read_text()
-    goal_content = goal_content.replace("<!-- User provides during init -->", goal)
-    goal_file.write_text(goal_content)
+    # Setup workspace folders
+    setup_workspace(project_path)
+
+    # Write settings and goal
+    write_settings(project_path, answers)
+    write_goal_file(project_path, answers)
 
     # Create state directories
     (project_path / "state" / "sessions").mkdir(parents=True, exist_ok=True)
     (project_path / "state" / "TODO.md").write_text(
-        f"# TODO\n\n- [ ] Review GOAL.md and refine success criteria\n"
-        f"- [ ] Set up environment\n- [ ] Begin first task\n"
+        "# TODO\n\n- [ ] Review GOAL.md and refine success criteria\n"
+        "- [ ] Set up environment\n- [ ] Begin first task\n"
     )
     (project_path / "state" / "PROGRESS.md").write_text("# Progress\n\n")
 
@@ -68,6 +74,50 @@ def init(
     console.print("\nNext steps:")
     console.print(f"  cd {project_path}")
     console.print("  research start")
+
+
+@app.command()
+def config(
+    section: str = typer.Argument(None, help="Section to reconfigure (notifications, compute, credentials)"),
+):
+    """View or reconfigure project settings."""
+    settings = load_settings(Path.cwd())
+    if not settings:
+        console.print("[red]No settings found. Run 'research init' first.[/red]")
+        raise typer.Exit(1)
+
+    if section is None:
+        # Show current settings
+        import yaml
+        console.print("[bold]Current Settings:[/bold]")
+        console.print(yaml.dump(settings, default_flow_style=False))
+        return
+
+    if section == "notifications":
+        method = typer.prompt("Notification method (email, slack, none)", default="none")
+        settings.setdefault("notifications", {})["method"] = method
+        settings["notifications"]["enabled"] = method != "none"
+        if method == "email":
+            settings["notifications"]["email"] = typer.prompt("Email address")
+        elif method == "slack":
+            settings["notifications"]["slack_webhook"] = typer.prompt("Slack webhook URL")
+    elif section == "compute":
+        ctype = typer.prompt("Compute type (local-cpu, local-gpu, cloud, cluster)", default="local-cpu")
+        settings.setdefault("compute", {})["type"] = ctype
+        if ctype == "local-gpu":
+            settings["compute"]["gpu"] = typer.prompt("GPU name", default="")
+    elif section == "credentials":
+        console.print("Credentials are stored in .env file.")
+        console.print("Edit .env directly to update credentials.")
+        return
+    else:
+        console.print(f"[red]Unknown section: {section}[/red]")
+        raise typer.Exit(1)
+
+    import yaml
+    settings_path = Path.cwd() / "config" / "settings.yml"
+    settings_path.write_text(yaml.dump(settings, default_flow_style=False, sort_keys=False))
+    console.print("[green]Settings updated.[/green]")
 
 
 @app.command()
