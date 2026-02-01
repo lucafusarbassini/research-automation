@@ -269,14 +269,36 @@ def verify_text(text: str, project_path: str = "") -> dict:
     """Run all verifiers on *text* and return a summary dict.
 
     Returns:
-        Dict with ``verdict`` (str) and ``issues`` (list[str]).
+        Dict with ``verdict`` (str), ``claims`` (list[dict]), and
+        ``file_issues`` / ``citation_issues`` for hard failures only.
     """
-    results: list[VerificationResult] = []
-    results.extend(verify_claims(text))
-    if project_path:
-        results.extend(verify_file_references(text, Path(project_path)))
-    results.extend(verify_citations(text))
+    claims = verify_claims(text)
+    file_results: list[VerificationResult] = []
+    citation_results: list[VerificationResult] = []
 
-    issues = [r.claim for r in results if not r.verified]
-    verdict = "all_verified" if not issues else "issues_found"
-    return {"verdict": verdict, "issues": issues}
+    if project_path:
+        file_results = verify_file_references(text, Path(project_path))
+    citation_results = verify_citations(text)
+
+    # File refs and citations can be definitively verified/failed.
+    # Claims are only "extracted" — they need external verification.
+    hard_failures = [r for r in file_results + citation_results if not r.verified]
+
+    claim_summaries = [
+        {"claim": c.claim, "confidence": c.confidence, "status": "needs_review"}
+        for c in claims
+    ]
+
+    if hard_failures:
+        verdict = "issues_found"
+    elif claims:
+        verdict = "claims_extracted"
+    else:
+        verdict = "no_claims"
+
+    return {
+        "verdict": verdict,
+        "claims": claim_summaries,
+        "file_issues": [r.claim for r in file_results if not r.verified],
+        "citation_issues": [r.claim for r in citation_results if not r.verified],
+    }

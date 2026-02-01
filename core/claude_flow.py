@@ -243,32 +243,41 @@ class ClaudeFlowBridge:
     # ------------------------------------------------------------------
 
     def get_metrics(self) -> dict[str, Any]:
-        """Retrieve current session metrics (tokens, costs, latency).
+        """Retrieve system status and performance info.
 
         Returns:
             Dict with metric fields.
         """
-        return self._run("metrics", "show")
+        try:
+            return self._run("status")
+        except ClaudeFlowUnavailable:
+            return {"agents": {}, "status": "unknown"}
 
     # ------------------------------------------------------------------
     # Sessions
     # ------------------------------------------------------------------
 
     def start_session(self, name: str) -> dict[str, Any]:
-        """Start a claude-flow session.
+        """Save a session checkpoint in claude-flow.
 
         Returns:
-            Dict with 'session_id'.
+            Dict with session info.
         """
-        return self._run("session", "start", "--name", name)
+        try:
+            return self._run("session", "save", "--name", name)
+        except ClaudeFlowUnavailable:
+            return {"session_id": name, "status": "local-only"}
 
     def end_session(self, name: str) -> dict[str, Any]:
-        """End a claude-flow session.
+        """Save final session state.
 
         Returns:
             Dict with summary stats.
         """
-        return self._run("session", "end", "--name", name)
+        try:
+            return self._run("session", "save", "--name", f"{name}-end")
+        except ClaudeFlowUnavailable:
+            return {"session_id": name, "status": "ended"}
 
     # ------------------------------------------------------------------
     # Cross-repo

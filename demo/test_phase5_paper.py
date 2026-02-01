@@ -364,17 +364,18 @@ class TestBuildVerificationTable:
 
 
 class TestVerifyTextAdapter:
-    """verify_text returns a dict with 'verdict' and 'issues'."""
+    """verify_text returns a dict with verdict and claim details."""
 
     def test_returns_proper_dict(self):
         result = verify_text("The system produces 100 widgets per hour.")
         assert "verdict" in result
-        assert "issues" in result
-        assert isinstance(result["issues"], list)
-        assert result["verdict"] in ("all_verified", "issues_found")
+        assert "claims" in result
+        assert isinstance(result["claims"], list)
+        assert result["verdict"] in ("claims_extracted", "no_claims", "issues_found")
 
-    def test_clean_text_has_issues_since_unverified(self):
+    def test_factual_text_extracts_claims(self):
         result = verify_text("Python was created in 1991.")
-        # Claims are extracted but not externally verified, so issues_found
-        assert result["verdict"] == "issues_found"
-        assert len(result["issues"]) >= 1
+        # Claims are extracted for review, not marked as failed
+        assert result["verdict"] == "claims_extracted"
+        assert len(result["claims"]) >= 1
+        assert result["claims"][0]["status"] == "needs_review"

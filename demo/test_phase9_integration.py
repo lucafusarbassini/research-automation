@@ -86,13 +86,24 @@ class TestCliVerify:
     """``ricet verify "test claim"`` via CliRunner."""
 
     def test_cli_verify(self):
-        mock_report = {"verdict": "unverified", "issues": ["No sources found"]}
+        mock_report = {
+            "verdict": "claims_extracted",
+            "claims": [
+                {
+                    "claim": "The Earth is flat",
+                    "confidence": 0.3,
+                    "status": "needs_review",
+                }
+            ],
+            "file_issues": [],
+            "citation_issues": [],
+        }
 
         with patch("core.verification.verify_text", return_value=mock_report):
             result = runner.invoke(app, ["verify", "The Earth is flat"])
 
         assert result.exit_code == 0
-        assert "unverified" in result.output
+        assert "claim" in result.output.lower()
 
 
 class TestCliPaper:

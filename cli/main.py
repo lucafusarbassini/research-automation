@@ -209,10 +209,15 @@ def start(
     session_name: str = typer.Option(None, help="Name for this session"),
 ):
     """Start an interactive research session."""
+    import uuid as _uuid
+
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
     if session_name is None:
         session_name = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Generate a proper UUID for Claude Code (it requires valid UUIDs)
+    session_uuid = str(_uuid.uuid4())
 
     session_dir = Path("state/sessions")
     session_dir.mkdir(parents=True, exist_ok=True)
@@ -220,24 +225,27 @@ def start(
     session_file = session_dir / f"{session_name}.json"
     session_data = {
         "name": session_name,
+        "uuid": session_uuid,
         "started": datetime.now().isoformat(),
         "status": "active",
         "token_estimate": 0,
     }
     session_file.write_text(json.dumps(session_data, indent=2))
 
-    # Start claude-flow session
+    # Save claude-flow session state
     try:
         bridge = _get_bridge()
         bridge.start_session(session_name)
-        console.print(f"[green]claude-flow session started: {session_name}[/green]")
+        console.print(f"[green]claude-flow session: {session_name}[/green]")
     except ClaudeFlowUnavailable:
         pass
 
-    console.print(f"[green]Session started: {session_name}[/green]")
+    console.print(
+        f"[green]Session started: {session_name} ({session_uuid[:8]}...)[/green]"
+    )
 
-    # Launch Claude Code
-    subprocess.run(["claude", "--session-id", session_name])
+    # Launch Claude Code with a valid UUID session
+    subprocess.run(["claude", "--session-id", session_uuid])
 
 
 @app.command()
@@ -346,14 +354,17 @@ def agents():
 
     try:
         bridge = _get_bridge()
-        metrics = bridge.get_metrics()
-        console.print("[bold]Claude-Flow Agents:[/bold]")
-        agent_stats = metrics.get("agents", {})
+        console.print(f"[bold]claude-flow {bridge.get_version()}[/bold]")
+        status = bridge.get_metrics()
+        console.print(
+            f"  Status: {status.get('output', status.get('status', 'connected'))}"
+        )
+        agent_stats = status.get("agents", {})
         if agent_stats:
             for name, info in agent_stats.items():
                 console.print(f"  {name}: {info}")
         else:
-            console.print("  No active agents")
+            console.print("  No active swarm agents")
     except ClaudeFlowUnavailable:
         console.print("[yellow]claude-flow not available[/yellow]")
         from core.agents import get_active_agents_status
@@ -591,14 +602,29 @@ def verify(
 
     console.print("[bold]Running verification...[/bold]")
     report = verify_text(text)
-    console.print(f"\n[bold]Verdict:[/bold] {report.get('verdict', 'unknown')}")
-    issues = report.get("issues", [])
-    if issues:
-        console.print("[yellow]Issues found:[/yellow]")
-        for issue in issues:
-            console.print(f"  - {issue}")
+    verdict = report.get("verdict", "unknown")
+
+    # Show hard failures (file refs, citations)
+    file_issues = report.get("file_issues", [])
+    citation_issues = report.get("citation_issues", [])
+    if file_issues or citation_issues:
+        console.print(f"\n[bold red]Verdict:[/bold red] issues_found")
+        for issue in file_issues:
+            console.print(f"  [red]- {issue}[/red]")
+        for issue in citation_issues:
+            console.print(f"  [red]- {issue}[/red]")
+    elif verdict == "claims_extracted":
+        claims = report.get("claims", [])
+        console.print(f"\n[bold]Extracted {len(claims)} claim(s) for review:[/bold]")
+        for c in claims:
+            conf = f"{c['confidence']:.0%}"
+            console.print(f"  [{conf}] {c['claim']}")
+        console.print(
+            "\n[dim]These claims were extracted heuristically. "
+            "External verification not yet connected.[/dim]"
+        )
     else:
-        console.print("[green]No issues detected.[/green]")
+        console.print("\n[green]No verifiable claims detected in the input.[/green]")
 
 
 @app.command()
