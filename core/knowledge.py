@@ -1,8 +1,9 @@
 """Encyclopedia auto-update and knowledge management.
 
 Handles persistent knowledge across sessions: learnings, decisions,
-successful/failed approaches. Optionally integrates with ChromaDB
-for semantic search over accumulated knowledge.
+successful/failed approaches. When claude-flow is available, search_knowledge
+uses HNSW vector memory for semantic search, and append_learning dual-writes
+to both markdown and the vector index.
 """
 
 import json
@@ -11,6 +12,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +49,17 @@ def append_learning(
         content = content[:insert_pos] + formatted_entry + content[insert_pos:]
         encyclopedia_path.write_text(content)
         logger.info("Added entry to '%s' section", section)
+
+        # Dual-write to claude-flow HNSW vector memory
+        try:
+            bridge = _get_bridge()
+            bridge.store_memory(
+                entry,
+                namespace="knowledge",
+                metadata={"section": section, "timestamp": timestamp},
+            )
+        except ClaudeFlowUnavailable:
+            pass
     else:
         logger.warning("Section '%s' not found in encyclopedia", section)
 
@@ -98,25 +112,38 @@ def search_knowledge(
     query: str,
     encyclopedia_path: Path = ENCYCLOPEDIA_PATH,
 ) -> list[str]:
-    """Simple keyword search over the encyclopedia.
+    """Search the encyclopedia, using semantic search when claude-flow is available.
 
-    For semantic search, use the ChromaDB integration via the chroma-mcp.
+    Tries HNSW vector memory first for semantic results, then merges with
+    keyword matches from the markdown file.
 
     Args:
         query: Search query string.
         encyclopedia_path: Path to encyclopedia file.
 
     Returns:
-        List of matching lines.
+        List of matching lines/entries.
     """
-    if not encyclopedia_path.exists():
-        return []
+    results: list[str] = []
 
-    query_lower = query.lower()
-    results = []
-    for line in encyclopedia_path.read_text().splitlines():
-        if query_lower in line.lower():
-            results.append(line.strip())
+    # Try semantic search via claude-flow
+    try:
+        bridge = _get_bridge()
+        cf_result = bridge.query_memory(query, top_k=10)
+        for hit in cf_result.get("results", []):
+            text = hit.get("text", "").strip()
+            if text and text not in results:
+                results.append(text)
+    except ClaudeFlowUnavailable:
+        pass
+
+    # Always merge with keyword search from markdown
+    if encyclopedia_path.exists():
+        query_lower = query.lower()
+        for line in encyclopedia_path.read_text().splitlines():
+            stripped = line.strip()
+            if query_lower in stripped.lower() and stripped not in results:
+                results.append(stripped)
 
     return results
 

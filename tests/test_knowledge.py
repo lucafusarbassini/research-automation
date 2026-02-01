@@ -95,3 +95,69 @@ def test_search_knowledge_no_match(tmp_path: Path):
 
     results = search_knowledge("nonexistent term", encyclopedia_path=enc)
     assert len(results) == 0
+
+
+# --- Bridge-integrated tests ---
+
+from unittest.mock import MagicMock, patch
+
+
+def test_append_learning_dual_writes(tmp_path: Path):
+    enc = tmp_path / "ENCYCLOPEDIA.md"
+    enc.write_text(TEMPLATE)
+    mock_bridge = MagicMock()
+    mock_bridge.store_memory.return_value = {"id": "mem-1"}
+    with patch("core.knowledge._get_bridge", return_value=mock_bridge):
+        append_learning("Tricks", "Use GPU for speed", encyclopedia_path=enc)
+        assert "Use GPU for speed" in enc.read_text()
+        mock_bridge.store_memory.assert_called_once()
+        call_kwargs = mock_bridge.store_memory.call_args
+        assert call_kwargs[0][0] == "Use GPU for speed"
+        assert call_kwargs[1]["namespace"] == "knowledge"
+
+
+def test_append_learning_bridge_unavailable(tmp_path: Path):
+    enc = tmp_path / "ENCYCLOPEDIA.md"
+    enc.write_text(TEMPLATE)
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.knowledge._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        append_learning("Tricks", "Still works without bridge", encyclopedia_path=enc)
+        assert "Still works without bridge" in enc.read_text()
+
+
+def test_search_knowledge_semantic(tmp_path: Path):
+    enc = tmp_path / "ENCYCLOPEDIA.md"
+    enc.write_text(TEMPLATE)
+    mock_bridge = MagicMock()
+    mock_bridge.query_memory.return_value = {
+        "results": [
+            {"text": "semantic result about transformers", "score": 0.95},
+        ]
+    }
+    with patch("core.knowledge._get_bridge", return_value=mock_bridge):
+        results = search_knowledge("transformers", encyclopedia_path=enc)
+        assert "semantic result about transformers" in results
+
+
+def test_search_knowledge_merges_semantic_and_keyword(tmp_path: Path):
+    enc = tmp_path / "ENCYCLOPEDIA.md"
+    enc.write_text(TEMPLATE + "\n- [2024-01-01] Use batch size 32 for stability\n")
+    mock_bridge = MagicMock()
+    mock_bridge.query_memory.return_value = {
+        "results": [
+            {"text": "batch normalization helps", "score": 0.8},
+        ]
+    }
+    with patch("core.knowledge._get_bridge", return_value=mock_bridge):
+        results = search_knowledge("batch", encyclopedia_path=enc)
+        assert any("batch normalization" in r for r in results)
+        assert any("batch size 32" in r for r in results)
+
+
+def test_search_knowledge_bridge_unavailable_keyword_only(tmp_path: Path):
+    enc = tmp_path / "ENCYCLOPEDIA.md"
+    enc.write_text(TEMPLATE + "\n- [2024-01-01] keyword match here\n")
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.knowledge._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        results = search_knowledge("keyword", encyclopedia_path=enc)
+        assert any("keyword match" in r for r in results)
