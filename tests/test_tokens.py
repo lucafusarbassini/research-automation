@@ -60,3 +60,59 @@ def test_select_thinking_mode_simple():
 
 def test_select_thinking_mode_default():
     assert select_thinking_mode("process the dataset") == "standard"
+
+
+# --- Bridge-integrated tests ---
+
+from unittest.mock import MagicMock, patch
+
+from core.tokens import _select_thinking_mode_keywords
+
+
+def test_estimate_tokens_via_bridge():
+    mock_bridge = MagicMock()
+    mock_bridge.get_metrics.return_value = {"tokens_used": 42}
+    with patch("core.tokens._get_bridge", return_value=mock_bridge):
+        assert estimate_tokens("ignored text") == 42
+
+
+def test_estimate_tokens_bridge_fallback():
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.tokens._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        assert estimate_tokens("abcd" * 25) == 25
+
+
+def test_check_budget_via_bridge():
+    mock_bridge = MagicMock()
+    mock_bridge.get_metrics.return_value = {"session_tokens": 800, "daily_tokens": 400}
+    with patch("core.tokens._get_bridge", return_value=mock_bridge):
+        budget = TokenBudget(session_limit=1000, daily_limit=5000)
+        result = check_budget(budget, estimated_cost=100)
+        assert result["can_proceed"] is True
+        assert budget.current_session == 800
+
+
+def test_select_thinking_mode_via_bridge():
+    mock_bridge = MagicMock()
+    mock_bridge.route_model.return_value = {"tier": "booster", "complexity": "simple"}
+    with patch("core.tokens._get_bridge", return_value=mock_bridge):
+        assert select_thinking_mode("anything") == "none"
+
+
+def test_select_thinking_mode_bridge_oracle_critical():
+    mock_bridge = MagicMock()
+    mock_bridge.route_model.return_value = {"tier": "oracle", "complexity": "critical"}
+    with patch("core.tokens._get_bridge", return_value=mock_bridge):
+        assert select_thinking_mode("validate the paper") == "ultrathink"
+
+
+def test_select_thinking_mode_bridge_oracle_complex():
+    mock_bridge = MagicMock()
+    mock_bridge.route_model.return_value = {"tier": "oracle", "complexity": "complex"}
+    with patch("core.tokens._get_bridge", return_value=mock_bridge):
+        assert select_thinking_mode("debug memory leak") == "extended"
+
+
+def test_select_thinking_mode_keywords_fallback():
+    assert _select_thinking_mode_keywords("format table") == "none"
+    assert _select_thinking_mode_keywords("validate results") == "ultrathink"

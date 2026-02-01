@@ -1,9 +1,15 @@
-"""Multi-model routing: task complexity classification, model selection, cross-provider fallback."""
+"""Multi-model routing: task complexity classification, model selection, cross-provider fallback.
+
+When claude-flow is available, classification and routing delegate to the bridge's
+3-tier model router. Otherwise, falls back to keyword-based classification.
+"""
 
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
+
+from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +84,9 @@ FALLBACK_CHAINS: dict[str, list[str]] = {
 
 
 def classify_task_complexity(description: str) -> TaskComplexity:
-    """Classify a task's complexity based on its description.
+    """Classify a task's complexity.
+
+    Tries claude-flow's 3-tier router first, falls back to keyword matching.
 
     Args:
         description: Natural language task description.
@@ -86,6 +94,28 @@ def classify_task_complexity(description: str) -> TaskComplexity:
     Returns:
         TaskComplexity level.
     """
+    try:
+        bridge = _get_bridge()
+        result = bridge.route_model(description)
+        tier = result.get("tier", "")
+        tier_to_complexity = {
+            "booster": TaskComplexity.SIMPLE,
+            "workhorse": TaskComplexity.MEDIUM,
+            "oracle": TaskComplexity.COMPLEX,
+        }
+        complexity_str = result.get("complexity", "")
+        if complexity_str in {c.value for c in TaskComplexity}:
+            return TaskComplexity(complexity_str)
+        if tier in tier_to_complexity:
+            return tier_to_complexity[tier]
+    except (ClaudeFlowUnavailable, KeyError, ValueError):
+        pass
+
+    return _classify_task_complexity_keywords(description)
+
+
+def _classify_task_complexity_keywords(description: str) -> TaskComplexity:
+    """Keyword-based complexity classification (legacy fallback)."""
     words = set(description.lower().split())
 
     if words & _CRITICAL_KEYWORDS:
@@ -106,6 +136,8 @@ def route_to_model(
 ) -> ModelConfig:
     """Select the best model for a task.
 
+    Tries claude-flow routing first, falls back to keyword-based selection.
+
     Args:
         description: Task description.
         complexity: Pre-classified complexity (auto-classifies if None).
@@ -115,10 +147,37 @@ def route_to_model(
     Returns:
         Selected ModelConfig.
     """
-    if complexity is None:
-        complexity = classify_task_complexity(description)
+    # Try bridge routing
+    try:
+        bridge = _get_bridge()
+        result = bridge.route_model(description)
+        model_name = result.get("model", "")
+        for key, cfg in DEFAULT_MODELS.items():
+            if cfg.name == model_name:
+                # Still respect budget override
+                if budget_remaining_pct < 20:
+                    return DEFAULT_MODELS["claude-haiku"]
+                return cfg
+    except (ClaudeFlowUnavailable, KeyError):
+        pass
 
-    # If budget is low, prefer cheaper models
+    return _route_to_model_keywords(
+        description,
+        complexity=complexity,
+        budget_remaining_pct=budget_remaining_pct,
+    )
+
+
+def _route_to_model_keywords(
+    description: str,
+    *,
+    complexity: Optional[TaskComplexity] = None,
+    budget_remaining_pct: float = 100.0,
+) -> ModelConfig:
+    """Keyword-based model selection (legacy fallback)."""
+    if complexity is None:
+        complexity = _classify_task_complexity_keywords(description)
+
     if budget_remaining_pct < 20:
         return DEFAULT_MODELS["claude-haiku"]
 

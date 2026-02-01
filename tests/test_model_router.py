@@ -73,3 +73,52 @@ def test_fallback_from_haiku_exhausted():
 def test_fallback_unknown_model():
     fallback = get_fallback_model("gpt-4")
     assert fallback is None
+
+
+# --- Bridge-integrated tests ---
+
+from unittest.mock import MagicMock, patch
+
+from core.model_router import _classify_task_complexity_keywords, _route_to_model_keywords
+
+
+def test_classify_via_bridge():
+    mock_bridge = MagicMock()
+    mock_bridge.route_model.return_value = {"complexity": "critical", "tier": "oracle"}
+    with patch("core.model_router._get_bridge", return_value=mock_bridge):
+        assert classify_task_complexity("anything") == TaskComplexity.CRITICAL
+
+
+def test_classify_via_bridge_tier_fallback():
+    mock_bridge = MagicMock()
+    mock_bridge.route_model.return_value = {"tier": "booster"}
+    with patch("core.model_router._get_bridge", return_value=mock_bridge):
+        assert classify_task_complexity("anything") == TaskComplexity.SIMPLE
+
+
+def test_classify_bridge_unavailable():
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.model_router._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        assert classify_task_complexity("debug something") == TaskComplexity.COMPLEX
+
+
+def test_route_to_model_via_bridge():
+    mock_bridge = MagicMock()
+    mock_bridge.route_model.return_value = {"model": "claude-opus-4-5-20251101"}
+    with patch("core.model_router._get_bridge", return_value=mock_bridge):
+        model = route_to_model("complex task")
+        assert model.name == DEFAULT_MODELS["claude-opus"].name
+
+
+def test_route_to_model_bridge_respects_budget():
+    mock_bridge = MagicMock()
+    mock_bridge.route_model.return_value = {"model": "claude-opus-4-5-20251101"}
+    with patch("core.model_router._get_bridge", return_value=mock_bridge):
+        model = route_to_model("complex task", budget_remaining_pct=5.0)
+        assert model.name == DEFAULT_MODELS["claude-haiku"].name
+
+
+def test_keywords_fallback_functions():
+    assert _classify_task_complexity_keywords("format this") == TaskComplexity.SIMPLE
+    model = _route_to_model_keywords("debug the issue")
+    assert model.name == DEFAULT_MODELS["claude-opus"].name
