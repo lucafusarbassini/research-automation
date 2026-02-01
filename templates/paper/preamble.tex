@@ -1,0 +1,106 @@
+% =============================================================================
+% preamble.tex — Shared preamble for research manuscripts
+% =============================================================================
+% Include via \input{preamble} BEFORE \begin{document}
+% =============================================================================
+
+% --- Encoding and fonts -----------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}                    % Latin Modern (scalable CM replacement)
+\usepackage{microtype}                  % Subliminal refinements to typesetting
+
+% --- Mathematics ------------------------------------------------------------
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}                  % Extends amsmath (dcases, coloneqq, ...)
+\usepackage{bm}                         % Bold math symbols via \bm{}
+
+% --- Tables -----------------------------------------------------------------
+\usepackage{booktabs}                   % \toprule, \midrule, \bottomrule
+\usepackage{multirow}                   % Multi-row cells
+\usepackage{array}                      % Extended column definitions
+
+% --- Figures and graphics ---------------------------------------------------
+\usepackage{graphicx}
+\usepackage{xcolor}                     % Colour support (loaded before tikz)
+\usepackage{subcaption}                 % Sub-figures with individual captions
+
+% --- Units and numbers ------------------------------------------------------
+\usepackage{siunitx}                    % Consistent number / unit formatting
+\sisetup{
+  detect-all,
+  separate-uncertainty = true,
+  multi-part-units     = single,
+}
+
+% --- Algorithms -------------------------------------------------------------
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+
+% --- Code listings (optional) -----------------------------------------------
+\usepackage{listings}
+\lstset{
+  basicstyle   = \ttfamily\small,
+  keywordstyle = \bfseries\color{blue!70!black},
+  commentstyle = \itshape\color{green!50!black},
+  breaklines   = true,
+  frame        = single,
+  numbers      = left,
+  numberstyle  = \tiny\color{gray},
+}
+
+% --- Bibliography -----------------------------------------------------------
+\usepackage{natbib}
+\bibliographystyle{plainnat}
+
+% --- Cross-referencing (load after most other packages) ---------------------
+\usepackage[
+  colorlinks  = true,
+  linkcolor   = blue!60!black,
+  citecolor   = green!40!black,
+  urlcolor    = magenta!70!black,
+]{hyperref}
+\usepackage[nameinlink,capitalise,noabbrev]{cleveref}
+
+% --- Utilities --------------------------------------------------------------
+\usepackage{enumitem}                   % Customisable lists
+\usepackage{xspace}                     % Smart spacing after macros
+\usepackage{lipsum}                     % Dummy text (remove in final version)
+
+% --- Custom commands --------------------------------------------------------
+% Shorthand for common math operators
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\rank}{rank}
+\newcommand{\given}{\,\vert\,}          % Conditional bar: P(A \given B)
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+
+% Convenience
+\newcommand{\eg}{e.g.\@\xspace}
+\newcommand{\ie}{i.e.\@\xspace}
+\newcommand{\cf}{cf.\@\xspace}
+\newcommand{\etal}{et~al.\@\xspace}
+
+% TODO / note macros (disable for camera-ready by redefining to {})
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO:} #1\textbf{]}}}
+\newcommand{\note}[1]{\textcolor{blue}{\textbf{[NOTE:} #1\textbf{]}}}
+
+% Theorem-like environments
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% =============================================================================
+% End of preamble
+% =============================================================================

@@ -1,98 +1,308 @@
-# Research Automation System
+<p align="center">
+  <h1 align="center">Research Automation</h1>
+  <p align="center">
+    End-to-end scientific research automation powered by Claude Code and multi-agent orchestration.
+  </p>
+</p>
 
-Automate scientific research using Claude Code with multi-agent orchestration, overnight autonomous execution, and comprehensive tooling.
+<p align="center">
+  <a href="https://github.com/YOUR_USERNAME/research-automation/actions/workflows/tests.yml"><img src="https://github.com/YOUR_USERNAME/research-automation/actions/workflows/tests.yml/badge.svg" alt="CI"></a>
+  <a href="https://pypi.org/project/research-automation/"><img src="https://img.shields.io/pypi/v/research-automation.svg" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/research-automation/"><img src="https://img.shields.io/pypi/pyversions/research-automation.svg" alt="Python versions"></a>
+  <a href="https://github.com/YOUR_USERNAME/research-automation/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  <a href="https://research-automation.readthedocs.io/"><img src="https://img.shields.io/badge/docs-readthedocs-brightgreen.svg" alt="Docs"></a>
+</p>
+
+<p align="center">
+  <!-- Replace with an actual screenshot or demo GIF -->
+  <img src="https://via.placeholder.com/800x400?text=research+start+%E2%80%94+demo+coming+soon" alt="Demo" width="700">
+</p>
+
+---
+
+Research Automation turns a research idea into reproducible code, validated results, and a publication-ready LaTeX paper -- all from your terminal. A master agent breaks your goal into subtasks and dispatches them to specialized sub-agents (researcher, coder, reviewer, falsifier, writer, cleaner) that execute inside a Docker-isolated environment with 70+ MCP integrations auto-discovered on demand.
+
+## Prerequisites
+
+| Requirement | Minimum version | Setup guide |
+|-------------|----------------|-------------|
+| **Python** | 3.11+ | [python.org/downloads](https://www.python.org/downloads/) |
+| **Node.js** | 20+ | [nodejs.org](https://nodejs.org/) |
+| **Docker** | 24+ | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
+| **Git** | 2.40+ | [git-scm.com](https://git-scm.com/) |
+| **Claude API key** | -- | [console.anthropic.com](https://console.anthropic.com/) |
+| **GitHub SSH key** | -- | [docs.github.com/authentication](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) |
+
+> Docker is optional for local-only usage but strongly recommended for overnight autonomous runs.
 
 ## Quick Start
 
 ```bash
-# Install Claude Code (requires Node.js 20+)
-npm install -g @anthropic-ai/claude-code
+# 1. Install
+pip install research-automation
 
-# Clone and enter
-git clone https://github.com/YOUR_USERNAME/research-automation
-cd research-automation
+# 2. Create a new project (interactive onboarding)
+research init my-experiment
 
-# Start Claude Code and bootstrap
-claude
-
-# Then tell Claude:
-# "Read BOOTSTRAP.md and execute the implementation plan starting from Phase 1"
-```
-
-## What This Builds
-
-A comprehensive research automation system featuring:
-
-- **Docker Containerization** - Safe, isolated execution environment
-- **70+ MCP Integrations** - Auto-discovered based on task type
-- **Multi-Agent Orchestration** - Master agent routes to specialized sub-agents
-- **Overnight Mode** - Autonomous execution while you sleep
-- **Knowledge Accumulation** - Encyclopedia that grows with each task
-- **Paper Pipeline** - LaTeX template, figure generation, citation management
-- **Progressive Instructions** - Orient → Explore → Plan → Execute → Validate
-
-## Project Structure (After Build)
-
-```
-research-automation/
-├── cli/                 # CLI entry point (`research` command)
-├── core/                # Python modules
-├── templates/           # Copied into new projects
-│   ├── .claude/         # Agent definitions, skills, hooks
-│   ├── paper/           # LaTeX template
-│   ├── knowledge/       # Encyclopedia, goals, decisions
-│   └── config/          # MCP config, settings
-├── defaults/            # Default prompts, philosophy, code style
-├── docker/              # Docker setup
-└── scripts/             # Setup, overnight, interactive
-```
-
-## Usage (After Build)
-
-### Create a New Project
-```bash
-research init my-project
-# Interactive onboarding asks for goal, type, credentials
-```
-
-### Start Interactive Session
-```bash
-cd my-project
+# 3. Launch an interactive research session
+cd my-experiment
 research start
 ```
 
-### Run Overnight Mode
+That's it. The onboarding wizard will ask for your research goal, compute preferences, and notification settings, then scaffold a fully configured project.
+
+## Features
+
+### Multi-Agent Orchestration
+
+A hierarchical swarm of specialized Claude agents collaborates on your research. The **master agent** parses every request and routes it to the right sub-agent:
+
+| Agent | Role |
+|-------|------|
+| **Researcher** | Literature search, paper retrieval, background synthesis |
+| **Coder** | Implementation, experiments, data processing |
+| **Reviewer** | Code review, improvement suggestions |
+| **Falsifier** | Attacks results, finds flaws, enforces Popperian falsification |
+| **Writer** | Paper sections, documentation, reports |
+| **Cleaner** | Refactoring, optimization, code hygiene |
+
+Token budgets are automatically distributed across agents and monitored throughout the session.
+
+### Vector Memory & Knowledge Accumulation
+
+Every insight, decision, and finding is persisted to a growing **Encyclopedia** backed by HNSW vector search (via claude-flow). Agents query memory semantically so knowledge compounds across sessions instead of being lost.
+
 ```bash
-research overnight --iterations 20
+research memory "effect of learning rate on convergence"
 ```
 
-### Check Status
+### Paper Pipeline
+
+A complete LaTeX publication workflow ships with every project:
+
+- Structured `main.tex` template with standard sections
+- BibTeX citation management
+- Automatic figure reference checking
+- Style analysis and transfer (sentence length, passive voice, hedging metrics)
+- One-command compilation: `research paper build`
+
+### Overnight Autonomous Mode
+
+Queue a task list and let the system work unattended:
+
 ```bash
-research status
+research overnight --iterations 30
 ```
 
-## Philosophy
+The system executes your TODO list iteratively, checkpoints progress after every subtask, and stops when the completion signal is detected or the iteration cap is reached. Supports both claude-flow swarm orchestration and a raw-loop fallback.
 
-1. **Never please the user** - Be objective, challenge assumptions
-2. **Popperian falsification** - Try to break results, not validate them
-3. **Never guess** - Search or ask when uncertain
-4. **Test small, then scale** - Downsample first
-5. **Commit aggressively** - Meaningful commits after every subtask
-6. **Accumulate knowledge** - Encyclopedia grows with each task
+### Auto-Debug Loop
 
-See `defaults/PHILOSOPHY.md` for the complete philosophy.
+When a command fails, the auto-debug module captures the error, analyses the traceback, proposes a fix, applies it, and retries -- all without manual intervention. Every fix and its outcome are logged for reproducibility.
 
-## Files
+### 3-Tier Model Routing
 
-| File | Purpose |
-|------|---------|
-| `BOOTSTRAP.md` | Implementation plan for Claude Code |
-| `defaults/PHILOSOPHY.md` | Core principles for all agents |
-| `defaults/CODE_STYLE.md` | Code style for the tool itself |
-| `defaults/PROMPTS.md` | Default prompt collection for RAG |
-| `defaults/MCP_NUCLEUS.json` | 70+ MCPs organized by tier |
-| `defaults/ONBOARDING.md` | Questions asked during project init |
+Requests are automatically routed to the most cost-effective model:
+
+| Tier | Model | Used for |
+|------|-------|----------|
+| Booster | Claude Haiku | Formatting, lookups, classification |
+| Workhorse | Claude Sonnet | Code writing, analysis, general tasks |
+| Oracle | Claude Opus | Architecture, validation, paper writing |
+
+### Browser Automation
+
+Headless browser sessions for web scraping, screenshot capture, and PDF generation. Delegates to a Puppeteer MCP server when available; falls back to lightweight HTTP tools otherwise.
+
+### Cross-Repository Coordination
+
+Link multiple repositories, run coordinated commits, and enforce permission boundaries across projects -- useful for mono-repo experiments that span data pipelines and model code.
+
+### Voice Prompting
+
+Transcribe audio instructions, detect language, and structure them into actionable prompts that feed directly into the agent pipeline.
+
+### Interactive Dashboard
+
+A Rich-powered TUI that shows live progress, TODO status, session history, and resource utilization at a glance.
+
+### Figure Gallery
+
+Automatically scans, catalogs, and organizes experiment figures by run ID and format for quick review and paper inclusion.
+
+### Security & Reproducibility
+
+- Credential isolation via `.env` files (never committed)
+- Docker containerization for safe, reproducible execution
+- Full audit logging in `state/audit.log`
+- Git checkpoint after every subtask
+
+## Installation
+
+### From PyPI (recommended)
+
+```bash
+pip install research-automation
+```
+
+### With ML extras
+
+```bash
+pip install "research-automation[ml]"     # numpy, pandas, scipy, scikit-learn, matplotlib
+pip install "research-automation[all]"    # + chromadb, sentence-transformers, torch, jupyter
+```
+
+### Docker
+
+```bash
+docker build -t research-automation docker/
+docker run -it -v $(pwd):/workspace research-automation
+```
+
+### From source
+
+```bash
+git clone https://github.com/YOUR_USERNAME/research-automation.git
+cd research-automation
+pip install -e ".[dev]"
+```
+
+## Configuration
+
+After running `research init`, your project contains `config/settings.yml`:
+
+```yaml
+project:
+  name: "my-experiment"
+  type: "ml-research"
+
+compute:
+  type: "local-gpu"       # local-cpu | local-gpu | cloud | cluster
+  gpu: "RTX 4090"
+
+notifications:
+  enabled: true
+  method: "slack"          # email | slack | none
+
+preferences:
+  auto_commit: true
+  checkpoint_interval: 30  # minutes
+  max_overnight_iterations: 20
+```
+
+Reconfigure any section interactively:
+
+```bash
+research config notifications
+research config compute
+```
+
+### API Keys
+
+Store credentials in a `.env` file at the project root (auto-loaded, never committed):
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+GITHUB_TOKEN=ghp_...
+```
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `research init <name>` | Scaffold a new research project with interactive onboarding |
+| `research start` | Launch an interactive Claude Code session |
+| `research overnight` | Run autonomous overnight mode with configurable iterations |
+| `research status` | Show current TODO, progress, and resource metrics |
+| `research config [section]` | View or update project settings |
+| `research paper <action>` | Paper pipeline: `build`, `check`, `update`, `modernize` |
+| `research memory <query>` | Semantic search across vector memory |
+| `research agents` | Show active swarm agent status |
+| `research metrics` | Display token usage, cost, and system resource stats |
+| `research list-sessions` | List all past and active sessions |
+| `research --version` | Print version |
+
+Run `research <command> --help` for full option details.
+
+## Architecture
+
+```
+research-automation/
+|
+|-- cli/                        # Typer CLI entry points
+|   |-- main.py                 #   research command definitions
+|   |-- dashboard.py            #   Rich TUI dashboard
+|   +-- gallery.py              #   Figure gallery viewer
+|
+|-- core/                       # Python library modules
+|   |-- agents.py               #   Agent definitions & routing
+|   |-- auto_debug.py           #   Auto-debug loop
+|   |-- autonomous.py           #   Overnight autonomous runner
+|   |-- browser.py              #   Headless browser integration
+|   |-- claude_flow.py          #   claude-flow bridge (swarm, memory, metrics)
+|   |-- cross_repo.py           #   Multi-repo coordination
+|   |-- knowledge.py            #   Encyclopedia & keyword search
+|   |-- mcps.py                 #   MCP discovery & management (70+ integrations)
+|   |-- meta_rules.py           #   Automatic meta-rule capture
+|   |-- model_router.py         #   3-tier model routing
+|   |-- notifications.py        #   Email / Slack notifications
+|   |-- onboarding.py           #   Project setup wizard
+|   |-- paper.py                #   LaTeX compilation & citation management
+|   |-- reproducibility.py      #   Reproducibility tracking
+|   |-- resources.py            #   System resource monitoring
+|   |-- security.py             #   Credential & permission guards
+|   |-- session.py              #   Session lifecycle management
+|   |-- style_transfer.py       #   Academic writing style analysis
+|   |-- tokens.py               #   Token budget tracking
+|   |-- verification.py         #   Result verification
+|   +-- voice.py                #   Voice transcription & prompt structuring
+|
+|-- templates/                  # Scaffolded into every new project
+|   |-- .claude/                #   Agent definitions, hooks, skills
+|   |-- paper/                  #   LaTeX template, Makefile, references.bib
+|   |-- knowledge/              #   GOAL.md, ENCYCLOPEDIA.md, CONSTRAINTS.md
+|   |-- config/                 #   settings.yml, mcp-nucleus.json, claude-flow.json
+|   +-- .github/workflows/      #   CI: tests, linting, paper build
+|
+|-- docker/                     # Dockerfile & docker-compose
+|-- scripts/                    # Shell helpers (setup, overnight, interactive)
+|-- defaults/                   # Philosophy, code style, prompt library, MCP catalog
++-- tests/                      # Pytest suite (40+ test modules)
+```
+
+### How it works
+
+```
+You --> research start --> Master Agent --> Sub-agents (researcher, coder, ...)
+                              |                    |
+                         claude-flow          Vector Memory
+                         (swarm, MCP)         (HNSW index)
+                              |                    |
+                         Docker sandbox     knowledge/ENCYCLOPEDIA.md
+```
+
+1. `research init` scaffolds a project from templates and runs interactive onboarding.
+2. `research start` launches a Claude Code session governed by the master agent.
+3. The master agent reads your goal, plans subtasks, and dispatches them to specialized sub-agents.
+4. Each sub-agent executes inside the project environment, commits results, and updates shared memory.
+5. The falsifier agent validates outputs before anything is marked complete.
+6. `research overnight` repeats this cycle unattended until the task list is done.
+
+## Contributing
+
+Contributions are welcome. To get started:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/research-automation.git
+cd research-automation
+pip install -e ".[dev]"
+python -m pytest tests/ -v
+```
+
+Please ensure all tests pass and code follows the project style (Black, isort, mypy) before submitting a pull request.
+
+See the [Contributing Guide](CONTRIBUTING.md) for full details.
 
 ## License
 
-MIT
+[MIT](LICENSE)

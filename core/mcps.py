@@ -74,6 +74,54 @@ def get_mcps_for_task(task_description: str) -> dict:
     return mcps
 
 
+def get_priority_mcps() -> dict:
+    """Return the always-needed (tier-0) MCP servers.
+
+    These are loaded unconditionally regardless of task classification.
+    Sequential-thinking is tier-0 because structured reasoning is
+    fundamental to every research workflow.
+    """
+    priority: dict = {
+        "sequential-thinking": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+            "purpose": "Structured reasoning chains for complex analysis",
+            "tier": 0,
+        },
+    }
+
+    # Merge claude-flow if available
+    cf_config = get_claude_flow_mcp_config()
+    if cf_config:
+        cf_mcps = cf_config["tier0_claude_flow"]["mcps"]
+        for name, entry in cf_mcps.items():
+            priority[name] = {**entry, "tier": 0}
+
+    return priority
+
+
+def install_priority_mcps() -> dict[str, bool]:
+    """Install all tier-0 priority MCP servers.
+
+    Returns:
+        Mapping of MCP name -> success boolean.
+    """
+    results: dict[str, bool] = {}
+    for name, cfg in get_priority_mcps().items():
+        source = cfg.get("source", "")
+        if not source:
+            # For npx-based MCPs, attempt a dry-run to verify availability
+            cmd_parts = cfg.get("args", [])
+            pkg = next((a for a in cmd_parts if not a.startswith("-")), None)
+            if pkg:
+                source = pkg
+            else:
+                results[name] = True  # nothing to install for npx
+                continue
+        results[name] = install_mcp(name, source)
+    return results
+
+
 def install_mcp(mcp_name: str, source: str) -> bool:
     """Install an MCP from source."""
     if "github.com" in source or "/" in source:

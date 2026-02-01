@@ -1,4 +1,20 @@
 {
+  "tier0_orchestration": {
+    "description": "Always loaded unconditionally — core reasoning and orchestration",
+    "mcps": {
+      "sequential-thinking": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+        "purpose": "Structured reasoning chains for complex analysis"
+      },
+      "claude-flow": {
+        "command": "npx",
+        "args": ["claude-flow@v3alpha", "mcp", "serve"],
+        "purpose": "Swarm orchestration, vector memory, 3-tier routing"
+      }
+    },
+    "trigger_keywords": []
+  },
   "tier1_essential": {
     "description": "Always loaded at project init",
     "mcps": {
@@ -17,6 +33,11 @@
       "github": {
         "source": "modelcontextprotocol/servers",
         "purpose": "GitHub PRs, issues, Actions"
+      },
+      "puppeteer": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+        "purpose": "Browser automation and web scraping"
       },
       "filesystem": {
         "source": "modelcontextprotocol/servers",
@@ -43,7 +64,12 @@
       "postgres": {"source": "modelcontextprotocol/servers-archived"},
       "sqlite": {"source": "modelcontextprotocol/servers-archived"},
       "duckdb-mcp": {"source": "community"},
-      "chroma-mcp": {"source": "chroma-core/chroma-mcp"}
+      "chroma-mcp": {"source": "chroma-core/chroma-mcp"},
+      "apidog-mcp": {
+        "command": "npx",
+        "args": ["-y", "apidog-mcp-server@latest"],
+        "purpose": "API testing, documentation, and mock servers"
+      }
     }
   },
   "tier3_ml": {

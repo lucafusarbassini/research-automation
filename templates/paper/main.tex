@@ -1,44 +1,223 @@
-\documentclass[11pt,a4paper]{article}
+% =============================================================================
+%  main.tex — Research manuscript template
+% =============================================================================
+%
+%  Build:   make all        (or: latexmk -pdf main.tex)
+%  Clean:   make clean
+%  Watch:   make watch
+%
+% =============================================================================
+\documentclass[11pt,a4paper,onecolumn]{article}
 
-% Packages
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{amsmath,amssymb}
-\usepackage{graphicx}
-\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue]{hyperref}
-\usepackage{natbib}
-\usepackage{booktabs}
-\usepackage{microtype}
+% --- Shared preamble --------------------------------------------------------
+\input{preamble}
 
-% Title
-\title{[Title]}
-\author{[Authors]}
-\date{\today}
+% --- Page geometry ----------------------------------------------------------
+\usepackage[
+  top    = 2.5cm,
+  bottom = 2.5cm,
+  left   = 2.5cm,
+  right  = 2.5cm,
+]{geometry}
 
+% --- Line spacing (adjust for submission) -----------------------------------
+\usepackage{setspace}
+\onehalfspacing           % Switch to \doublespacing for review copies
+
+% --- Line numbers (uncomment for review) ------------------------------------
+% \usepackage{lineno}
+% \linenumbers
+
+% =============================================================================
+%  Metadata
+% =============================================================================
+\title{%
+  \textbf{A Descriptive Title That Clearly Communicates\\
+  the Main Finding of This Study}%
+}
+
+\author{%
+  First~Author\textsuperscript{1,*},\quad
+  Second~Author\textsuperscript{2},\quad
+  Third~Author\textsuperscript{1,2}\\[6pt]
+  \small\textsuperscript{1}Department of Example, University of Somewhere,
+    City, Country\\
+  \small\textsuperscript{2}Institute of Research, Organisation, City, Country\\[4pt]
+  \small\textsuperscript{*}Corresponding author:
+    \href{mailto:first.author@example.com}{first.author@example.com}
+}
+
+\date{}  % Suppress date; journals set their own
+
+% =============================================================================
 \begin{document}
+% =============================================================================
 
 \maketitle
+\thispagestyle{empty}  % No page number on title page
 
+% --- Abstract ---------------------------------------------------------------
 \begin{abstract}
-[Abstract goes here - 150-250 words]
+\noindent
+\textbf{Background.}\quad
+Provide context and motivation for the study in one to two sentences.
+%
+\textbf{Methods.}\quad
+Briefly describe the experimental or computational approach.
+%
+\textbf{Results.}\quad
+State the key findings with quantitative detail where possible.
+%
+\textbf{Conclusions.}\quad
+Summarise the implications and significance of the work.
+
+\medskip
+\noindent
+\textbf{Keywords:}\quad
+keyword one, keyword two, keyword three, keyword four, keyword five
 \end{abstract}
 
-\section{Introduction}
-\label{sec:intro}
+\clearpage
 
+% =============================================================================
+\section{Introduction}
+\label{sec:introduction}
+% =============================================================================
+
+% Opening paragraph: broad context and significance of the problem.
+
+% Second paragraph: what is currently known, with key citations
+% \citep{AuthorYear}.
+
+% Third paragraph: the gap in knowledge or the unresolved question.
+
+% Final paragraph: state the aim and outline the approach taken.
+% ``In this work, we \ldots''
+
+\todo{Write the introduction.}
+
+% =============================================================================
 \section{Methods}
 \label{sec:methods}
+% =============================================================================
 
+\subsection{Data Collection}
+\label{sec:methods:data}
+
+% Describe datasets, cohorts, or experimental materials.
+
+\subsection{Computational Pipeline}
+\label{sec:methods:pipeline}
+
+% Describe the algorithms, models, or statistical methods.
+
+\subsection{Statistical Analysis}
+\label{sec:methods:statistics}
+
+% Describe significance tests, multiple-testing correction, etc.
+
+\todo{Write the methods.}
+
+% =============================================================================
 \section{Results}
 \label{sec:results}
+% =============================================================================
 
+\subsection{Descriptive Overview}
+\label{sec:results:overview}
+
+% Present the first set of findings with references to figures and tables.
+% Use \cref{fig:example} and \cref{tab:example} for cross-references.
+
+\subsection{Key Finding}
+\label{sec:results:key}
+
+% Present the central result with quantitative evidence.
+
+\todo{Write the results.}
+
+% --- Example figure ---------------------------------------------------------
+% \begin{figure}[htbp]
+%   \centering
+%   \includegraphics[width=0.8\textwidth]{figures/placeholder.pdf}
+%   \caption{%
+%     \textbf{Short descriptive title.}
+%     Detailed explanation of what the figure shows, including axis labels
+%     and any statistical annotations.
+%   }
+%   \label{fig:example}
+% \end{figure}
+
+% --- Example table ----------------------------------------------------------
+% \begin{table}[htbp]
+%   \centering
+%   \caption{%
+%     \textbf{Summary statistics.}
+%     Description of the table contents and any relevant notes.
+%   }
+%   \label{tab:example}
+%   \begin{tabular}{@{} l S[table-format=4.1] S[table-format=1.3] @{}}
+%     \toprule
+%     {Method} & {Score} & {$p$-value} \\
+%     \midrule
+%     Baseline   & 72.3  & 0.041 \\
+%     Our method & 89.7  & 0.001 \\
+%     \bottomrule
+%   \end{tabular}
+% \end{table}
+
+% =============================================================================
 \section{Discussion}
 \label{sec:discussion}
+% =============================================================================
 
+% Paragraph 1: Restate the main finding and its significance.
+
+% Paragraph 2: How does this compare with prior work?
+
+% Paragraph 3: Limitations and potential confounders.
+
+% Paragraph 4: Future directions.
+
+\todo{Write the discussion.}
+
+% =============================================================================
 \section{Conclusion}
 \label{sec:conclusion}
+% =============================================================================
 
-\bibliographystyle{plainnat}
+% A concise summary (one paragraph) of the contribution and outlook.
+
+\todo{Write the conclusion.}
+
+% =============================================================================
+%  Back matter
+% =============================================================================
+
+\section*{Data Availability}
+
+% State where data and code can be accessed (e.g., Zenodo, GitHub).
+
+\section*{Author Contributions}
+
+% CRediT taxonomy: Conceptualization, Methodology, Software, Validation,
+% Formal analysis, Investigation, Resources, Data curation, Writing --
+% original draft, Writing -- review \& editing, Visualisation, Supervision,
+% Project administration, Funding acquisition.
+
+\section*{Acknowledgements}
+
+% Funding agencies, compute resources, helpful discussions.
+
+\section*{Conflicts of Interest}
+
+The authors declare no competing interests.
+
+% --- Bibliography -----------------------------------------------------------
 \bibliography{references}
+
+% --- Supplementary (separate file) ------------------------------------------
+% \clearpage
+% \input{supplementary}
 
 \end{document}

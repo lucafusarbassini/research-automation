@@ -1,0 +1,117 @@
+% =============================================================================
+%  supplementary.tex — Supplementary Materials
+% =============================================================================
+%
+%  Usage: \input{supplementary} at the end of main.tex,
+%         or compile standalone (uncomment the preamble block below).
+%
+% =============================================================================
+
+% --- Uncomment the following block to compile as a standalone document ------
+% \documentclass[11pt,a4paper]{article}
+% \input{preamble}
+% \usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
+% \usepackage{setspace}\onehalfspacing
+% \title{Supplementary Materials}
+% \author{}
+% \date{}
+% \begin{document}
+% \maketitle
+% ---
+
+% =============================================================================
+%  Reset counters for supplementary numbering (S1, S2, ...)
+% =============================================================================
+\setcounter{section}{0}
+\setcounter{figure}{0}
+\setcounter{table}{0}
+\setcounter{equation}{0}
+
+\renewcommand{\thesection}{S\arabic{section}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\theequation}{S\arabic{equation}}
+
+% Update cleveref names
+\crefname{section}{Supplementary Section}{Supplementary Sections}
+\crefname{figure}{Supplementary Figure}{Supplementary Figures}
+\crefname{table}{Supplementary Table}{Supplementary Tables}
+\crefname{equation}{Supplementary Equation}{Supplementary Equations}
+
+\clearpage
+\begin{center}
+  {\LARGE\bfseries Supplementary Materials}\\[12pt]
+  {\large A Descriptive Title That Clearly Communicates
+   the Main Finding of This Study}
+\end{center}
+
+\bigskip
+\tableofcontents
+
+% =============================================================================
+\section{Supplementary Methods}
+\label{sec:supp:methods}
+% =============================================================================
+
+% Extended methodological detail that does not fit in the main text.
+% Include derivations, parameter choices, preprocessing steps, etc.
+
+\subsection{Parameter Selection}
+\label{sec:supp:methods:params}
+
+% Describe hyperparameter tuning, cross-validation, grid search, etc.
+
+\subsection{Detailed Derivations}
+\label{sec:supp:methods:derivations}
+
+% Full mathematical derivations for key results.
+
+% =============================================================================
+\section{Supplementary Figures}
+\label{sec:supp:figures}
+% =============================================================================
+
+% \begin{figure}[htbp]
+%   \centering
+%   \includegraphics[width=0.85\textwidth]{figures/supp_placeholder.pdf}
+%   \caption{%
+%     \textbf{Supplementary Figure S1: Extended analysis.}
+%     Detailed caption describing what the figure shows, how it was generated,
+%     and how to interpret it.
+%   }
+%   \label{fig:supp:example}
+% \end{figure}
+
+% =============================================================================
+\section{Supplementary Tables}
+\label{sec:supp:tables}
+% =============================================================================
+
+% \begin{table}[htbp]
+%   \centering
+%   \caption{%
+%     \textbf{Supplementary Table S1: Full benchmark results.}
+%     Complete results for all methods and datasets.
+%   }
+%   \label{tab:supp:benchmark}
+%   \begin{tabular}{@{} l *{4}{S[table-format=2.1]} @{}}
+%     \toprule
+%     {Method} & {Dataset A} & {Dataset B} & {Dataset C} & {Dataset D} \\
+%     \midrule
+%     Baseline   & 72.3 & 68.1 & 75.4 & 70.9 \\
+%     Variant 1  & 78.5 & 74.2 & 80.1 & 76.3 \\
+%     Variant 2  & 81.2 & 77.8 & 83.6 & 79.1 \\
+%     Our method & 89.7 & 85.4 & 91.2 & 87.5 \\
+%     \bottomrule
+%   \end{tabular}
+% \end{table}
+
+% =============================================================================
+\section{Supplementary Notes}
+\label{sec:supp:notes}
+% =============================================================================
+
+% Additional discussion, edge cases, or extended analysis.
+
+% --- Uncomment if compiling standalone --------------------------------------
+% \end{document}

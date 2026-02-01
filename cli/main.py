@@ -452,5 +452,212 @@ def paper(
         raise typer.Exit(1)
 
 
+@app.command()
+def mobile(
+    action: str = typer.Argument(help="Action: start, stop, url"),
+):
+    """Manage mobile companion server for on-the-go monitoring."""
+    try:
+        from core.mobile import mobile_server
+    except ImportError:
+        console.print("[red]core.mobile not available. Install mobile dependencies first.[/red]")
+        raise typer.Exit(1)
+
+    if action == "start":
+        console.print("[bold]Starting mobile server...[/bold]")
+        mobile_server.start()
+        console.print("[green]Mobile server started.[/green]")
+    elif action == "stop":
+        console.print("[bold]Stopping mobile server...[/bold]")
+        mobile_server.stop()
+        console.print("[green]Mobile server stopped.[/green]")
+    elif action == "url":
+        url = mobile_server.get_url()
+        console.print(f"[bold]Mobile URL:[/bold] {url}")
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: start, stop, url")
+        raise typer.Exit(1)
+
+
+@app.command()
+def website(
+    action: str = typer.Argument(help="Action: init, build, deploy, preview"),
+):
+    """Manage project website for sharing results."""
+    try:
+        from core.website import site_manager
+    except ImportError:
+        console.print("[red]core.website not available. Install website dependencies first.[/red]")
+        raise typer.Exit(1)
+
+    if action == "init":
+        console.print("[bold]Initializing project website...[/bold]")
+        site_manager.init()
+        console.print("[green]Website initialized.[/green]")
+    elif action == "build":
+        console.print("[bold]Building website...[/bold]")
+        site_manager.build()
+        console.print("[green]Website built.[/green]")
+    elif action == "deploy":
+        console.print("[bold]Deploying website...[/bold]")
+        site_manager.deploy()
+        console.print("[green]Website deployed.[/green]")
+    elif action == "preview":
+        console.print("[bold]Starting preview server...[/bold]")
+        site_manager.preview()
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: init, build, deploy, preview")
+        raise typer.Exit(1)
+
+
+@app.command()
+def publish(
+    platform: str = typer.Argument(help="Platform: medium, linkedin"),
+):
+    """Draft and publish research summaries to social platforms."""
+    try:
+        from core.social_media import publish_to_platform
+    except ImportError:
+        console.print("[red]core.social_media not available. Install social media dependencies first.[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[bold]Publishing to {platform}...[/bold]")
+    result = publish_to_platform(platform)
+    if result.get("success"):
+        url = result.get("url", "")
+        console.print(f"[green]Published successfully.[/green]")
+        if url:
+            console.print(f"[bold]URL:[/bold] {url}")
+    else:
+        error = result.get("error", "Unknown error")
+        console.print(f"[red]Publish failed: {error}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+def verify(
+    text: str = typer.Argument(help="Text or claim to verify"),
+):
+    """Run verification and fact-checking on a piece of text."""
+    try:
+        from core.verification import verify_text
+    except ImportError:
+        console.print("[red]core.verification not available. Install verification dependencies first.[/red]")
+        raise typer.Exit(1)
+
+    console.print("[bold]Running verification...[/bold]")
+    report = verify_text(text)
+    console.print(f"\n[bold]Verdict:[/bold] {report.get('verdict', 'unknown')}")
+    issues = report.get("issues", [])
+    if issues:
+        console.print("[yellow]Issues found:[/yellow]")
+        for issue in issues:
+            console.print(f"  - {issue}")
+    else:
+        console.print("[green]No issues detected.[/green]")
+
+
+@app.command()
+def debug(
+    command: str = typer.Argument(help="Command or script to auto-debug"),
+):
+    """Run an automatic debug loop on a failing command."""
+    try:
+        from core.auto_debug import auto_debug_loop
+    except ImportError:
+        console.print("[red]core.auto_debug not available. Install debug dependencies first.[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[bold]Starting auto-debug for:[/bold] {command}")
+    result = auto_debug_loop(command)
+    if result.get("fixed"):
+        console.print("[green]Issue resolved after auto-debug.[/green]")
+        if result.get("patch"):
+            console.print(f"[bold]Patch:[/bold]\n{result['patch']}")
+    else:
+        console.print("[yellow]Auto-debug could not fully resolve the issue.[/yellow]")
+        if result.get("log"):
+            console.print(f"[bold]Debug log:[/bold]\n{result['log']}")
+
+
+@app.command()
+def projects(
+    action: str = typer.Argument(help="Action: list, switch, register"),
+):
+    """Manage multiple research projects."""
+    try:
+        from core.multi_project import project_manager
+    except ImportError:
+        console.print("[red]core.multi_project not available. Install multi-project dependencies first.[/red]")
+        raise typer.Exit(1)
+
+    if action == "list":
+        entries = project_manager.list_projects()
+        if entries:
+            console.print("[bold]Registered projects:[/bold]")
+            for entry in entries:
+                marker = " *" if entry.get("active") else ""
+                console.print(f"  {entry['name']} — {entry['path']}{marker}")
+        else:
+            console.print("No projects registered yet.")
+    elif action == "switch":
+        name = typer.prompt("Project name to switch to")
+        project_manager.switch(name)
+        console.print(f"[green]Switched to project: {name}[/green]")
+    elif action == "register":
+        name = typer.prompt("Project name")
+        path = typer.prompt("Project path", default=str(Path.cwd()))
+        project_manager.register(name, path)
+        console.print(f"[green]Registered project: {name}[/green]")
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: list, switch, register")
+        raise typer.Exit(1)
+
+
+@app.command()
+def worktree(
+    action: str = typer.Argument(help="Action: add, list, remove, prune"),
+    branch: str = typer.Argument("", help="Branch name (for add/remove)"),
+):
+    """Manage git worktrees for parallel experiments."""
+    try:
+        from core.git_worktrees import worktree_manager
+    except ImportError:
+        console.print("[red]core.git_worktrees not available. Install worktree dependencies first.[/red]")
+        raise typer.Exit(1)
+
+    if action == "add":
+        if not branch:
+            console.print("[red]Branch name required for add.[/red]")
+            raise typer.Exit(1)
+        console.print(f"[bold]Adding worktree for branch: {branch}[/bold]")
+        path = worktree_manager.add(branch)
+        console.print(f"[green]Worktree created at {path}[/green]")
+    elif action == "list":
+        trees = worktree_manager.list()
+        if trees:
+            console.print("[bold]Active worktrees:[/bold]")
+            for t in trees:
+                console.print(f"  {t['branch']} → {t['path']}")
+        else:
+            console.print("No worktrees found.")
+    elif action == "remove":
+        if not branch:
+            console.print("[red]Branch name required for remove.[/red]")
+            raise typer.Exit(1)
+        worktree_manager.remove(branch)
+        console.print(f"[green]Worktree for {branch} removed.[/green]")
+    elif action == "prune":
+        worktree_manager.prune()
+        console.print("[green]Stale worktrees pruned.[/green]")
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: add, list, remove, prune")
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()

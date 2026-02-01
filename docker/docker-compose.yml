@@ -1,24 +1,80 @@
-version: '3.8'
+# =============================================================================
+# research-automation  —  docker compose up
+# =============================================================================
+#
+# Quick start:
+#   1. Copy .env.example to .env and add your ANTHROPIC_API_KEY
+#   2. docker compose up
+#   3. Open http://localhost:7681 in your browser
+#
+# Services:
+#   app   — main research environment (web terminal on :7681)
+#   docs  — GitHub Pages preview server  (on :4000)
+# =============================================================================
+
 services:
-  research:
-    build: .
-    volumes:
-      - ${PROJECT_PATH}:/workspace:rw          # Project files
-      - ${REFERENCE_PATH}:/reference:ro        # Papers, code (read-only)
-      - ${OUTPUTS_PATH}:/outputs:rw            # Deliverables
-      - ${SECRETS_PATH}:/secrets:ro            # API keys (read-only)
-      - ${SHARED_PATH}:/shared:rw              # Cross-project knowledge
+  # --------------------------------------------------------------------------
+  # Main research-automation container
+  # --------------------------------------------------------------------------
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: research-automation
+    hostname: research-auto
+
+    # Default mode: web terminal
+    command: ["--web"]
+
+    ports:
+      - "${TTYD_PORT:-7681}:7681"
+
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-    networks:
-      - research-net
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - TTYD_PORT=7681
+
+    volumes:
+      # Mount a local workspace so work persists across restarts
+      - ${WORKSPACE_DIR:-./workspace}:/workspace
+      # Share git config for commits inside the container
+      - ~/.gitconfig:/root/.gitconfig:ro
+
+    # Keep the container running even if ttyd restarts
+    restart: unless-stopped
+
+    # Resource limits (adjust for your machine)
     deploy:
       resources:
         limits:
-          cpus: '8'
-          memory: 32G
+          memory: 8G
+        reservations:
+          memory: 2G
 
-networks:
-  research-net:
-    driver: bridge
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7681/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # --------------------------------------------------------------------------
+  # Docs preview (GitHub Pages / Jekyll)
+  # --------------------------------------------------------------------------
+  docs:
+    image: jekyll/jekyll:4
+    container_name: research-docs
+    command: >
+      bash -c "
+        cd /srv/jekyll &&
+        if [ -f Gemfile ]; then bundle install; fi &&
+        jekyll serve --host 0.0.0.0 --port 4000 --livereload --force_polling
+      "
+    ports:
+      - "${DOCS_PORT:-4000}:4000"
+    volumes:
+      - ../docs:/srv/jekyll:rw
+    profiles:
+      - docs
+    restart: unless-stopped

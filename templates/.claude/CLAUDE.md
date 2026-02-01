@@ -1,82 +1,46 @@
 # Project Instructions
 
-You are working on a scientific research project. Follow these protocols:
+Scientific research project. Read `knowledge/GOAL.md`, `knowledge/CONSTRAINTS.md`, and `state/TODO.md` before starting any work.
 
-## Progressive Instruction Protocol
+## Core Philosophies
 
-**Phase 1: ORIENT** (always first)
-1. Read knowledge/GOAL.md
-2. Read knowledge/CONSTRAINTS.md
-3. Read state/TODO.md
-4. Summarize your understanding
-5. Ask clarifying questions if needed
+1. **Break big problems into small ones.** Decompose every task into the smallest useful subtasks. Execute one at a time. Checkpoint after each.
+2. **Context is milk — best served fresh and condensed.** Keep files, prompts, and docs short. Prune stale information. Prefer re-reading source over relying on memory.
+3. **Double-check everything.** After completing any task, verify the result: re-read the changed file, run the test, compare to the goal. Never mark done without validation.
 
-**Phase 2: EXPLORE**
-1. Read relevant code/data
-2. Build mental model
-3. Propose approach (don't execute yet)
+## Anti-Drift Rules (MANDATORY)
 
-**Phase 3: PLAN**
-1. Break into subtasks
-2. Estimate difficulty/risk per subtask
-3. Get approval (or auto-approve if SAFE)
+- ONLY make changes that were directly requested.
+- Do NOT refactor, rename, or reformat surrounding code.
+- Do NOT add features, helpers, or abstractions not asked for.
+- Do NOT add docstrings, comments, or type hints to code you didn't change.
+- If tempted to "improve" something adjacent — stop. Note it and ask first.
+- Re-read `knowledge/GOAL.md` at the start of every session.
 
-**Phase 4: EXECUTE**
-1. Execute one subtask at a time
-2. Checkpoint after each
-3. Validate results before proceeding
+## Work Protocol
 
-**Phase 5: VALIDATE**
-1. Run falsifier checks
-2. Compare to original goal
-3. Document learnings in knowledge/ENCYCLOPEDIA.md
+1. **Orient** — Read goal, constraints, and TODO. Summarize understanding.
+2. **Plan** — Propose approach and subtasks. Get approval before executing.
+3. **Execute** — One subtask at a time. Keep changes minimal and focused.
+4. **Verify** — After each subtask: re-read changed files, run tests, compare to goal.
+5. **Record** — Commit after each subtask. Update `knowledge/ENCYCLOPEDIA.md` only when genuinely useful.
 
-## Core Rules
+## Operating Rules
 
-1. **Never guess** - Search or ask when uncertain
-2. **Test small first** - Downsample data, run 1 epoch, then scale
-3. **Commit aggressively** - Meaningful commits after each subtask
-4. **Be verbose** - Log extensively for self-diagnosis
-5. **Update knowledge** - Every task should potentially update ENCYCLOPEDIA.md
-6. **Don't please** - Be objective, challenge assumptions, report flaws
-
-## Token Awareness
-
-- Estimate tokens before expensive operations (~4 chars/token)
-- Warn at 50%, 75%, 90% of session budget
-- Use cheap operations where possible (local LLMs for simple tasks)
-
-## Thinking Mode Selection
-
-Automatically select based on task:
-- SIMPLE (formatting, lookups): No extended thinking
-- MEDIUM (code writing, analysis): Standard thinking
-- COMPLEX (debugging, architecture): Extended thinking (3% budget)
-- CRITICAL (validation, paper writing): Maximum thinking budget
+- Never guess — search or ask when uncertain.
+- Test small first — downsample data, run 1 epoch, then scale.
+- Be objective — challenge assumptions, report flaws, don't flatter.
+- Estimate token cost before expensive operations (~4 chars/token).
+- Prefer simple solutions. Less code is better code.
 
 ## Claude-Flow Integration
 
-This project uses [claude-flow v3](https://github.com/ruvnet/claude-flow) for enhanced orchestration when available. All capabilities gracefully degrade when claude-flow is not installed.
+When [claude-flow](https://github.com/ruvnet/claude-flow) is available:
+- Hierarchical swarm: coordinator dispatches to specialized agents (researcher, coder, reviewer).
+- HNSW vector memory for semantic search over knowledge entries.
+- 3-tier model routing: Haiku (simple) → Sonnet (general) → Opus (reasoning).
+- All capabilities degrade gracefully when claude-flow is absent.
 
-### Swarm Topology
-- **Hierarchical**: Queen coordinator dispatches to specialized worker agents
-- Agent types: researcher, coder, code-reviewer, security-auditor, api-docs, refactorer
-- Tasks auto-route to the best agent based on description keywords
+## Self-Maintenance
 
-### HNSW Vector Memory
-- Knowledge entries are dual-written to markdown AND the HNSW vector index
-- `search_knowledge()` uses semantic search first, merges with keyword results
-- Namespace: `knowledge` (all encyclopedia entries)
-
-### 3-Tier Model Routing
-| Tier | Model | Use For |
-|------|-------|---------|
-| Booster | claude-haiku | Formatting, lookups, classification |
-| Workhorse | claude-sonnet | Code writing, analysis, general tasks |
-| Oracle | claude-opus | Reasoning, architecture, validation, paper |
-
-### Anti-Drift Rules
-- Always re-read GOAL.md at session start
-- Checkpoint after every subtask
-- Falsifier agent must validate results before marking complete
-- All learnings flow to ENCYCLOPEDIA.md (and vector memory)
+This file must stay under 80 lines. Every 5 sessions, review it and trim anything stale or redundant. If a rule hasn't been useful, remove it.

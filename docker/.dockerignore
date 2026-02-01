@@ -1,0 +1,73 @@
+# =============================================================================
+# .dockerignore  —  keep the build context lean
+# =============================================================================
+
+# Git
+.git
+.gitignore
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist/
+build/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Secrets (never send to Docker daemon)
+.env
+.env.*
+.secrets
+secrets/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.log
+*.out
+*.run.xml
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Runtime state (rebuilt inside container)
+state/sessions/
+state/snapshots/
+state/.notification_throttle.json
+state/DONE
+outputs/
+
+# Docker files themselves (avoid recursion)
+docker/workspace/
+
+# Large / unnecessary files
+*.tar.gz
+*.zip
+*.pdf
+TODO_prep.md
+BUILD_LOG.md

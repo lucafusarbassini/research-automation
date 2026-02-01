@@ -1,0 +1,72 @@
+# ============================================================================
+# Paper Build — compile LaTeX on changes to paper/ directory
+# ============================================================================
+# Badge:
+#   ![Paper](https://github.com/<owner>/research-automation/actions/workflows/paper.yml/badge.svg)
+
+name: Paper Build
+
+on:
+  push:
+    paths:
+      - "paper/**"
+    branches: [main, master]
+  pull_request:
+    paths:
+      - "paper/**"
+  workflow_dispatch:
+
+concurrency:
+  group: paper-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-latex:
+    name: Compile LaTeX
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache LaTeX packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /tmp/texlive
+            ~/.texlive
+          key: texlive-${{ runner.os }}-${{ hashFiles('paper/**/*.tex', 'paper/**/*.bib') }}
+          restore-keys: |
+            texlive-${{ runner.os }}-
+
+      - name: Install LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            texlive-latex-base \
+            texlive-latex-extra \
+            texlive-latex-recommended \
+            texlive-bibtex-extra \
+            texlive-fonts-recommended \
+            texlive-science \
+            biber \
+            latexmk
+
+      - name: Compile paper
+        working-directory: paper
+        run: |
+          if [ -f Makefile ]; then
+            make all
+          else
+            latexmk -pdf -interaction=nonstopmode main.tex
+          fi
+
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-pdf
+          path: paper/*.pdf
+          if-no-files-found: warn
+          retention-days: 30

@@ -212,6 +212,157 @@ def build_memory_panel() -> Panel:
     return Panel(content, title="Memory", border_style="cyan")
 
 
+def build_verification_panel() -> Panel:
+    """Build the verification results panel.
+
+    Shows the last verification results from the state directory, or runs a
+    lightweight check on the most recent progress entry.
+    """
+    lines: list[str] = []
+
+    # Try reading cached verification results from state
+    results_path = Path("state/verification_results.json")
+    if results_path.exists():
+        try:
+            data = json.loads(results_path.read_text())
+            for r in data[-8:]:  # Last 8 results
+                status = "OK" if r.get("verified") else "??"
+                conf = r.get("confidence", 0.0)
+                claim = r.get("claim", "")[:60]
+                lines.append(f"  [{status}] ({conf:.0%}) {claim}")
+        except (json.JSONDecodeError, KeyError):
+            lines.append("Corrupt results file")
+    else:
+        # Fall back to running verification on recent progress
+        try:
+            from core.verification import verify_claims
+
+            progress = read_progress()
+            if progress and progress != "No progress yet":
+                # Verify only the last few lines to keep it lightweight
+                last_lines = "\n".join(progress.strip().splitlines()[-5:])
+                results = verify_claims(last_lines)
+                if results:
+                    for r in results[:6]:
+                        status = "OK" if r.verified else "??"
+                        claim = r.claim[:60]
+                        lines.append(f"  [{status}] ({r.confidence:.0%}) {claim}")
+                else:
+                    lines.append("No verifiable claims found")
+            else:
+                lines.append("No progress to verify")
+        except ImportError:
+            lines.append("verification module unavailable")
+
+    content = "\n".join(lines) if lines else "No verification data"
+    return Panel(content, title="Verification", border_style="bright_yellow")
+
+
+def build_task_queue_panel() -> Panel:
+    """Build the task queue panel.
+
+    Shows the current task spooler queue status. Handles the case where the
+    core.task_spooler module is not available.
+    """
+    lines: list[str] = []
+    try:
+        from core.task_spooler import TaskSpooler
+
+        ts = TaskSpooler()
+        jobs = ts.status()
+        if jobs:
+            running = sum(1 for j in jobs if j.get("state") == "running")
+            queued = sum(1 for j in jobs if j.get("state") == "queued")
+            finished = sum(1 for j in jobs if j.get("state") == "finished")
+            lines.append(f"Running: {running}  Queued: {queued}  Done: {finished}")
+            lines.append("")
+            for job in jobs[-8:]:  # Last 8 jobs
+                state = job.get("state", "?")
+                jid = job.get("id", "?")
+                cmd = job.get("command", "")[:45]
+                style_map = {"running": "bold green", "queued": "yellow", "finished": "dim"}
+                style = style_map.get(state, "white")
+                lines.append(f"  [{style}]#{jid}[/{style}] {state:8s} {cmd}")
+        else:
+            lines.append("Queue empty")
+    except ImportError:
+        lines.append("task_spooler module unavailable")
+    except Exception as exc:
+        lines.append(f"Error: {exc}")
+
+    content = "\n".join(lines) if lines else "No queue data"
+    return Panel(Text.from_markup(content), title="Task Queue", border_style="bright_blue")
+
+
+def build_multi_project_panel() -> Panel:
+    """Build the multi-project overview panel.
+
+    Shows all registered projects and highlights the currently active one.
+    """
+    lines: list[str] = []
+    try:
+        from core.multi_project import get_active_project, list_projects
+
+        projects = list_projects()
+        if projects:
+            for proj in projects:
+                marker = ">>>" if proj.get("active") else "   "
+                name = proj.get("name", "?")
+                ptype = proj.get("project_type", "")
+                path = proj.get("path", "")
+                lines.append(f"  {marker} {name} ({ptype}) {path}")
+            try:
+                active = get_active_project()
+                lines.insert(0, f"Active: {active.get('name', '?')}")
+                lines.insert(1, "")
+            except RuntimeError:
+                lines.insert(0, "No active project")
+                lines.insert(1, "")
+        else:
+            lines.append("No projects registered")
+    except ImportError:
+        lines.append("multi_project module unavailable")
+    except Exception as exc:
+        lines.append(f"Error: {exc}")
+
+    content = "\n".join(lines) if lines else "No project data"
+    return Panel(content, title="Projects", border_style="bright_magenta")
+
+
+def build_mobile_panel() -> Panel:
+    """Build the mobile server status panel.
+
+    Shows whether the mobile server is running, its URL, and available routes.
+    """
+    lines: list[str] = []
+    try:
+        from core.mobile import (
+            _mobile_server,
+            _server_instance,
+            _server_thread,
+            generate_mobile_url,
+        )
+
+        if _server_thread is not None and _server_thread.is_alive():
+            lines.append("Status: [bold green]RUNNING[/bold green]")
+            if _server_instance is not None:
+                addr = _server_instance.server_address
+                lines.append(f"Address: {addr[0]}:{addr[1]}")
+            if _mobile_server is not None:
+                route_count = len(_mobile_server.routes)
+                lines.append(f"Routes: {route_count} endpoints")
+        else:
+            lines.append("Status: [dim]stopped[/dim]")
+            lines.append(f"Default URL: {generate_mobile_url()}")
+    except ImportError:
+        lines.append("mobile module unavailable")
+    except Exception as exc:
+        lines.append(f"Error: {exc}")
+
+    content = "\n".join(lines) if lines else "No mobile data"
+    return Panel(Text.from_markup(content), title="Mobile", border_style="bright_green")
+
+
 def show_dashboard() -> None:
     """Display a static snapshot of the project dashboard."""
     console.clear()
@@ -230,8 +381,17 @@ def show_dashboard() -> None:
     ], equal=True))
     console.print()
 
-    # Bottom row: TODO + Progress
-    console.print(Columns([build_todo_panel(), build_progress_panel()], equal=True))
+    # Row 3: Verification + Task Queue + Projects
+    console.print(Columns([
+        build_verification_panel(), build_task_queue_panel(),
+        build_multi_project_panel(),
+    ], equal=True))
+    console.print()
+
+    # Row 4: Mobile + TODO + Progress
+    console.print(Columns([
+        build_mobile_panel(), build_todo_panel(), build_progress_panel(),
+    ], equal=True))
 
 
 def live_dashboard(refresh_interval: float = 5.0) -> None:
