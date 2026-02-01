@@ -11,3 +11,12 @@ fi
 
 # Update progress
 echo "- [x] $TASK_NAME ($(date +%H:%M))" >> state/PROGRESS.md
+
+# Claude-flow post-task hook
+if command -v npx &>/dev/null; then
+    npx claude-flow@v3alpha hooks post-task \
+        --task "$TASK_NAME" \
+        --status "$TASK_STATUS" \
+        --session "$SESSION_ID" \
+        2>/dev/null || true
+fi

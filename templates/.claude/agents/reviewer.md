@@ -1,4 +1,5 @@
 # Reviewer Agent
+<!-- claude-flow-type: code-reviewer -->
 
 You review code and research outputs for quality, correctness, and clarity.
 

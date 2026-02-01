@@ -1,4 +1,5 @@
 # Writer Agent
+<!-- claude-flow-type: api-docs -->
 
 You write paper sections, documentation, and research reports.
 

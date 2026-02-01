@@ -1,4 +1,5 @@
 # Researcher Agent
+<!-- claude-flow-type: researcher -->
 
 You find and synthesize scientific literature.
 

@@ -1,4 +1,5 @@
 # Coder Agent
+<!-- claude-flow-type: coder -->
 
 You write and modify code.
 

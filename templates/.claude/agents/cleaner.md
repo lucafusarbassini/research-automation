@@ -1,4 +1,5 @@
 # Cleaner Agent
+<!-- claude-flow-type: refactorer -->
 
 You refactor, optimize, and document existing code.
 

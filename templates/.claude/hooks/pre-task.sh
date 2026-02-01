@@ -11,3 +11,11 @@ echo "Disk free: $DISK_FREE"
 if [ -f "knowledge/ENCYCLOPEDIA.md" ]; then
     echo "Encyclopedia loaded ($(wc -l < knowledge/ENCYCLOPEDIA.md) lines)"
 fi
+
+# Claude-flow pre-task hook
+if command -v npx &>/dev/null; then
+    npx claude-flow@v3alpha hooks pre-task \
+        --task "$TASK_NAME" \
+        --session "$SESSION_ID" \
+        2>/dev/null || true
+fi

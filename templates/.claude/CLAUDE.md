@@ -53,3 +53,30 @@ Automatically select based on task:
 - MEDIUM (code writing, analysis): Standard thinking
 - COMPLEX (debugging, architecture): Extended thinking (3% budget)
 - CRITICAL (validation, paper writing): Maximum thinking budget
+
+## Claude-Flow Integration
+
+This project uses [claude-flow v3](https://github.com/ruvnet/claude-flow) for enhanced orchestration when available. All capabilities gracefully degrade when claude-flow is not installed.
+
+### Swarm Topology
+- **Hierarchical**: Queen coordinator dispatches to specialized worker agents
+- Agent types: researcher, coder, code-reviewer, security-auditor, api-docs, refactorer
+- Tasks auto-route to the best agent based on description keywords
+
+### HNSW Vector Memory
+- Knowledge entries are dual-written to markdown AND the HNSW vector index
+- `search_knowledge()` uses semantic search first, merges with keyword results
+- Namespace: `knowledge` (all encyclopedia entries)
+
+### 3-Tier Model Routing
+| Tier | Model | Use For |
+|------|-------|---------|
+| Booster | claude-haiku | Formatting, lookups, classification |
+| Workhorse | claude-sonnet | Code writing, analysis, general tasks |
+| Oracle | claude-opus | Reasoning, architecture, validation, paper |
+
+### Anti-Drift Rules
+- Always re-read GOAL.md at session start
+- Checkpoint after every subtask
+- Falsifier agent must validate results before marking complete
+- All learnings flow to ENCYCLOPEDIA.md (and vector memory)

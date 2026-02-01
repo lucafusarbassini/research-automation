@@ -12,3 +12,12 @@ if [ -n "$NOTIFICATION_WEBHOOK" ]; then
         -H "Content-Type: application/json" \
         -d "{\"text\": \"Error in $PROJECT_NAME: $ERROR_MSG\"}"
 fi
+
+# Claude-flow error hook
+if command -v npx &>/dev/null; then
+    npx claude-flow@v3alpha hooks on-error \
+        --task "$TASK_NAME" \
+        --error "$ERROR_MSG" \
+        --session "$SESSION_ID" \
+        2>/dev/null || true
+fi
