@@ -107,23 +107,38 @@ def build_goal_panel() -> Panel:
 
 
 def build_agents_panel() -> Panel:
-    """Build the active agents panel."""
-    from core.agents import get_active_agents_status
+    """Build the active agents panel.
 
-    agents = get_active_agents_status()
-    if not agents:
-        content = "No active agents"
-    else:
-        lines = []
-        for a in agents:
-            lines.append(f"  [{a.get('agent', '?')}] {a.get('description', '?')[:50]}")
-        content = "\n".join(lines)
+    Queries claude-flow for active agents when available, falls back to local tracker.
+    """
+    from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
+    lines = []
+    try:
+        bridge = _get_bridge()
+        metrics = bridge.get_metrics()
+        agent_stats = metrics.get("agents", {})
+        for name, info in agent_stats.items():
+            lines.append(f"  [{name}] {info}")
+    except ClaudeFlowUnavailable:
+        pass
+
+    if not lines:
+        from core.agents import get_active_agents_status
+        agents = get_active_agents_status()
+        if agents:
+            for a in agents:
+                lines.append(f"  [{a.get('agent', '?')}] {a.get('description', '?')[:50]}")
+
+    content = "\n".join(lines) if lines else "No active agents"
     return Panel(content, title="Active Agents", border_style="yellow")
 
 
 def build_resource_panel() -> Panel:
-    """Build the resource monitoring panel."""
+    """Build the resource monitoring panel.
+
+    Includes token savings and model routing stats from claude-flow when available.
+    """
     from core.resources import monitor_resources
 
     snap = monitor_resources()
@@ -135,6 +150,20 @@ def build_resource_panel() -> Panel:
         lines.append(f"CPU: {snap.cpu_percent}%")
     if snap.disk_free_gb > 0:
         lines.append(f"Disk free: {snap.disk_free_gb} GB")
+
+    # Claude-flow metrics
+    from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
+    try:
+        bridge = _get_bridge()
+        metrics = bridge.get_metrics()
+        if "tokens_used" in metrics:
+            lines.append(f"Tokens: {metrics['tokens_used']}")
+        if "cost_usd" in metrics:
+            lines.append(f"Cost: ${metrics['cost_usd']:.4f}")
+        if "model_routing" in metrics:
+            lines.append(f"Routing: {metrics['model_routing']}")
+    except ClaudeFlowUnavailable:
+        pass
 
     content = "\n".join(lines) if lines else "No resource data"
     return Panel(content, title="Resources", border_style="red")
@@ -156,6 +185,33 @@ def build_plots_panel() -> Panel:
     return Panel(content, title="Figures", border_style="white")
 
 
+def build_memory_panel() -> Panel:
+    """Build the knowledge/memory stats panel."""
+    from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
+
+    lines = []
+    try:
+        bridge = _get_bridge()
+        metrics = bridge.get_metrics()
+        mem_stats = metrics.get("memory", {})
+        if mem_stats:
+            lines.append(f"Entries: {mem_stats.get('total_entries', '?')}")
+            lines.append(f"Namespaces: {mem_stats.get('namespaces', '?')}")
+        else:
+            lines.append("HNSW memory active")
+    except ClaudeFlowUnavailable:
+        pass
+
+    # Always show local stats
+    enc_stats = read_encyclopedia_stats()
+    if enc_stats:
+        total = sum(enc_stats.values())
+        lines.append(f"Encyclopedia: {total} entries")
+
+    content = "\n".join(lines) if lines else "No memory data"
+    return Panel(content, title="Memory", border_style="cyan")
+
+
 def show_dashboard() -> None:
     """Display a static snapshot of the project dashboard."""
     console.clear()
@@ -167,8 +223,11 @@ def show_dashboard() -> None:
     console.print(Columns([build_goal_panel(), build_sessions_table()], equal=True))
     console.print()
 
-    # Middle row: Agents + Resources + Figures
-    console.print(Columns([build_agents_panel(), build_resource_panel(), build_plots_panel()], equal=True))
+    # Middle row: Agents + Resources + Memory + Figures
+    console.print(Columns([
+        build_agents_panel(), build_resource_panel(),
+        build_memory_panel(), build_plots_panel(),
+    ], equal=True))
     console.print()
 
     # Bottom row: TODO + Progress
