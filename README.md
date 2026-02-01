@@ -6,11 +6,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lucafusarbassini/research-automation/actions/workflows/tests.yml"><img src="https://github.com/lucafusarbassini/research-automation/actions/workflows/tests.yml/badge.svg" alt="CI"></a>
-  <a href="https://pypi.org/project/research-automation/"><img src="https://img.shields.io/pypi/v/research-automation.svg" alt="PyPI version"></a>
-  <a href="https://pypi.org/project/research-automation/"><img src="https://img.shields.io/pypi/pyversions/research-automation.svg" alt="Python versions"></a>
+  <a href="https://github.com/lucafusarbassini/research-automation/actions/workflows/ci.yml"><img src="https://github.com/lucafusarbassini/research-automation/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/python-3.11%2B-blue.svg" alt="Python 3.11+">
   <a href="https://github.com/lucafusarbassini/research-automation/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
-  <a href="https://research-automation.readthedocs.io/"><img src="https://img.shields.io/badge/docs-readthedocs-brightgreen.svg" alt="Docs"></a>
+  <a href="https://lucafusarbassini.github.io/research-automation/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-brightgreen.svg" alt="Docs"></a>
 </p>
 
 <p align="center">
