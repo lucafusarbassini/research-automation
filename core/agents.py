@@ -1,4 +1,8 @@
-"""Agent orchestration: task routing, budget management, DAG execution, and supervision."""
+"""Agent orchestration: task routing, budget management, DAG execution, and supervision.
+
+When claude-flow is available, agent execution and swarm orchestration delegate to
+the bridge. Otherwise, falls back to direct Claude CLI subprocess calls.
+"""
 
 import json
 import logging
@@ -10,6 +14,8 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Optional
+
+from core.claude_flow import AGENT_TYPE_MAP, ClaudeFlowUnavailable, _get_bridge
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +98,9 @@ _active_agents: dict[str, dict] = {}
 
 
 def route_task(task_description: str) -> AgentType:
-    """Determine which agent should handle a task based on keywords.
+    """Determine which agent should handle a task.
+
+    Tries claude-flow model routing first, falls back to keyword matching.
 
     Args:
         task_description: Natural language task description.
@@ -100,6 +108,22 @@ def route_task(task_description: str) -> AgentType:
     Returns:
         The most appropriate agent type.
     """
+    try:
+        bridge = _get_bridge()
+        result = bridge.route_model(task_description)
+        # claude-flow returns an agent type suggestion we can map back
+        cf_agent = result.get("agent_type", "")
+        from core.claude_flow import AGENT_TYPE_REVERSE
+        if cf_agent in AGENT_TYPE_REVERSE:
+            return AgentType(AGENT_TYPE_REVERSE[cf_agent])
+    except (ClaudeFlowUnavailable, KeyError, ValueError):
+        pass
+
+    return _route_task_keywords(task_description)
+
+
+def _route_task_keywords(task_description: str) -> AgentType:
+    """Keyword-based task routing (legacy fallback)."""
     task_lower = task_description.lower()
     scores: dict[AgentType, int] = {}
 
@@ -136,7 +160,9 @@ def execute_agent_task(
     *,
     dangerously_skip_permissions: bool = False,
 ) -> TaskResult:
-    """Execute a task using the specified agent via Claude CLI.
+    """Execute a task using the specified agent.
+
+    Tries claude-flow agent spawning first, falls back to direct Claude CLI.
 
     Args:
         agent_type: Which agent to use.
@@ -146,6 +172,34 @@ def execute_agent_task(
     Returns:
         TaskResult with output and status.
     """
+    try:
+        bridge = _get_bridge()
+        cf_result = bridge.spawn_agent(agent_type.value, task)
+        result = TaskResult(
+            agent=agent_type,
+            task=task,
+            status=cf_result.get("status", "success"),
+            output=cf_result.get("output", ""),
+            tokens_used=cf_result.get("tokens_used", 0),
+            ended=datetime.now().isoformat(),
+        )
+        _log_result(result)
+        return result
+    except ClaudeFlowUnavailable:
+        pass
+
+    return _execute_agent_task_legacy(
+        agent_type, task, dangerously_skip_permissions=dangerously_skip_permissions
+    )
+
+
+def _execute_agent_task_legacy(
+    agent_type: AgentType,
+    task: str,
+    *,
+    dangerously_skip_permissions: bool = False,
+) -> TaskResult:
+    """Execute a task via direct Claude CLI (legacy fallback)."""
     agent_prompt = get_agent_prompt(agent_type)
     full_prompt = f"{agent_prompt}\n\n## Current Task\n\n{task}"
 
@@ -236,6 +290,9 @@ def execute_parallel_tasks(
 ) -> dict[str, TaskResult]:
     """Execute tasks respecting dependencies, parallelizing where possible.
 
+    Tries claude-flow swarm orchestration when no custom executor_fn is provided.
+    Falls back to ThreadPoolExecutor-based execution.
+
     Args:
         tasks: List of Task objects.
         max_workers: Maximum parallel executions.
@@ -245,6 +302,61 @@ def execute_parallel_tasks(
     Returns:
         Dict mapping task_id -> TaskResult.
     """
+    # Try claude-flow swarm when no custom executor
+    if executor_fn is None:
+        try:
+            bridge = _get_bridge()
+            swarm_tasks = [
+                {"type": (t.agent or _route_task_keywords(t.description)).value,
+                 "task": t.description}
+                for t in tasks
+            ]
+            cf_result = bridge.run_swarm(swarm_tasks, topology="hierarchical")
+            results: dict[str, TaskResult] = {}
+            cf_results_list = cf_result.get("results", [])
+            for i, task in enumerate(tasks):
+                if i < len(cf_results_list):
+                    tr = cf_results_list[i]
+                    results[task.id] = TaskResult(
+                        agent=task.agent or _route_task_keywords(task.description),
+                        task=task.description,
+                        status=tr.get("status", "success"),
+                        output=tr.get("output", ""),
+                        tokens_used=tr.get("tokens_used", 0),
+                        ended=datetime.now().isoformat(),
+                    )
+                    task.status = results[task.id].status
+                    task.result = results[task.id]
+                else:
+                    results[task.id] = TaskResult(
+                        agent=task.agent or AgentType.CODER,
+                        task=task.description,
+                        status="success",
+                        output=cf_result.get("output", ""),
+                        ended=datetime.now().isoformat(),
+                    )
+                    task.status = "success"
+                    task.result = results[task.id]
+            return results
+        except ClaudeFlowUnavailable:
+            pass
+
+    return _execute_parallel_tasks_legacy(
+        tasks,
+        max_workers=max_workers,
+        dangerously_skip_permissions=dangerously_skip_permissions,
+        executor_fn=executor_fn,
+    )
+
+
+def _execute_parallel_tasks_legacy(
+    tasks: list[Task],
+    *,
+    max_workers: int = 3,
+    dangerously_skip_permissions: bool = False,
+    executor_fn=None,
+) -> dict[str, TaskResult]:
+    """Legacy parallel execution using ThreadPoolExecutor."""
     task_map = {t.id: t for t in tasks}
     completed: set[str] = set()
     results: dict[str, TaskResult] = {}

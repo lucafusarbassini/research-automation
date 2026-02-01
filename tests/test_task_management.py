@@ -153,3 +153,50 @@ def test_get_active_agents_status():
     # Should return empty when no agents running
     status = get_active_agents_status()
     assert isinstance(status, list)
+
+
+# --- Bridge-integrated tests ---
+
+from unittest.mock import MagicMock, patch
+
+
+def test_execute_parallel_via_swarm():
+    """When bridge is available, execute_parallel_tasks uses run_swarm."""
+    mock_bridge = MagicMock()
+    mock_bridge.run_swarm.return_value = {
+        "results": [
+            {"status": "success", "output": "done-1", "tokens_used": 100},
+            {"status": "success", "output": "done-2", "tokens_used": 200},
+        ]
+    }
+    tasks = [
+        Task(id="t1", description="task one", agent=AgentType.CODER),
+        Task(id="t2", description="task two", agent=AgentType.WRITER),
+    ]
+    with patch("core.agents._get_bridge", return_value=mock_bridge):
+        results = execute_parallel_tasks(tasks)
+        assert len(results) == 2
+        assert results["t1"].status == "success"
+        assert results["t2"].output == "done-2"
+        mock_bridge.run_swarm.assert_called_once()
+
+
+def test_execute_parallel_swarm_fallback():
+    """When bridge fails, execute_parallel_tasks uses legacy executor."""
+    from core.claude_flow import ClaudeFlowUnavailable
+    tasks = [
+        Task(id="t1", description="task one", agent=AgentType.CODER),
+    ]
+    with patch("core.agents._get_bridge", side_effect=ClaudeFlowUnavailable("nope")):
+        results = execute_parallel_tasks(tasks, executor_fn=_mock_executor)
+        assert results["t1"].status == "success"
+
+
+def test_execute_parallel_custom_executor_skips_bridge():
+    """When executor_fn is provided, bridge is not attempted."""
+    tasks = [
+        Task(id="t1", description="task one", agent=AgentType.CODER),
+    ]
+    # No bridge mocking needed; executor_fn bypasses bridge
+    results = execute_parallel_tasks(tasks, executor_fn=_mock_executor)
+    assert results["t1"].status == "success"
