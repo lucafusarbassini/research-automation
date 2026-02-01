@@ -1,0 +1,71 @@
+{
+  "version": "3",
+  "topology": "hierarchical",
+  "memory": {
+    "backend": "hnsw",
+    "dimensions": 1536,
+    "namespace": "knowledge",
+    "persist": true
+  },
+  "routing": {
+    "tiers": [
+      {
+        "name": "booster",
+        "model": "claude-haiku-3-5-20241022",
+        "max_tokens": 4096,
+        "use_for": ["simple", "classification", "formatting"]
+      },
+      {
+        "name": "workhorse",
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": 8192,
+        "use_for": ["code", "analysis", "general"]
+      },
+      {
+        "name": "oracle",
+        "model": "claude-opus-4-5-20251101",
+        "max_tokens": 8192,
+        "use_for": ["reasoning", "architecture", "validation", "paper"]
+      }
+    ],
+    "fallback_chain": ["oracle", "workhorse", "booster"]
+  },
+  "agents": {
+    "hierarchical-coordinator": {
+      "role": "queen",
+      "description": "Orchestrates sub-agents, never executes tasks directly"
+    },
+    "researcher": {
+      "role": "worker",
+      "description": "Literature search and synthesis"
+    },
+    "coder": {
+      "role": "worker",
+      "description": "Code implementation and bug fixing"
+    },
+    "code-reviewer": {
+      "role": "worker",
+      "description": "Code quality review and improvement suggestions"
+    },
+    "security-auditor": {
+      "role": "worker",
+      "description": "Security audit, result validation, falsification"
+    },
+    "api-docs": {
+      "role": "worker",
+      "description": "Documentation and paper writing"
+    },
+    "refactorer": {
+      "role": "worker",
+      "description": "Code refactoring, optimization, style cleanup"
+    }
+  },
+  "security": {
+    "scan_on_commit": true,
+    "block_secrets": true
+  },
+  "session": {
+    "auto_checkpoint": true,
+    "checkpoint_interval_minutes": 30
+  }
+}
