@@ -1,0 +1,103 @@
+{
+  "tier1_essential": {
+    "description": "Always loaded at project init",
+    "mcps": {
+      "paper-search-mcp": {
+        "source": "openags/paper-search-mcp",
+        "purpose": "arXiv, PubMed, bioRxiv, Semantic Scholar search"
+      },
+      "arxiv-mcp-server": {
+        "source": "blazickjp/arxiv-mcp-server",
+        "purpose": "Deep arXiv integration"
+      },
+      "git": {
+        "source": "modelcontextprotocol/servers",
+        "purpose": "Git operations"
+      },
+      "github": {
+        "source": "modelcontextprotocol/servers",
+        "purpose": "GitHub PRs, issues, Actions"
+      },
+      "filesystem": {
+        "source": "modelcontextprotocol/servers",
+        "purpose": "File operations"
+      },
+      "memory": {
+        "source": "modelcontextprotocol/servers",
+        "purpose": "Knowledge persistence"
+      },
+      "sequential-thinking": {
+        "source": "modelcontextprotocol/servers",
+        "purpose": "Chain-of-thought reasoning"
+      },
+      "fetch": {
+        "source": "modelcontextprotocol/servers",
+        "purpose": "Web content retrieval"
+      }
+    }
+  },
+  "tier2_data": {
+    "description": "Loaded when data tasks detected",
+    "trigger_keywords": ["database", "sql", "query", "data", "table"],
+    "mcps": {
+      "postgres": {"source": "modelcontextprotocol/servers-archived"},
+      "sqlite": {"source": "modelcontextprotocol/servers-archived"},
+      "duckdb-mcp": {"source": "community"},
+      "chroma-mcp": {"source": "chroma-core/chroma-mcp"}
+    }
+  },
+  "tier3_ml": {
+    "description": "Loaded for ML/DL tasks",
+    "trigger_keywords": ["model", "training", "neural", "deep learning", "huggingface"],
+    "mcps": {
+      "jupyter-mcp-server": {"source": "datalayer/jupyter-mcp-server"},
+      "huggingface-mcp": {"source": "shreyaskarnik/huggingface-mcp"},
+      "mlflow-mcp": {"source": "mlflow/mlflow"},
+      "wandb-mcp": {"source": "community"}
+    }
+  },
+  "tier4_math": {
+    "description": "Loaded for math/computation tasks",
+    "trigger_keywords": ["math", "equation", "derivative", "integral", "symbolic"],
+    "mcps": {
+      "wolfram-mcp": {"source": "paraporoco/wolfram-mcp"},
+      "sympy-mcp": {"source": "community"}
+    }
+  },
+  "tier5_paper": {
+    "description": "Loaded for paper writing",
+    "trigger_keywords": ["paper", "latex", "write", "manuscript", "publication"],
+    "mcps": {
+      "latex-mcp-server": {"source": "Yeok-c/latex-mcp-server"},
+      "overleaf-mcp": {"source": "mjyoo2/overleaf-mcp"}
+    }
+  },
+  "tier6_communication": {
+    "description": "Loaded for notifications/comms",
+    "trigger_keywords": ["notify", "email", "slack", "message"],
+    "mcps": {
+      "slack-mcp": {"source": "modelcontextprotocol/servers-archived"},
+      "gmail-mcp": {"source": "community"},
+      "sendgrid-mcp": {"source": "community"}
+    }
+  },
+  "tier7_cloud": {
+    "description": "Loaded for cloud/infra tasks",
+    "trigger_keywords": ["deploy", "aws", "cloud", "server", "docker"],
+    "mcps": {
+      "aws-mcp": {"source": "awslabs/mcp"},
+      "docker-mcp": {"source": "community"},
+      "terraform-mcp-server": {"source": "hashicorp/terraform-mcp-server"}
+    }
+  },
+  "tier8_startup": {
+    "description": "Loaded for outreach/website tasks",
+    "trigger_keywords": ["website", "slides", "presentation", "marketing"],
+    "mcps": {
+      "vercel-mcp": {"source": "community"},
+      "gamma-mcp": {"source": "community"},
+      "stripe-mcp": {"source": "community"},
+      "notion-mcp": {"source": "notion-community/notion-mcp"}
+    }
+  }
+}
