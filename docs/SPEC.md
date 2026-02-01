@@ -139,3 +139,91 @@ Budget < 20% remaining -> always route to Haiku.
 - Artifacts registered with SHA-256 checksums
 - Dataset hashing for integrity verification
 - Checkpoint policies with configurable retention
+
+## Claude-Flow Integration
+
+The system integrates with [claude-flow v3](https://github.com/ruvnet/claude-flow) for enhanced
+orchestration. All integrations use a graceful fallback pattern: when claude-flow is unavailable,
+every module falls back to its original implementation.
+
+### Architecture
+
+```
+core/claude_flow.py        # ClaudeFlowBridge wrapping npx claude-flow@v3alpha CLI
+scripts/setup_claude_flow.sh   # Node.js check, installation, verification
+templates/config/claude-flow.json  # Default config (topology, memory, routing)
+```
+
+### Bridge API
+
+| Method | Description | Fallback |
+|--------|-------------|----------|
+| `spawn_agent(type, task)` | Execute single agent task | Claude CLI subprocess |
+| `run_swarm(tasks, topology)` | Multi-agent swarm execution | ThreadPoolExecutor |
+| `route_model(description)` | 3-tier model routing | Keyword classification |
+| `query_memory(query)` | HNSW semantic search | Keyword grep over markdown |
+| `store_memory(text)` | Index in vector memory | Markdown-only append |
+| `scan_security(path)` | Security scan | Local regex patterns |
+| `get_metrics()` | Token/cost metrics | Char-based estimation |
+| `start_session(name)` | Start tracked session | Local JSON file |
+| `end_session(name)` | End tracked session | Local JSON update |
+| `multi_repo_sync(msg, repos)` | Cross-repo commit | Sequential git commands |
+
+### Fallback Pattern
+
+```python
+try:
+    bridge = _get_bridge()
+    result = bridge.some_method(args)
+    return _adapt_result(result)
+except ClaudeFlowUnavailable:
+    return _legacy_implementation(args)
+```
+
+### Agent Type Mapping
+
+| Research Automation | claude-flow |
+|-------------------|-------------|
+| MASTER | hierarchical-coordinator (queen) |
+| RESEARCHER | researcher |
+| CODER | coder |
+| REVIEWER | code-reviewer |
+| FALSIFIER | security-auditor |
+| WRITER | api-docs |
+| CLEANER | refactorer |
+
+### 3-Tier Model Routing
+
+| Tier | Model | Tasks |
+|------|-------|-------|
+| Booster | claude-haiku | Simple: formatting, lookups, classification |
+| Workhorse | claude-sonnet | Medium: code, analysis, general |
+| Oracle | claude-opus | Complex/Critical: reasoning, architecture, validation |
+
+### Files Modified by Integration
+
+**Core modules with bridge integration:**
+- `core/agents.py` — spawn_agent, run_swarm, route_model
+- `core/model_router.py` — 3-tier routing
+- `core/tokens.py` — metrics-based estimation, thinking mode
+- `core/session.py` — session start/end
+- `core/security.py` — merged scan results
+- `core/cross_repo.py` — multi_repo_sync
+- `core/resources.py` — merged GPU metrics
+- `core/mcps.py` — tier-0 MCP injection
+- `core/knowledge.py` — HNSW dual-write, semantic search
+
+**CLI commands:**
+- `cli/main.py` — init (setup), start (session), overnight (swarm), status, agents, memory, metrics
+- `cli/dashboard.py` — agents panel, resource panel, memory panel
+
+**Templates:**
+- `.claude/hooks/*.sh` — claude-flow hook integration
+- `.claude/CLAUDE.md` — integration documentation
+- `.claude/agents/*.md` — claude-flow-type metadata headers
+
+**Files NOT touched (domain-specific):**
+- `core/onboarding.py`, `core/reproducibility.py`, `core/paper.py`
+- `core/style_transfer.py`, `core/voice.py`, `core/automation_utils.py`
+- `core/meta_rules.py`, `core/notifications.py`, `core/environment.py`
+- `core/autonomous.py`, `cli/gallery.py`
