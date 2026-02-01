@@ -106,6 +106,56 @@ def build_goal_panel() -> Panel:
     return Panel(content, title="Goal", border_style="magenta")
 
 
+def build_agents_panel() -> Panel:
+    """Build the active agents panel."""
+    from core.agents import get_active_agents_status
+
+    agents = get_active_agents_status()
+    if not agents:
+        content = "No active agents"
+    else:
+        lines = []
+        for a in agents:
+            lines.append(f"  [{a.get('agent', '?')}] {a.get('description', '?')[:50]}")
+        content = "\n".join(lines)
+
+    return Panel(content, title="Active Agents", border_style="yellow")
+
+
+def build_resource_panel() -> Panel:
+    """Build the resource monitoring panel."""
+    from core.resources import monitor_resources
+
+    snap = monitor_resources()
+    lines = []
+    if snap.ram_total_gb > 0:
+        ram_pct = (snap.ram_used_gb / snap.ram_total_gb) * 100
+        lines.append(f"RAM: {snap.ram_used_gb}/{snap.ram_total_gb} GB ({ram_pct:.0f}%)")
+    if snap.cpu_percent > 0:
+        lines.append(f"CPU: {snap.cpu_percent}%")
+    if snap.disk_free_gb > 0:
+        lines.append(f"Disk free: {snap.disk_free_gb} GB")
+
+    content = "\n".join(lines) if lines else "No resource data"
+    return Panel(content, title="Resources", border_style="red")
+
+
+def build_plots_panel() -> Panel:
+    """Build the plots/figures summary panel."""
+    from cli.gallery import scan_figures
+
+    figures = scan_figures()
+    if not figures:
+        content = "No figures yet"
+    else:
+        lines = [f"Total: {len(figures)} figures"]
+        for fig in figures[-5:]:  # Last 5
+            lines.append(f"  {fig.name}.{fig.format} ({fig.size_kb} KB)")
+        content = "\n".join(lines)
+
+    return Panel(content, title="Figures", border_style="white")
+
+
 def show_dashboard() -> None:
     """Display a static snapshot of the project dashboard."""
     console.clear()
@@ -117,8 +167,30 @@ def show_dashboard() -> None:
     console.print(Columns([build_goal_panel(), build_sessions_table()], equal=True))
     console.print()
 
+    # Middle row: Agents + Resources + Figures
+    console.print(Columns([build_agents_panel(), build_resource_panel(), build_plots_panel()], equal=True))
+    console.print()
+
     # Bottom row: TODO + Progress
     console.print(Columns([build_todo_panel(), build_progress_panel()], equal=True))
+
+
+def live_dashboard(refresh_interval: float = 5.0) -> None:
+    """Display a live-updating dashboard.
+
+    Args:
+        refresh_interval: Seconds between refreshes.
+    """
+    from time import sleep
+
+    console.print("[bold]Live Dashboard (Ctrl+C to exit)[/bold]")
+
+    try:
+        while True:
+            show_dashboard()
+            sleep(refresh_interval)
+    except KeyboardInterrupt:
+        console.print("\n[dim]Dashboard stopped.[/dim]")
 
 
 if __name__ == "__main__":
