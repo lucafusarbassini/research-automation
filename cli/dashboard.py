@@ -13,7 +13,6 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-
 console = Console()
 
 
@@ -125,10 +124,13 @@ def build_agents_panel() -> Panel:
 
     if not lines:
         from core.agents import get_active_agents_status
+
         agents = get_active_agents_status()
         if agents:
             for a in agents:
-                lines.append(f"  [{a.get('agent', '?')}] {a.get('description', '?')[:50]}")
+                lines.append(
+                    f"  [{a.get('agent', '?')}] {a.get('description', '?')[:50]}"
+                )
 
     content = "\n".join(lines) if lines else "No active agents"
     return Panel(content, title="Active Agents", border_style="yellow")
@@ -153,6 +155,7 @@ def build_resource_panel() -> Panel:
 
     # Claude-flow metrics
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
+
     try:
         bridge = _get_bridge()
         metrics = bridge.get_metrics()
@@ -280,7 +283,11 @@ def build_task_queue_panel() -> Panel:
                 state = job.get("state", "?")
                 jid = job.get("id", "?")
                 cmd = job.get("command", "")[:45]
-                style_map = {"running": "bold green", "queued": "yellow", "finished": "dim"}
+                style_map = {
+                    "running": "bold green",
+                    "queued": "yellow",
+                    "finished": "dim",
+                }
                 style = style_map.get(state, "white")
                 lines.append(f"  [{style}]#{jid}[/{style}] {state:8s} {cmd}")
         else:
@@ -291,7 +298,9 @@ def build_task_queue_panel() -> Panel:
         lines.append(f"Error: {exc}")
 
     content = "\n".join(lines) if lines else "No queue data"
-    return Panel(Text.from_markup(content), title="Task Queue", border_style="bright_blue")
+    return Panel(
+        Text.from_markup(content), title="Task Queue", border_style="bright_blue"
+    )
 
 
 def build_multi_project_panel() -> Panel:
@@ -366,8 +375,10 @@ def build_mobile_panel() -> Panel:
 def show_dashboard() -> None:
     """Display a static snapshot of the project dashboard."""
     console.clear()
-    console.print("[bold]Research Automation Dashboard[/bold]", justify="center")
-    console.print(f"[dim]{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}[/dim]", justify="center")
+    console.print("[bold]ricet Dashboard[/bold]", justify="center")
+    console.print(
+        f"[dim]{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}[/dim]", justify="center"
+    )
     console.print()
 
     # Top row: Goal + Sessions
@@ -375,23 +386,43 @@ def show_dashboard() -> None:
     console.print()
 
     # Middle row: Agents + Resources + Memory + Figures
-    console.print(Columns([
-        build_agents_panel(), build_resource_panel(),
-        build_memory_panel(), build_plots_panel(),
-    ], equal=True))
+    console.print(
+        Columns(
+            [
+                build_agents_panel(),
+                build_resource_panel(),
+                build_memory_panel(),
+                build_plots_panel(),
+            ],
+            equal=True,
+        )
+    )
     console.print()
 
     # Row 3: Verification + Task Queue + Projects
-    console.print(Columns([
-        build_verification_panel(), build_task_queue_panel(),
-        build_multi_project_panel(),
-    ], equal=True))
+    console.print(
+        Columns(
+            [
+                build_verification_panel(),
+                build_task_queue_panel(),
+                build_multi_project_panel(),
+            ],
+            equal=True,
+        )
+    )
     console.print()
 
     # Row 4: Mobile + TODO + Progress
-    console.print(Columns([
-        build_mobile_panel(), build_todo_panel(), build_progress_panel(),
-    ], equal=True))
+    console.print(
+        Columns(
+            [
+                build_mobile_panel(),
+                build_todo_panel(),
+                build_progress_panel(),
+            ],
+            equal=True,
+        )
+    )
 
 
 def live_dashboard(refresh_interval: float = 5.0) -> None:

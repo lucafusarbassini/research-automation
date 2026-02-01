@@ -3,16 +3,16 @@
 import json
 import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch, call
+from unittest.mock import MagicMock, call, mock_open, patch
 
 import pytest
 
 from core.browser import BrowserSession
 
-
 # ---------------------------------------------------------------------------
 # Fixture
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def session():
@@ -32,6 +32,7 @@ def puppeteer_session():
 # 1. is_available — fallback path (curl/wget present)
 # ---------------------------------------------------------------------------
 
+
 def test_is_available_true_when_curl_exists(session):
     with patch("shutil.which", return_value="/usr/bin/curl"):
         assert session.is_available() is True
@@ -46,6 +47,7 @@ def test_is_available_false_when_nothing_found(session):
 # 2. is_available — Puppeteer path
 # ---------------------------------------------------------------------------
 
+
 def test_is_available_true_when_puppeteer_detected(puppeteer_session):
     assert puppeteer_session.is_available() is True
 
@@ -54,17 +56,24 @@ def test_is_available_true_when_puppeteer_detected(puppeteer_session):
 # 3. screenshot — fallback uses subprocess
 # ---------------------------------------------------------------------------
 
+
 def test_screenshot_fallback_runs_subprocess(session, tmp_path):
     out = tmp_path / "shot.png"
     completed = subprocess.CompletedProcess(args=[], returncode=0)
-    with patch("shutil.which", return_value="/usr/bin/chromium-browser"), \
-         patch("subprocess.run", return_value=completed) as mock_run:
+    with (
+        patch("shutil.which", return_value="/usr/bin/chromium-browser"),
+        patch("subprocess.run", return_value=completed) as mock_run,
+    ):
         result = session.screenshot("https://example.com", out)
         assert result == out
         mock_run.assert_called_once()
         args = mock_run.call_args
         # The command should reference the URL
-        cmd_str = " ".join(str(a) for a in args[0][0]) if isinstance(args[0][0], list) else str(args[0][0])
+        cmd_str = (
+            " ".join(str(a) for a in args[0][0])
+            if isinstance(args[0][0], list)
+            else str(args[0][0])
+        )
         assert "example.com" in cmd_str
 
 
@@ -72,9 +81,12 @@ def test_screenshot_fallback_runs_subprocess(session, tmp_path):
 # 4. screenshot — Puppeteer path
 # ---------------------------------------------------------------------------
 
+
 def test_screenshot_puppeteer_delegates(puppeteer_session, tmp_path):
     out = tmp_path / "shot.png"
-    with patch.object(puppeteer_session, "_puppeteer_call", return_value={"success": True}) as mock_pup:
+    with patch.object(
+        puppeteer_session, "_puppeteer_call", return_value={"success": True}
+    ) as mock_pup:
         result = puppeteer_session.screenshot("https://example.com", out)
         assert result == out
         mock_pup.assert_called_once()
@@ -86,11 +98,14 @@ def test_screenshot_puppeteer_delegates(puppeteer_session, tmp_path):
 # 5. extract_text — fallback fetches via HTTP
 # ---------------------------------------------------------------------------
 
+
 def test_extract_text_fallback(session):
     html = "<html><body><p>Hello world</p></body></html>"
     completed = subprocess.CompletedProcess(args=[], returncode=0, stdout=html)
-    with patch("shutil.which", return_value="/usr/bin/curl"), \
-         patch("subprocess.run", return_value=completed):
+    with (
+        patch("shutil.which", return_value="/usr/bin/curl"),
+        patch("subprocess.run", return_value=completed),
+    ):
         text = session.extract_text("https://example.com")
         assert "Hello world" in text
 
@@ -98,6 +113,7 @@ def test_extract_text_fallback(session):
 # ---------------------------------------------------------------------------
 # 6. extract_text — Puppeteer path
 # ---------------------------------------------------------------------------
+
 
 def test_extract_text_puppeteer(puppeteer_session):
     with patch.object(
@@ -113,6 +129,7 @@ def test_extract_text_puppeteer(puppeteer_session):
 # ---------------------------------------------------------------------------
 # 7. fill_form
 # ---------------------------------------------------------------------------
+
 
 def test_fill_form_puppeteer(puppeteer_session):
     fields = {"username": "alice", "password": "secret"}
@@ -137,13 +154,16 @@ def test_fill_form_fallback_returns_false(session):
 # 8. wait_for_element
 # ---------------------------------------------------------------------------
 
+
 def test_wait_for_element_puppeteer(puppeteer_session):
     with patch.object(
         puppeteer_session,
         "_puppeteer_call",
         return_value={"found": True},
     ):
-        assert puppeteer_session.wait_for_element("https://example.com", "#main") is True
+        assert (
+            puppeteer_session.wait_for_element("https://example.com", "#main") is True
+        )
 
 
 def test_wait_for_element_fallback_returns_false(session):
@@ -155,11 +175,14 @@ def test_wait_for_element_fallback_returns_false(session):
 # 9. generate_pdf
 # ---------------------------------------------------------------------------
 
+
 def test_generate_pdf_fallback(session, tmp_path):
     out = tmp_path / "page.pdf"
     completed = subprocess.CompletedProcess(args=[], returncode=0)
-    with patch("shutil.which", return_value="/usr/bin/chromium-browser"), \
-         patch("subprocess.run", return_value=completed):
+    with (
+        patch("shutil.which", return_value="/usr/bin/chromium-browser"),
+        patch("subprocess.run", return_value=completed),
+    ):
         result = session.generate_pdf("https://example.com", out)
         assert result == out
 
@@ -178,6 +201,7 @@ def test_generate_pdf_puppeteer(puppeteer_session, tmp_path):
 # ---------------------------------------------------------------------------
 # 10. _puppeteer_call plumbing
 # ---------------------------------------------------------------------------
+
 
 def test_puppeteer_call_invokes_subprocess(puppeteer_session):
     payload = json.dumps({"result": "ok"})

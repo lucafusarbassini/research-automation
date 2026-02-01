@@ -2,7 +2,7 @@
 # Release — publish to PyPI on version tag (v*)
 # ============================================================================
 # Badge:
-#   ![Release](https://github.com/<owner>/research-automation/actions/workflows/release.yml/badge.svg)
+#   ![Release](https://github.com/<owner>/ricet/actions/workflows/release.yml/badge.svg)
 #
 # Usage:
 #   git tag v0.2.0 && git push origin v0.2.0
@@ -107,7 +107,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           # Uses trusted publishing (OIDC) — no API token needed
-          # Configure at: https://pypi.org/manage/project/research-automation/settings/publishing/
+          # Configure at: https://pypi.org/manage/project/ricet/settings/publishing/
           print-hash: true
 
   # --------------------------------------------------------------------------

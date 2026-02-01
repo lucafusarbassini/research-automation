@@ -55,7 +55,11 @@ def test_log_decision(tmp_path: Path):
 
     log_decision.__wrapped__ = None  # type: ignore
     # Call append_learning directly with explicit path
-    append_learning("Decisions", "Use PyTorch over TF -- Rationale: Better debugging experience", encyclopedia_path=enc)
+    append_learning(
+        "Decisions",
+        "Use PyTorch over TF -- Rationale: Better debugging experience",
+        encyclopedia_path=enc,
+    )
     content = enc.read_text()
     assert "Use PyTorch over TF" in content
     assert "Rationale" in content
@@ -65,7 +69,11 @@ def test_log_success(tmp_path: Path):
     enc = tmp_path / "ENCYCLOPEDIA.md"
     enc.write_text(TEMPLATE)
 
-    append_learning("What Works", "Learning rate warmup (context: transformer training)", encyclopedia_path=enc)
+    append_learning(
+        "What Works",
+        "Learning rate warmup (context: transformer training)",
+        encyclopedia_path=enc,
+    )
     content = enc.read_text()
     assert "Learning rate warmup" in content
 
@@ -74,7 +82,11 @@ def test_log_failure(tmp_path: Path):
     enc = tmp_path / "ENCYCLOPEDIA.md"
     enc.write_text(TEMPLATE)
 
-    append_learning("What Doesn't Work", "SGD with momentum -- Failed because: Diverged after 10 epochs", encyclopedia_path=enc)
+    append_learning(
+        "What Doesn't Work",
+        "SGD with momentum -- Failed because: Diverged after 10 epochs",
+        encyclopedia_path=enc,
+    )
     content = enc.read_text()
     assert "SGD with momentum" in content
     assert "Diverged" in content
@@ -120,6 +132,7 @@ def test_append_learning_bridge_unavailable(tmp_path: Path):
     enc = tmp_path / "ENCYCLOPEDIA.md"
     enc.write_text(TEMPLATE)
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.knowledge._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         append_learning("Tricks", "Still works without bridge", encyclopedia_path=enc)
         assert "Still works without bridge" in enc.read_text()
@@ -158,6 +171,7 @@ def test_search_knowledge_bridge_unavailable_keyword_only(tmp_path: Path):
     enc = tmp_path / "ENCYCLOPEDIA.md"
     enc.write_text(TEMPLATE + "\n- [2024-01-01] keyword match here\n")
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.knowledge._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         results = search_knowledge("keyword", encyclopedia_path=enc)
         assert any("keyword match" in r for r in results)

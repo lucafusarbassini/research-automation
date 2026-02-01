@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Onboarding
 # ---------------------------------------------------------------------------
@@ -134,27 +133,48 @@ class TestCheckProjectReadiness:
 class TestKnowledgeInit:
     """Test core.knowledge functions against a temporary encyclopedia."""
 
-    @patch("core.knowledge._get_bridge", side_effect=__import__("core.claude_flow", fromlist=["ClaudeFlowUnavailable"]).ClaudeFlowUnavailable)
+    @patch(
+        "core.knowledge._get_bridge",
+        side_effect=__import__(
+            "core.claude_flow", fromlist=["ClaudeFlowUnavailable"]
+        ).ClaudeFlowUnavailable,
+    )
     def test_append_learning(self, _mock_bridge, demo_project_path):
         from core.knowledge import append_learning
 
         enc_path = demo_project_path / "knowledge" / "ENCYCLOPEDIA.md"
-        append_learning("Tricks", "Use batch size 64 for faster convergence", encyclopedia_path=enc_path)
+        append_learning(
+            "Tricks",
+            "Use batch size 64 for faster convergence",
+            encyclopedia_path=enc_path,
+        )
 
         content = enc_path.read_text()
         assert "batch size 64" in content
 
-    @patch("core.knowledge._get_bridge", side_effect=__import__("core.claude_flow", fromlist=["ClaudeFlowUnavailable"]).ClaudeFlowUnavailable)
+    @patch(
+        "core.knowledge._get_bridge",
+        side_effect=__import__(
+            "core.claude_flow", fromlist=["ClaudeFlowUnavailable"]
+        ).ClaudeFlowUnavailable,
+    )
     def test_search_knowledge(self, _mock_bridge, demo_project_path):
         from core.knowledge import append_learning, search_knowledge
 
         enc_path = demo_project_path / "knowledge" / "ENCYCLOPEDIA.md"
-        append_learning("Tricks", "Use learning rate warmup", encyclopedia_path=enc_path)
+        append_learning(
+            "Tricks", "Use learning rate warmup", encyclopedia_path=enc_path
+        )
 
         results = search_knowledge("warmup", encyclopedia_path=enc_path)
         assert any("warmup" in r for r in results)
 
-    @patch("core.knowledge._get_bridge", side_effect=__import__("core.claude_flow", fromlist=["ClaudeFlowUnavailable"]).ClaudeFlowUnavailable)
+    @patch(
+        "core.knowledge._get_bridge",
+        side_effect=__import__(
+            "core.claude_flow", fromlist=["ClaudeFlowUnavailable"]
+        ).ClaudeFlowUnavailable,
+    )
     def test_get_encyclopedia_stats(self, _mock_bridge, demo_project_path):
         from core.knowledge import append_learning, get_encyclopedia_stats
 
@@ -166,7 +186,12 @@ class TestKnowledgeInit:
         assert isinstance(stats, dict)
         assert stats.get("Tricks", 0) >= 2
 
-    @patch("core.knowledge._get_bridge", side_effect=__import__("core.claude_flow", fromlist=["ClaudeFlowUnavailable"]).ClaudeFlowUnavailable)
+    @patch(
+        "core.knowledge._get_bridge",
+        side_effect=__import__(
+            "core.claude_flow", fromlist=["ClaudeFlowUnavailable"]
+        ).ClaudeFlowUnavailable,
+    )
     def test_log_decision(self, _mock_bridge, demo_project_path):
         from core.knowledge import append_learning
 
@@ -232,7 +257,12 @@ class TestEnvironmentDiscovery:
 class TestSecurityScan:
     """Test core.security.scan_for_secrets."""
 
-    @patch("core.security._get_bridge", side_effect=__import__("core.claude_flow", fromlist=["ClaudeFlowUnavailable"]).ClaudeFlowUnavailable)
+    @patch(
+        "core.security._get_bridge",
+        side_effect=__import__(
+            "core.claude_flow", fromlist=["ClaudeFlowUnavailable"]
+        ).ClaudeFlowUnavailable,
+    )
     def test_scan_for_secrets_clean(self, _mock_bridge, tmp_path):
         from core.security import scan_for_secrets
 
@@ -242,7 +272,12 @@ class TestSecurityScan:
         findings = scan_for_secrets(tmp_path)
         assert findings == []
 
-    @patch("core.security._get_bridge", side_effect=__import__("core.claude_flow", fromlist=["ClaudeFlowUnavailable"]).ClaudeFlowUnavailable)
+    @patch(
+        "core.security._get_bridge",
+        side_effect=__import__(
+            "core.claude_flow", fromlist=["ClaudeFlowUnavailable"]
+        ).ClaudeFlowUnavailable,
+    )
     def test_scan_for_secrets_finds_api_key(self, _mock_bridge, tmp_path):
         from core.security import scan_for_secrets
 
@@ -253,17 +288,29 @@ class TestSecurityScan:
         assert len(findings) >= 1
         assert any("config.py" in f["file"] for f in findings)
 
-    @patch("core.security._get_bridge", side_effect=__import__("core.claude_flow", fromlist=["ClaudeFlowUnavailable"]).ClaudeFlowUnavailable)
+    @patch(
+        "core.security._get_bridge",
+        side_effect=__import__(
+            "core.claude_flow", fromlist=["ClaudeFlowUnavailable"]
+        ).ClaudeFlowUnavailable,
+    )
     def test_scan_for_secrets_finds_private_key(self, _mock_bridge, tmp_path):
         from core.security import scan_for_secrets
 
         key_file = tmp_path / "secret.pem"
-        key_file.write_text("-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----\n")
+        key_file.write_text(
+            "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----\n"
+        )
 
         findings = scan_for_secrets(key_file)
         assert len(findings) >= 1
 
-    @patch("core.security._get_bridge", side_effect=__import__("core.claude_flow", fromlist=["ClaudeFlowUnavailable"]).ClaudeFlowUnavailable)
+    @patch(
+        "core.security._get_bridge",
+        side_effect=__import__(
+            "core.claude_flow", fromlist=["ClaudeFlowUnavailable"]
+        ).ClaudeFlowUnavailable,
+    )
     def test_protect_immutable_files(self, _mock_bridge):
         from core.security import protect_immutable_files
 

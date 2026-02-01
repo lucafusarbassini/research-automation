@@ -46,27 +46,66 @@ DEFAULT_BUDGET_SPLIT = {
 # Keywords used to route tasks to agents
 ROUTING_KEYWORDS = {
     AgentType.RESEARCHER: [
-        "literature", "paper", "search", "survey", "review", "cite",
-        "arxiv", "pubmed", "reference",
+        "literature",
+        "paper",
+        "search",
+        "survey",
+        "review",
+        "cite",
+        "arxiv",
+        "pubmed",
+        "reference",
     ],
     AgentType.CODER: [
-        "code", "implement", "write", "function", "class", "script",
-        "bug", "fix", "feature", "test",
+        "code",
+        "implement",
+        "write",
+        "function",
+        "class",
+        "script",
+        "bug",
+        "fix",
+        "feature",
+        "test",
     ],
     AgentType.REVIEWER: [
-        "review", "check", "audit", "inspect", "quality", "improve",
+        "review",
+        "check",
+        "audit",
+        "inspect",
+        "quality",
+        "improve",
     ],
     AgentType.FALSIFIER: [
-        "validate", "attack", "falsify", "verify", "test", "leak",
-        "statistical", "reproducib",
+        "validate",
+        "attack",
+        "falsify",
+        "verify",
+        "test",
+        "leak",
+        "statistical",
+        "reproducib",
     ],
     AgentType.WRITER: [
-        "write", "draft", "paper", "abstract", "introduction", "methods",
-        "results", "discussion", "document",
+        "write",
+        "draft",
+        "paper",
+        "abstract",
+        "introduction",
+        "methods",
+        "results",
+        "discussion",
+        "document",
     ],
     AgentType.CLEANER: [
-        "refactor", "clean", "optimize", "document", "style", "lint",
-        "format", "organize",
+        "refactor",
+        "clean",
+        "optimize",
+        "document",
+        "style",
+        "lint",
+        "format",
+        "organize",
     ],
 }
 
@@ -114,6 +153,7 @@ def route_task(task_description: str) -> AgentType:
         # claude-flow returns an agent type suggestion we can map back
         cf_agent = result.get("agent_type", "")
         from core.claude_flow import AGENT_TYPE_REVERSE
+
         if cf_agent in AGENT_TYPE_REVERSE:
             return AgentType(AGENT_TYPE_REVERSE[cf_agent])
     except (ClaudeFlowUnavailable, KeyError, ValueError):
@@ -307,8 +347,10 @@ def execute_parallel_tasks(
         try:
             bridge = _get_bridge()
             swarm_tasks = [
-                {"type": (t.agent or _route_task_keywords(t.description)).value,
-                 "task": t.description}
+                {
+                    "type": (t.agent or _route_task_keywords(t.description)).value,
+                    "task": t.description,
+                }
                 for t in tasks
             ]
             cf_result = bridge.run_swarm(swarm_tasks, topology="hierarchical")
@@ -362,10 +404,12 @@ def _execute_parallel_tasks_legacy(
     results: dict[str, TaskResult] = {}
 
     if executor_fn is None:
+
         def executor_fn(t: Task) -> TaskResult:
             agent = t.agent or route_task(t.description)
             return execute_agent_task(
-                agent, t.description,
+                agent,
+                t.description,
                 dangerously_skip_permissions=dangerously_skip_permissions,
             )
 
@@ -488,7 +532,9 @@ def _log_result(result: TaskResult) -> None:
         result.status, " "
     )
     timestamp = datetime.now().strftime("%H:%M")
-    line = f"- [{status_icon}] [{result.agent.value}] {result.task[:60]} ({timestamp})\n"
+    line = (
+        f"- [{status_icon}] [{result.agent.value}] {result.task[:60]} ({timestamp})\n"
+    )
 
     with open(PROGRESS_FILE, "a") as f:
         f.write(line)

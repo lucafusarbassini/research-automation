@@ -152,9 +152,7 @@ def make_resource_decision(
     # Disk space check
     if snapshot.disk_free_gb < policy.min_disk_free_gb:
         decision["should_cleanup"] = True
-        decision["warnings"].append(
-            f"Low disk space: {snapshot.disk_free_gb} GB free"
-        )
+        decision["warnings"].append(f"Low disk space: {snapshot.disk_free_gb} GB free")
         if snapshot.disk_free_gb < 1.0:
             decision["can_proceed"] = False
             decision["warnings"].append("Critical: less than 1 GB disk space")

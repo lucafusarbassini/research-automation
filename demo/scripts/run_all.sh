@@ -5,7 +5,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
-echo "=== Research Automation Demo Suite ==="
+echo "=== ricet Demo Suite ==="
 echo ""
 
 # Run existing unit tests first

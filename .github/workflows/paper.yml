@@ -2,7 +2,7 @@
 # Paper Build — compile LaTeX on changes to paper/ directory
 # ============================================================================
 # Badge:
-#   ![Paper](https://github.com/<owner>/research-automation/actions/workflows/paper.yml/badge.svg)
+#   ![Paper](https://github.com/<owner>/ricet/actions/workflows/paper.yml/badge.svg)
 
 name: Paper Build
 

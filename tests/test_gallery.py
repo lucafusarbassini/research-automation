@@ -39,9 +39,15 @@ def test_scan_figures_with_run_dirs(tmp_path: Path):
 
 def test_organize_by_run():
     figs = [
-        FigureEntry(path=Path("a.png"), name="a", format="png", size_kb=10, run_id="run-1"),
-        FigureEntry(path=Path("b.png"), name="b", format="png", size_kb=20, run_id="run-1"),
-        FigureEntry(path=Path("c.png"), name="c", format="png", size_kb=30, run_id="run-2"),
+        FigureEntry(
+            path=Path("a.png"), name="a", format="png", size_kb=10, run_id="run-1"
+        ),
+        FigureEntry(
+            path=Path("b.png"), name="b", format="png", size_kb=20, run_id="run-1"
+        ),
+        FigureEntry(
+            path=Path("c.png"), name="c", format="png", size_kb=30, run_id="run-2"
+        ),
         FigureEntry(path=Path("d.png"), name="d", format="png", size_kb=5),
     ]
     by_run = organize_by_run(figs)

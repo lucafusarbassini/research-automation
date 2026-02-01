@@ -1,14 +1,14 @@
 # Tutorial 5: Website Setup
 
 This tutorial covers setting up and deploying a personal academic website using
-Research Automation. You will create a site with your bio, publications list,
+ricet. You will create a site with your bio, publications list,
 research interests, and blog -- then deploy it so it is accessible on the
 internet.
 
 **Time:** ~45 minutes
 
 **Prerequisites:**
-- A project created with `research init` ([Tutorial 3](first-project.md))
+- A project created with `ricet init` ([Tutorial 3](first-project.md))
 - A GitHub account (for GitHub Pages deployment)
 - Optional: a custom domain name
 
@@ -22,14 +22,14 @@ internet.
 4. [Preview Locally](#4-preview-locally)
 5. [Deploy to GitHub Pages](#5-deploy-to-github-pages)
 6. [Set Up a Custom Domain](#6-set-up-a-custom-domain)
-7. [Automate Updates with Research Automation](#7-automate-updates-with-research-automation)
+7. [Automate Updates with ricet](#7-automate-updates-with-ricet)
 8. [Troubleshooting](#8-troubleshooting)
 
 ---
 
 ## 1. Choose a Framework
 
-Research Automation can generate a website using any static site framework.
+ricet can generate a website using any static site framework.
 For academic sites, we recommend these options:
 
 | Framework | Best For | Complexity |
@@ -49,7 +49,7 @@ Start an interactive session in your project:
 
 ```bash
 $ cd ~/projects/my-first-project
-$ research start --session-name "website"
+$ ricet start --session-name "website"
 ```
 
 Ask Claude to scaffold the site:
@@ -288,7 +288,7 @@ $ git push
 
 ---
 
-## 7. Automate Updates with Research Automation
+## 7. Automate Updates with ricet
 
 ### Auto-generate publication pages
 

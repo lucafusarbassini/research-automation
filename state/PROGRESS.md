@@ -43,3 +43,7 @@
 - [x] [researcher] find papers (20:09)
 - [x] [coder] fix the bug (20:10)
 - [x] [researcher] find papers (20:10)
+- [x] [coder] fix the bug (22:22)
+- [x] [researcher] find papers (22:22)
+- [x] [coder] fix the bug (22:38)
+- [x] [researcher] find papers (22:38)

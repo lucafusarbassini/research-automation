@@ -9,7 +9,6 @@ import pytest
 from core.agents import AgentType, TaskResult
 from core.prompt_queue import PromptEntry, PromptQueue, SharedMemory
 
-
 # ---------------------------------------------------------------------------
 # SharedMemory
 # ---------------------------------------------------------------------------
@@ -68,6 +67,7 @@ class TestSharedMemory:
 
     def test_thread_safety(self):
         import threading
+
         mem = SharedMemory()
         errors = []
 
@@ -272,7 +272,9 @@ class TestPromptQueuePriority:
         q._dispatcher_running = False
 
         q._queue.append(PromptEntry(prompt_id="low", text="Low prio task", priority=0))
-        q._queue.append(PromptEntry(prompt_id="high", text="High prio task", priority=10))
+        q._queue.append(
+            PromptEntry(prompt_id="high", text="High prio task", priority=10)
+        )
 
         # Manually find which one _try_dispatch would pick
         # by checking the selection logic directly

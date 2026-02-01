@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Authentication
 # ---------------------------------------------------------------------------
 
+
 class MobileAuth:
     """Simple token-based authentication for mobile API access."""
 
@@ -60,7 +61,7 @@ def format_for_mobile(data: dict) -> dict:
     out: dict[str, Any] = {}
     for key, value in data.items():
         if isinstance(value, str) and len(value) > _MOBILE_MAX_STR:
-            out[key] = value[:_MOBILE_MAX_STR - 3] + "..."
+            out[key] = value[: _MOBILE_MAX_STR - 3] + "..."
         else:
             out[key] = value
     out["_ts"] = datetime.now(timezone.utc).isoformat()
@@ -155,7 +156,12 @@ class MobileServer:
         text = (body or {}).get("text", "")
         # Voice input is treated as a task submission
         task_id = uuid.uuid4().hex[:12]
-        task = {"task_id": task_id, "prompt": text, "status": "queued", "source": "voice"}
+        task = {
+            "task_id": task_id,
+            "prompt": text,
+            "status": "queued",
+            "source": "voice",
+        }
         self._tasks.append(task)
         logger.info("Voice task queued: %s — %s", task_id, text[:80])
         return {"ok": True, "task_id": task_id, "source": "voice"}
@@ -168,6 +174,7 @@ class MobileServer:
 # ---------------------------------------------------------------------------
 # URL generation
 # ---------------------------------------------------------------------------
+
 
 def generate_mobile_url(
     host: str = "0.0.0.0",
@@ -265,6 +272,7 @@ def stop_server() -> None:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _extract_bearer(headers: Optional[dict]) -> Optional[str]:
     """Pull the token out of an ``Authorization: Bearer <tok>`` header."""

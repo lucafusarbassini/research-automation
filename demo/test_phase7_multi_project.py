@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Multi-project registry
 # ---------------------------------------------------------------------------
@@ -181,7 +180,9 @@ class TestGitWorktreeCreate:
         fake_result = subprocess.CompletedProcess(
             args=["git", "worktree", "add"], returncode=0, stdout="", stderr=""
         )
-        with patch("core.git_worktrees.subprocess.run", return_value=fake_result) as mock_run:
+        with patch(
+            "core.git_worktrees.subprocess.run", return_value=fake_result
+        ) as mock_run:
             wt_path = tmp_path / "wt"
             result = create_worktree("feature/test", path=wt_path)
 
@@ -234,7 +235,9 @@ class TestGitWorktreeRemove:
         fake_result = subprocess.CompletedProcess(
             args=["git", "worktree", "remove"], returncode=0, stdout="", stderr=""
         )
-        with patch("core.git_worktrees.subprocess.run", return_value=fake_result) as mock_run:
+        with patch(
+            "core.git_worktrees.subprocess.run", return_value=fake_result
+        ) as mock_run:
             success = remove_worktree(tmp_path / "some-worktree")
 
         assert success is True
@@ -306,7 +309,7 @@ class TestCrossRepoLink:
     """core.cross_repo linking repos."""
 
     def test_cross_repo_link(self, tmp_path):
-        from core.cross_repo import link_repository, _load_linked_repos
+        from core.cross_repo import _load_linked_repos, link_repository
 
         repos_file = tmp_path / "linked_repos.json"
 
@@ -330,7 +333,7 @@ class TestCrossRepoLink:
         assert loaded[0].name == "data-pipeline"
 
     def test_cross_repo_link_duplicate_replaces(self, tmp_path):
-        from core.cross_repo import link_repository, _load_linked_repos
+        from core.cross_repo import _load_linked_repos, link_repository
 
         repos_file = tmp_path / "linked_repos.json"
 
@@ -350,7 +353,7 @@ class TestCrossRepoLink:
         assert loaded[0].path == "/path/a-updated"
 
     def test_enforce_permission_boundaries(self, tmp_path):
-        from core.cross_repo import link_repository, enforce_permission_boundaries
+        from core.cross_repo import enforce_permission_boundaries, link_repository
 
         repos_file = tmp_path / "linked_repos.json"
         link_repository(
@@ -360,6 +363,19 @@ class TestCrossRepoLink:
             repos_file=repos_file,
         )
 
-        assert enforce_permission_boundaries("readonly-repo", "read", repos_file=repos_file) is True
-        assert enforce_permission_boundaries("readonly-repo", "write", repos_file=repos_file) is False
-        assert enforce_permission_boundaries("nonexistent", "read", repos_file=repos_file) is False
+        assert (
+            enforce_permission_boundaries(
+                "readonly-repo", "read", repos_file=repos_file
+            )
+            is True
+        )
+        assert (
+            enforce_permission_boundaries(
+                "readonly-repo", "write", repos_file=repos_file
+            )
+            is False
+        )
+        assert (
+            enforce_permission_boundaries("nonexistent", "read", repos_file=repos_file)
+            is False
+        )

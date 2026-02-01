@@ -183,7 +183,7 @@ def send_desktop(title: str, message: str) -> bool:
 def notify(
     message: str,
     *,
-    title: str = "Research Automation",
+    title: str = "ricet",
     level: str = "info",
 ) -> None:
     """Send notification through all configured channels.
@@ -194,9 +194,12 @@ def notify(
         level: One of 'info', 'warning', 'error', 'success'.
     """
     config = NotificationConfig.load()
-    prefix = {"info": "", "warning": "[WARNING] ", "error": "[ERROR] ", "success": "[OK] "}.get(
-        level, ""
-    )
+    prefix = {
+        "info": "",
+        "warning": "[WARNING] ",
+        "error": "[ERROR] ",
+        "success": "[OK] ",
+    }.get(level, "")
     full_message = f"{prefix}{title}: {message}"
 
     send_desktop(title, message)

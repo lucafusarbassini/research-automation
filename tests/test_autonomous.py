@@ -14,7 +14,9 @@ from core.autonomous import (
 
 
 def test_scheduled_routine_roundtrip():
-    r = ScheduledRoutine(name="backup", description="Daily backup", schedule="daily", command="backup.sh")
+    r = ScheduledRoutine(
+        name="backup", description="Daily backup", schedule="daily", command="backup.sh"
+    )
     d = r.to_dict()
     restored = ScheduledRoutine.from_dict(d)
     assert restored.name == "backup"
@@ -23,8 +25,12 @@ def test_scheduled_routine_roundtrip():
 
 def test_add_and_list_routines(tmp_path: Path):
     routines_file = tmp_path / "routines.json"
-    r1 = ScheduledRoutine(name="check-arxiv", description="Check arXiv", schedule="daily", command="check")
-    r2 = ScheduledRoutine(name="backup", description="Backup state", schedule="weekly", command="backup")
+    r1 = ScheduledRoutine(
+        name="check-arxiv", description="Check arXiv", schedule="daily", command="check"
+    )
+    r2 = ScheduledRoutine(
+        name="backup", description="Backup state", schedule="weekly", command="backup"
+    )
     add_routine(r1, routines_file=routines_file)
     add_routine(r2, routines_file=routines_file)
 

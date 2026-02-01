@@ -20,10 +20,20 @@ from core.onboarding import (
 
 
 def test_collect_answers_defaults():
-    responses = iter([
-        "predict proteins", "ml-research", "skip", "skip", "flexible",
-        "local-cpu", "none", "skip", "no", "no",
-    ])
+    responses = iter(
+        [
+            "predict proteins",
+            "ml-research",
+            "skip",
+            "skip",
+            "flexible",
+            "local-cpu",
+            "none",
+            "skip",
+            "no",
+            "no",
+        ]
+    )
     answers = collect_answers("test-proj", prompt_fn=lambda p, d="": next(responses))
     assert answers.project_name == "test-proj"
     assert answers.goal == "predict proteins"
@@ -34,30 +44,62 @@ def test_collect_answers_defaults():
 
 
 def test_collect_answers_with_gpu():
-    responses = iter([
-        "goal", "ml-research", "skip", "skip", "flexible",
-        "local-gpu", "RTX 4090", "none", "skip", "no", "no",
-    ])
+    responses = iter(
+        [
+            "goal",
+            "ml-research",
+            "skip",
+            "skip",
+            "flexible",
+            "local-gpu",
+            "RTX 4090",
+            "none",
+            "skip",
+            "no",
+            "no",
+        ]
+    )
     answers = collect_answers("proj", prompt_fn=lambda p, d="": next(responses))
     assert answers.compute_type == "local-gpu"
     assert answers.gpu_name == "RTX 4090"
 
 
 def test_collect_answers_with_email():
-    responses = iter([
-        "goal", "general", "skip", "skip", "flexible",
-        "local-cpu", "email", "a@b.com", "skip", "no", "no",
-    ])
+    responses = iter(
+        [
+            "goal",
+            "general",
+            "skip",
+            "skip",
+            "flexible",
+            "local-cpu",
+            "email",
+            "a@b.com",
+            "skip",
+            "no",
+            "no",
+        ]
+    )
     answers = collect_answers("proj", prompt_fn=lambda p, d="": next(responses))
     assert answers.notification_method == "email"
     assert answers.notification_email == "a@b.com"
 
 
 def test_collect_answers_invalid_project_type():
-    responses = iter([
-        "goal", "invalid-type", "skip", "skip", "flexible",
-        "local-cpu", "none", "skip", "no", "no",
-    ])
+    responses = iter(
+        [
+            "goal",
+            "invalid-type",
+            "skip",
+            "skip",
+            "flexible",
+            "local-cpu",
+            "none",
+            "skip",
+            "no",
+            "no",
+        ]
+    )
     answers = collect_answers("proj", prompt_fn=lambda p, d="": next(responses))
     assert answers.project_type == "ml-research"  # Falls back to default
 
@@ -203,10 +245,20 @@ def test_setup_claude_web_access_custom():
 
 def test_collect_answers_new_fields():
     """Verify journal_target, needs_website, needs_mobile are collected."""
-    responses = iter([
-        "goal", "paper-writing", "skip", "acc > 90%", "2025-12",
-        "local-cpu", "none", "Nature", "yes", "yes",
-    ])
+    responses = iter(
+        [
+            "goal",
+            "paper-writing",
+            "skip",
+            "acc > 90%",
+            "2025-12",
+            "local-cpu",
+            "none",
+            "Nature",
+            "yes",
+            "yes",
+        ]
+    )
     answers = collect_answers("proj", prompt_fn=lambda p, d="": next(responses))
     assert answers.journal_target == "Nature"
     assert answers.needs_website is True
@@ -216,7 +268,9 @@ def test_collect_answers_new_fields():
 def test_verify_uploaded_files_empty_workspace(tmp_path: Path):
     """Empty workspace triggers warnings."""
     setup_workspace(tmp_path)
-    answers = OnboardingAnswers(project_type="paper-writing", github_repo="https://github.com/x/y")
+    answers = OnboardingAnswers(
+        project_type="paper-writing", github_repo="https://github.com/x/y"
+    )
     warnings = verify_uploaded_files(tmp_path, answers)
     # Should warn about empty reference/ and uploads/ and missing code
     assert len(warnings) >= 2

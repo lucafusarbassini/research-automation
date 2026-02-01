@@ -1,8 +1,8 @@
-# Research Automation Specification
+# ricet Specification
 
 ## Overview
 
-Research Automation is a CLI tool and framework for managing scientific research projects
+ricet is a CLI tool and framework for managing scientific research projects
 with Claude Code. It provides multi-agent orchestration, knowledge persistence,
 reproducibility enforcement, and paper pipeline automation.
 
@@ -182,7 +182,7 @@ except ClaudeFlowUnavailable:
 
 ### Agent Type Mapping
 
-| Research Automation | claude-flow |
+| ricet | claude-flow |
 |-------------------|-------------|
 | MASTER | hierarchical-coordinator (queen) |
 | RESEARCHER | researcher |

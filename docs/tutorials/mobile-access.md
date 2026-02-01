@@ -1,13 +1,13 @@
 # Tutorial 7: Mobile Access
 
-This tutorial shows you how to set up mobile phone access to your Research
-Automation projects. You can submit tasks, check status, review progress, and
+This tutorial shows you how to set up mobile phone access to your ricet
+projects. You can submit tasks, check status, review progress, and
 send voice commands -- all from your phone's browser.
 
 **Time:** ~15 minutes
 
 **Prerequisites:**
-- A project created with `research init` ([Tutorial 3](first-project.md))
+- A project created with `ricet init` ([Tutorial 3](first-project.md))
 - Your computer and phone on the same network (for local access), or a public
   server/tunneling setup (for remote access)
 
@@ -104,7 +104,7 @@ You can run the mobile server in the background while overnight mode runs:
 $ python3 start_mobile.py &
 
 # Terminal 2: Start overnight mode
-$ research overnight --iterations 20
+$ ricet overnight --iterations 20
 ```
 
 ---

@@ -1,6 +1,6 @@
 # =============================================================================
-# research-automation: production Docker image
-# Python 3.12 + Node.js 20 + LaTeX + claude-flow + research CLI
+# ricet: production Docker image
+# Python 3.12 + Node.js 20 + LaTeX + claude-flow + ricet CLI
 # =============================================================================
 
 # ---------------------------------------------------------------------------

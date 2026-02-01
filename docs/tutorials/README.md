@@ -1,6 +1,6 @@
 # Tutorials
 
-Step-by-step guides for setting up and using Research Automation.
+Step-by-step guides for setting up and using ricet.
 
 ## Getting Started
 
@@ -35,7 +35,7 @@ Before starting any tutorial, make sure you have:
 
 ## Recommended Order
 
-If you are brand new to Research Automation, follow the tutorials in numbered order.
+If you are brand new to ricet, follow the tutorials in numbered order.
 Tutorials 1 through 3 cover everything you need to start doing real work.
 Tutorials 4 through 7 can be completed in any order depending on what you need.
 

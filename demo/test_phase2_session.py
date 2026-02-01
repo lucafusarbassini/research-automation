@@ -8,7 +8,6 @@ import pytest
 
 from core.claude_flow import ClaudeFlowUnavailable
 
-
 # ---------------------------------------------------------------------------
 # Session lifecycle
 # ---------------------------------------------------------------------------
@@ -110,7 +109,15 @@ class TestAgentTypesDefined:
     def test_agent_types_defined(self):
         from core.agents import AgentType
 
-        expected = {"master", "researcher", "coder", "reviewer", "falsifier", "writer", "cleaner"}
+        expected = {
+            "master",
+            "researcher",
+            "coder",
+            "reviewer",
+            "falsifier",
+            "writer",
+            "cleaner",
+        }
         actual = {member.value for member in AgentType}
         assert expected == actual
 
@@ -148,7 +155,9 @@ class TestModelRouterClassify:
     def test_model_router_classify_critical(self, _mock_bridge):
         from core.model_router import TaskComplexity, classify_task_complexity
 
-        result = classify_task_complexity("validate and submit the paper for publication")
+        result = classify_task_complexity(
+            "validate and submit the paper for publication"
+        )
         assert result == TaskComplexity.CRITICAL
 
 
@@ -159,7 +168,9 @@ class TestModelRouterSelect:
     def test_model_router_select_opus_for_critical(self, _mock_bridge):
         from core.model_router import ModelConfig, TaskComplexity, route_to_model
 
-        model = route_to_model("verify the final paper submission", complexity=TaskComplexity.CRITICAL)
+        model = route_to_model(
+            "verify the final paper submission", complexity=TaskComplexity.CRITICAL
+        )
         assert isinstance(model, ModelConfig)
         assert "opus" in model.name
 
@@ -286,7 +297,17 @@ class TestPromptSuggestions:
 
         # Should include research-related steps
         combined = " ".join(steps).lower()
-        assert any(kw in combined for kw in ["literature", "theme", "gap", "research", "question", "methodology"])
+        assert any(
+            kw in combined
+            for kw in [
+                "literature",
+                "theme",
+                "gap",
+                "research",
+                "question",
+                "methodology",
+            ]
+        )
 
 
 class TestDetectStuckPattern:
@@ -301,7 +322,14 @@ class TestDetectStuckPattern:
     def test_detect_stuck_pattern_obvious_loop(self):
         from core.prompt_suggestions import detect_stuck_pattern
 
-        history = ["fix bug", "run tests", "fix bug", "run tests", "fix bug", "run tests"]
+        history = [
+            "fix bug",
+            "run tests",
+            "fix bug",
+            "run tests",
+            "fix bug",
+            "run tests",
+        ]
         assert detect_stuck_pattern(history) is True
 
     def test_detect_stuck_pattern_short_history(self):
@@ -354,14 +382,18 @@ class TestCompressContext:
 
         context = (
             "This is the important introduction to the project. "
-            "Some filler padding text goes here for length. " * 20 +
-            "A critical error was found in the deployment pipeline. "
+            "Some filler padding text goes here for length. " * 20
+            + "A critical error was found in the deployment pipeline. "
             "The API token must be refreshed urgently. "
-            "More random filler to pad out. " * 20 +
-            "This is the essential conclusion of the analysis."
+            "More random filler to pad out. " * 20
+            + "This is the essential conclusion of the analysis."
         )
 
         compressed = compress_context(context, max_tokens=80)
         compressed_lower = compressed.lower()
         # High-signal words should be preferentially kept
-        assert "important" in compressed_lower or "critical" in compressed_lower or "essential" in compressed_lower
+        assert (
+            "important" in compressed_lower
+            or "critical" in compressed_lower
+            or "essential" in compressed_lower
+        )

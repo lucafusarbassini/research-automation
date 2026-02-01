@@ -16,10 +16,10 @@ from core.social_media import (
     validate_post,
 )
 
-
 # ---------------------------------------------------------------------------
 # PostDraft dataclass
 # ---------------------------------------------------------------------------
+
 
 def test_post_draft_defaults():
     draft = PostDraft(platform="medium", body="Hello world")
@@ -41,6 +41,7 @@ def test_post_draft_char_count_auto():
 # draft_medium_post
 # ---------------------------------------------------------------------------
 
+
 def test_draft_medium_post_basic():
     result = draft_medium_post("My Title", "Some **bold** content.", ["ai", "ml"])
     assert result["title"] == "My Title"
@@ -61,6 +62,7 @@ def test_draft_medium_post_limits_tags_to_five():
 # ---------------------------------------------------------------------------
 # draft_linkedin_post
 # ---------------------------------------------------------------------------
+
 
 def test_draft_linkedin_post_basic():
     result = draft_linkedin_post("Check out my new paper!")
@@ -86,6 +88,7 @@ def test_draft_linkedin_post_truncates_over_limit():
 # summarize_for_social
 # ---------------------------------------------------------------------------
 
+
 def test_summarize_for_social_twitter():
     paper = "We present a novel method for training large language models. " * 20
     summary = summarize_for_social(paper, "twitter")
@@ -109,6 +112,7 @@ def test_summarize_for_social_medium():
 # ---------------------------------------------------------------------------
 # generate_thread
 # ---------------------------------------------------------------------------
+
 
 def test_generate_thread_short_content():
     thread = generate_thread("Hello world")
@@ -135,6 +139,7 @@ def test_generate_thread_custom_max_chars():
 # ---------------------------------------------------------------------------
 # validate_post
 # ---------------------------------------------------------------------------
+
 
 def test_validate_post_valid_medium():
     draft = PostDraft(platform="medium", title="Title", body="Content", tags=["ai"])
@@ -164,21 +169,20 @@ def test_validate_post_twitter_over_limit():
 # publish_medium (mocked)
 # ---------------------------------------------------------------------------
 
+
 @patch("core.social_media.urlopen")
 def test_publish_medium_success(mock_urlopen):
     # First call: GET /v1/me returns user info
     me_response = MagicMock()
-    me_response.read.return_value = json.dumps({
-        "data": {"id": "user-42"}
-    }).encode()
+    me_response.read.return_value = json.dumps({"data": {"id": "user-42"}}).encode()
     me_response.__enter__ = lambda s: s
     me_response.__exit__ = MagicMock(return_value=False)
 
     # Second call: POST /v1/users/{id}/posts returns post info
     post_response = MagicMock()
-    post_response.read.return_value = json.dumps({
-        "data": {"id": "abc123", "url": "https://medium.com/@user/post-abc123"}
-    }).encode()
+    post_response.read.return_value = json.dumps(
+        {"data": {"id": "abc123", "url": "https://medium.com/@user/post-abc123"}}
+    ).encode()
     post_response.__enter__ = lambda s: s
     post_response.__exit__ = MagicMock(return_value=False)
 
@@ -204,6 +208,7 @@ def test_publish_medium_failure(mock_urlopen):
 # ---------------------------------------------------------------------------
 # publish_linkedin (mocked)
 # ---------------------------------------------------------------------------
+
 
 @patch("core.social_media.urlopen")
 def test_publish_linkedin_success(mock_urlopen):

@@ -143,7 +143,9 @@ class ClaudeFlowBridge:
             Dict with 'output', 'status', 'tokens_used', etc.
         """
         cf_type = AGENT_TYPE_MAP.get(agent_type, agent_type)
-        return self._run("agent", "spawn", "--type", cf_type, "--task", task, timeout=timeout)
+        return self._run(
+            "agent", "spawn", "--type", cf_type, "--task", task, timeout=timeout
+        )
 
     def run_swarm(
         self,
@@ -162,15 +164,24 @@ class ClaudeFlowBridge:
         Returns:
             Dict with per-task results.
         """
-        tasks_json = json.dumps([
-            {"type": AGENT_TYPE_MAP.get(t.get("type", "coder"), t.get("type", "coder")),
-             "task": t["task"]}
-            for t in tasks
-        ])
+        tasks_json = json.dumps(
+            [
+                {
+                    "type": AGENT_TYPE_MAP.get(
+                        t.get("type", "coder"), t.get("type", "coder")
+                    ),
+                    "task": t["task"],
+                }
+                for t in tasks
+            ]
+        )
         return self._run(
-            "swarm", "run",
-            "--topology", topology,
-            "--tasks", tasks_json,
+            "swarm",
+            "run",
+            "--topology",
+            topology,
+            "--tasks",
+            tasks_json,
             timeout=timeout,
         )
 
@@ -274,7 +285,10 @@ class ClaudeFlowBridge:
             Dict mapping repo name -> success.
         """
         return self._run(
-            "repo", "sync",
-            "--message", message,
-            "--repos", json.dumps(repos),
+            "repo",
+            "sync",
+            "--message",
+            message,
+            "--repos",
+            json.dumps(repos),
         )

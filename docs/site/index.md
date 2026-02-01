@@ -1,14 +1,14 @@
-# Research Automation
+# ricet
 
 **Automate scientific research using Claude Code with multi-agent orchestration, overnight autonomous execution, and comprehensive tooling.**
 
-Research Automation is a CLI tool and framework that manages the full lifecycle of scientific research projects. It pairs Claude Code with a structured agent system, persistent knowledge, reproducibility enforcement, and a complete paper pipeline -- so you can focus on the science while automation handles the scaffolding.
+ricet is a CLI tool and framework that manages the full lifecycle of scientific research projects. It pairs Claude Code with a structured agent system, persistent knowledge, reproducibility enforcement, and a complete paper pipeline -- so you can focus on the science while automation handles the scaffolding.
 
 ---
 
-## Why Research Automation?
+## Why ricet?
 
-Running a research project involves dozens of repetitive tasks: environment setup, literature searches, experiment tracking, figure generation, paper writing, and more. Research Automation provides a single `research` command that orchestrates all of these through specialized AI agents operating inside a safe, containerized environment.
+Running a research project involves dozens of repetitive tasks: environment setup, literature searches, experiment tracking, figure generation, paper writing, and more. ricet provides a single `ricet` command that orchestrates all of these through specialized AI agents operating inside a safe, containerized environment.
 
 | Problem | Solution |
 |---------|----------|
@@ -34,14 +34,14 @@ cd research-automation
 pip install -e .
 
 # Create your first project
-research init my-project
+ricet init my-project
 
 # Start an interactive session
 cd my-project
-research start
+ricet start
 
 # Or run overnight
-research overnight --iterations 20
+ricet overnight --iterations 20
 ```
 
 See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough.
@@ -52,7 +52,7 @@ See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough
 
 - **Multi-Agent Orchestration** -- Master agent routes tasks to Researcher, Coder, Reviewer, Falsifier, Writer, and Cleaner sub-agents, each with dedicated budgets and system prompts.
 - **70+ MCP Integrations** -- Automatically discovered and loaded based on task type, organized in eight tiers from essential tools to cloud infrastructure.
-- **Overnight Mode** -- Autonomous execution loop with auto-debug, resource monitoring, and recovery. Run `research overnight` and check results in the morning.
+- **Overnight Mode** -- Autonomous execution loop with auto-debug, resource monitoring, and recovery. Run `ricetovernight` and check results in the morning.
 - **Knowledge Accumulation** -- A project encyclopedia that records learnings, decisions, successful approaches, and failed attempts. Supports HNSW vector search when claude-flow is available.
 - **Paper Pipeline** -- LaTeX template, publication-quality figure generation with matplotlib rcParams, BibTeX citation management, and one-command compilation.
 - **Reproducibility** -- Every experiment run is logged with parameters, metrics, git hash, and SHA-256 artifact checksums.
@@ -67,7 +67,7 @@ Explore all features in the [Features](features.md) page.
 
 ## Project Philosophy
 
-Research Automation is built on six core principles:
+ricet is built on six core principles:
 
 1. **Never please the user** -- Be objective, challenge assumptions, report flaws.
 2. **Popperian falsification** -- Try to break results, not validate them.
@@ -80,11 +80,11 @@ Research Automation is built on six core principles:
 
 ## Project Status
 
-Research Automation is under active development. The core modules, CLI, Docker setup, templates, and agent system are implemented. Contributions and feedback are welcome.
+ricet is under active development. The core modules, CLI, Docker setup, templates, and agent system are implemented. Contributions and feedback are welcome.
 
 | Component | Status |
 |-----------|--------|
-| CLI (`research` command) | Implemented |
+| CLI (`ricet` command) | Implemented |
 | Core modules (20+ modules) | Implemented |
 | Docker containerization | Implemented |
 | Agent orchestration | Implemented |

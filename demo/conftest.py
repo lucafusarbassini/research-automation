@@ -1,4 +1,4 @@
-"""Shared fixtures for the research-automation demo test suite."""
+"""Shared fixtures for the ricet demo test suite."""
 
 import subprocess
 from pathlib import Path
@@ -33,9 +33,7 @@ def demo_project_path(tmp_path):
     )
 
     (knowledge_dir / "CONSTRAINTS.md").write_text(
-        "# Constraints\n\n"
-        "- Compute: local-cpu\n"
-        "- Budget: minimal\n"
+        "# Constraints\n\n" "- Compute: local-cpu\n" "- Budget: minimal\n"
     )
 
     # knowledge/ENCYCLOPEDIA.md (needed by knowledge module)
@@ -56,9 +54,7 @@ def demo_project_path(tmp_path):
     state_dir.mkdir()
 
     (state_dir / "TODO.md").write_text(
-        "# TODO\n\n"
-        "- [ ] Set up environment\n"
-        "- [ ] Run first experiment\n"
+        "# TODO\n\n" "- [ ] Set up environment\n" "- [ ] Run first experiment\n"
     )
 
     # config/

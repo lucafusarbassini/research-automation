@@ -1,9 +1,9 @@
 # =============================================================================
-# research-automation  —  docker compose up
+# ricet  —  docker compose up
 # =============================================================================
 #
 # Quick start:
-#   1. Copy .env.example to .env and add your ANTHROPIC_API_KEY
+#   1. Run `claude auth login` on the host (or set ANTHROPIC_API_KEY in .env)
 #   2. docker compose up
 #   3. Open http://localhost:7681 in your browser
 #
@@ -14,14 +14,14 @@
 
 services:
   # --------------------------------------------------------------------------
-  # Main research-automation container
+  # Main ricet container
   # --------------------------------------------------------------------------
   app:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: research-automation
-    hostname: research-auto
+    container_name: ricet
+    hostname: ricet
 
     # Default mode: web terminal
     command: ["--web"]
@@ -40,6 +40,8 @@ services:
       - ${WORKSPACE_DIR:-./workspace}:/workspace
       # Share git config for commits inside the container
       - ~/.gitconfig:/root/.gitconfig:ro
+      # Mount Claude auth so browser login works inside the container
+      - ${CLAUDE_AUTH_DIR:-~/.claude}:/root/.claude:ro
 
     # Keep the container running even if ttyd restarts
     restart: unless-stopped
@@ -64,7 +66,7 @@ services:
   # --------------------------------------------------------------------------
   docs:
     image: jekyll/jekyll:4
-    container_name: research-docs
+    container_name: ricet-docs
     command: >
       bash -c "
         cd /srv/jekyll &&

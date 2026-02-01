@@ -11,7 +11,6 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # DevOps
 # ---------------------------------------------------------------------------
@@ -26,8 +25,10 @@ class TestCheckInfrastructure:
         fake_result = subprocess.CompletedProcess(
             args=[], returncode=0, stdout="Docker version 24.0.7\n", stderr=""
         )
-        with patch("core.devops.subprocess.run", return_value=fake_result), \
-             patch("core.devops.shutil.which", return_value="/usr/bin/docker"):
+        with (
+            patch("core.devops.subprocess.run", return_value=fake_result),
+            patch("core.devops.shutil.which", return_value="/usr/bin/docker"),
+        ):
             results = check_infrastructure()
 
         # All tools checked; at least one should be available since we mock which
@@ -114,6 +115,7 @@ class TestHealthCheck:
 
     def test_health_check_unhealthy(self):
         import urllib.error
+
         from core.devops import health_check
 
         with patch(
@@ -189,7 +191,7 @@ class TestReproducibilityRunLog:
 
     def test_run_log_roundtrip(self, tmp_path, monkeypatch):
         import core.reproducibility as repro
-        from core.reproducibility import RunLog, log_run, load_run
+        from core.reproducibility import RunLog, load_run, log_run
 
         # Point RUNS_DIR to tmp
         monkeypatch.setattr(repro, "RUNS_DIR", tmp_path / "runs")
@@ -243,8 +245,10 @@ class TestBrowserExtractText:
 
         html_content = "<html><head><title>Test</title></head><body><p>Hello World</p><script>var x=1;</script></body></html>"
 
-        with patch.object(BrowserSession, "_detect_puppeteer", return_value=False), \
-             patch.object(BrowserSession, "_http_get", return_value=html_content):
+        with (
+            patch.object(BrowserSession, "_detect_puppeteer", return_value=False),
+            patch.object(BrowserSession, "_http_get", return_value=html_content),
+        ):
             session = BrowserSession()
             text = session.extract_text("http://example.com")
 
@@ -344,7 +348,9 @@ class TestMetaRulesDetect:
         from core.meta_rules import classify_rule_type
 
         assert classify_rule_type("Always run lint before commit") == "workflow"
-        assert classify_rule_type("Must not exceed 100 lines per function") == "constraint"
+        assert (
+            classify_rule_type("Must not exceed 100 lines per function") == "constraint"
+        )
         assert classify_rule_type("Prefer composition over inheritance") == "preference"
         assert classify_rule_type("When error occurs, check the log file") == "debug"
 
@@ -406,8 +412,12 @@ class TestLazyMcpRegisterLoad:
         from core.lazy_mcp import LazyMCPLoader
 
         loader = LazyMCPLoader()
-        loader.register_mcp("fs", {"cmd": "npx"}, tier=1, trigger_keywords=["file", "read"])
-        loader.register_mcp("db", {"cmd": "npx"}, tier=2, trigger_keywords=["database", "sql"])
+        loader.register_mcp(
+            "fs", {"cmd": "npx"}, tier=1, trigger_keywords=["file", "read"]
+        )
+        loader.register_mcp(
+            "db", {"cmd": "npx"}, tier=2, trigger_keywords=["database", "sql"]
+        )
 
         needed = loader.get_needed_mcps("I need to read a file")
         assert "fs" in needed
@@ -423,7 +433,9 @@ class TestLazyMcpOptimize:
         loader = LazyMCPLoader()
         loader.register_mcp("fs", {"cmd": "npx"}, tier=1, trigger_keywords=["file"])
         loader.register_mcp("db", {"cmd": "npx"}, tier=2, trigger_keywords=["database"])
-        loader.register_mcp("browser", {"cmd": "npx"}, tier=3, trigger_keywords=["web", "browser"])
+        loader.register_mcp(
+            "browser", {"cmd": "npx"}, tier=3, trigger_keywords=["web", "browser"]
+        )
 
         # All three are active
         active = ["fs", "db", "browser"]
@@ -516,7 +528,11 @@ class TestMarkdownExecuteRunbookDry:
         from core.markdown_commands import execute_runbook
 
         steps = [
-            {"heading": "Setup", "language": "bash", "code": "pip install -r requirements.txt"},
+            {
+                "heading": "Setup",
+                "language": "bash",
+                "code": "pip install -r requirements.txt",
+            },
             {"heading": "Test", "language": "python", "code": "print('test')"},
         ]
 
@@ -548,7 +564,9 @@ class TestSecurityScan:
             'SAFE_VAR = "hello"\n'
         )
 
-        with patch("core.security._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")):
+        with patch(
+            "core.security._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")
+        ):
             findings = scan_for_secrets(tmp_path)
 
         assert len(findings) >= 1
@@ -561,7 +579,9 @@ class TestSecurityScan:
         secret_file = tmp_path / "secrets.py"
         secret_file.write_text('token = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij"\n')
 
-        with patch("core.security._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")):
+        with patch(
+            "core.security._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")
+        ):
             findings = scan_for_secrets(secret_file)
 
         assert len(findings) >= 1

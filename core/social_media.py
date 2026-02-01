@@ -38,6 +38,7 @@ class PostDraft:
 # Drafting helpers
 # ---------------------------------------------------------------------------
 
+
 def draft_medium_post(title: str, content: str, tags: list[str]) -> dict:
     """Prepare a Medium article draft in markdown format.
 
@@ -88,6 +89,7 @@ def draft_linkedin_post(content: str, link: str = "") -> dict:
 # Summarization
 # ---------------------------------------------------------------------------
 
+
 def summarize_for_social(paper_content: str, platform: str) -> str:
     """Auto-summarize research content for a given platform.
 
@@ -134,6 +136,7 @@ def _split_sentences(text: str) -> list[str]:
 # Thread generation
 # ---------------------------------------------------------------------------
 
+
 def generate_thread(content: str, max_chars: int = 280) -> list[str]:
     """Break content into a Twitter/X-style thread.
 
@@ -166,6 +169,7 @@ def generate_thread(content: str, max_chars: int = 280) -> list[str]:
 # Validation
 # ---------------------------------------------------------------------------
 
+
 def validate_post(draft: PostDraft) -> list[str]:
     """Validate a PostDraft and return a list of error strings (empty = valid)."""
     errors: list[str] = []
@@ -192,6 +196,7 @@ def validate_post(draft: PostDraft) -> list[str]:
 # Publishing
 # ---------------------------------------------------------------------------
 
+
 def publish_medium(draft: PostDraft, api_token: str) -> dict:
     """Publish a draft to the Medium API.
 
@@ -211,13 +216,15 @@ def publish_medium(draft: PostDraft, api_token: str) -> dict:
             user_id = user_data["data"]["id"]
 
         # Step 2: create post
-        payload = json.dumps({
-            "title": draft.title,
-            "contentFormat": "markdown",
-            "content": f"# {draft.title}\n\n{draft.body}",
-            "tags": draft.tags,
-            "publishStatus": "draft",
-        }).encode()
+        payload = json.dumps(
+            {
+                "title": draft.title,
+                "contentFormat": "markdown",
+                "content": f"# {draft.title}\n\n{draft.body}",
+                "tags": draft.tags,
+                "publishStatus": "draft",
+            }
+        ).encode()
 
         post_req = Request(
             f"https://api.medium.com/v1/users/{user_id}/posts",
@@ -247,17 +254,19 @@ def publish_linkedin(draft: PostDraft, api_token: str) -> dict:
     Requires a valid OAuth2 access token with ``w_member_social`` scope.
     """
     try:
-        payload = json.dumps({
-            "author": "urn:li:person:me",
-            "lifecycleState": "PUBLISHED",
-            "specificContent": {
-                "com.linkedin.ugc.ShareContent": {
-                    "shareCommentary": {"text": draft.body},
-                    "shareMediaCategory": "NONE",
-                }
-            },
-            "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
-        }).encode()
+        payload = json.dumps(
+            {
+                "author": "urn:li:person:me",
+                "lifecycleState": "PUBLISHED",
+                "specificContent": {
+                    "com.linkedin.ugc.ShareContent": {
+                        "shareCommentary": {"text": draft.body},
+                        "shareMediaCategory": "NONE",
+                    }
+                },
+                "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
+            }
+        ).encode()
 
         req = Request(
             "https://api.linkedin.com/v2/ugcPosts",
@@ -308,7 +317,10 @@ def publish_to_platform(
     platform_lower = platform.lower()
 
     if not body:
-        return {"success": False, "error": "Post body cannot be empty. Provide body text."}
+        return {
+            "success": False,
+            "error": "Post body cannot be empty. Provide body text.",
+        }
 
     if platform_lower == "medium":
         if not title:

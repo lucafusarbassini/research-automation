@@ -66,8 +66,13 @@ class TestPromoteToClean:
             ["git", "commit", "-m", "exp work"],
             cwd=project_dir / "experiments",
             check=True,
-            env={**os.environ, "GIT_AUTHOR_NAME": "test", "GIT_COMMITTER_NAME": "test",
-                 "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_EMAIL": "t@t"},
+            env={
+                **os.environ,
+                "GIT_AUTHOR_NAME": "test",
+                "GIT_COMMITTER_NAME": "test",
+                "GIT_AUTHOR_EMAIL": "t@t",
+                "GIT_COMMITTER_EMAIL": "t@t",
+            },
         )
 
         ok = manager.promote_to_clean(["analysis.py"], "Promote analysis")
@@ -78,7 +83,8 @@ class TestPromoteToClean:
         log = subprocess.run(
             ["git", "log", "--oneline"],
             cwd=project_dir / "clean",
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         assert "Promote analysis" in log.stdout
 
@@ -117,7 +123,9 @@ class TestSyncShared:
 
         ok = manager.sync_shared(["config/"])
         assert ok is True
-        assert (project_dir / "clean" / "config" / "settings.yaml").read_text() == "key: value"
+        assert (
+            project_dir / "clean" / "config" / "settings.yaml"
+        ).read_text() == "key: value"
 
     def test_sync_no_source_returns_false(self, manager):
         """Syncing a path that doesn't exist in experiments should return False."""

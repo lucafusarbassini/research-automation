@@ -9,15 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from core.website import (
-    WebsiteProject,
-    add_page,
-    add_publication,
-    build_site,
-    deploy_site,
-    init_website,
-    site_manager,
-)
+from core.notifications import NotificationConfig
 from core.social_media import (
     PostDraft,
     draft_linkedin_post,
@@ -27,8 +19,15 @@ from core.social_media import (
     summarize_for_social,
     validate_post,
 )
-from core.notifications import NotificationConfig
-
+from core.website import (
+    WebsiteProject,
+    add_page,
+    add_publication,
+    build_site,
+    deploy_site,
+    init_website,
+    site_manager,
+)
 
 # ---------------------------------------------------------------------------
 # website: init_website (academic template)
@@ -255,7 +254,9 @@ class TestDraftLinkedinPost:
     """draft_linkedin_post handles content + link + truncation."""
 
     def test_basic_linkedin_post(self):
-        result = draft_linkedin_post("Check out our new paper!", link="https://example.com")
+        result = draft_linkedin_post(
+            "Check out our new paper!", link="https://example.com"
+        )
         assert "https://example.com" in result["text"]
         assert result["draft"].platform == "linkedin"
         assert result["draft"].ready is True
@@ -364,7 +365,9 @@ class TestPublishToPlatformDispatch:
         """Calling publish_to_platform('medium') without a real token fails gracefully."""
         with patch("core.social_media.publish_medium") as mock_pub:
             mock_pub.return_value = {"success": False, "error": "no token"}
-            result = publish_to_platform("medium", title="Test", body="Content", api_token="")
+            result = publish_to_platform(
+                "medium", title="Test", body="Content", api_token=""
+            )
         assert result["success"] is False
 
     def test_linkedin_dispatch_without_network(self):
@@ -392,11 +395,15 @@ class TestNotificationConfig:
 
     def test_load_from_file(self, tmp_path):
         cfg_path = tmp_path / "notif.json"
-        cfg_path.write_text(json.dumps({
-            "slack_webhook": "https://hooks.slack.com/test",
-            "email_to": "user@example.com",
-            "desktop_enabled": False,
-        }))
+        cfg_path.write_text(
+            json.dumps(
+                {
+                    "slack_webhook": "https://hooks.slack.com/test",
+                    "email_to": "user@example.com",
+                    "desktop_enabled": False,
+                }
+            )
+        )
         config = NotificationConfig.load(cfg_path)
         assert config.slack_webhook == "https://hooks.slack.com/test"
         assert config.email_to == "user@example.com"

@@ -11,10 +11,10 @@ from core.markdown_commands import (
     update_todo_status,
 )
 
-
 # ---------------------------------------------------------------------------
 # extract_code_blocks
 # ---------------------------------------------------------------------------
+
 
 def test_extract_code_blocks_basic():
     md = "# Title\n\n```python\nprint('hello')\n```\n"
@@ -25,10 +25,7 @@ def test_extract_code_blocks_basic():
 
 
 def test_extract_code_blocks_multiple():
-    md = (
-        "```bash\necho hi\n```\n\nSome text\n\n"
-        "```python\nx = 1\n```\n"
-    )
+    md = "```bash\necho hi\n```\n\nSome text\n\n" "```python\nx = 1\n```\n"
     blocks = extract_code_blocks(md)
     assert len(blocks) == 2
     assert blocks[0]["language"] == "bash"
@@ -46,6 +43,7 @@ def test_extract_code_blocks_no_language():
 # ---------------------------------------------------------------------------
 # parse_todo_to_tasks
 # ---------------------------------------------------------------------------
+
 
 def test_parse_todo_to_tasks(tmp_path: Path):
     todo = tmp_path / "TODO.md"
@@ -75,6 +73,7 @@ def test_parse_todo_to_tasks_empty(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # parse_runbook / execute_runbook
 # ---------------------------------------------------------------------------
+
 
 def test_parse_runbook(tmp_path: Path):
     rb = tmp_path / "runbook.md"
@@ -115,13 +114,10 @@ def test_execute_runbook_real_bash():
 # update_todo_status
 # ---------------------------------------------------------------------------
 
+
 def test_update_todo_status(tmp_path: Path):
     todo = tmp_path / "TODO.md"
-    todo.write_text(
-        "- [ ] First\n"
-        "- [ ] Second\n"
-        "- [x] Third\n"
-    )
+    todo.write_text("- [ ] First\n" "- [ ] Second\n" "- [x] Third\n")
     update_todo_status(todo, 0, True)
     update_todo_status(todo, 2, False)
     text = todo.read_text()
@@ -133,6 +129,7 @@ def test_update_todo_status(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # generate_task_file
 # ---------------------------------------------------------------------------
+
 
 def test_generate_task_file(tmp_path: Path):
     tasks = [

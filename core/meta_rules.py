@@ -11,7 +11,15 @@ CHEATSHEET_PATH = Path("knowledge/CHEATSHEET.md")
 
 RULE_TYPES = {
     "workflow": ["always", "never", "before", "after", "first", "then", "step"],
-    "constraint": ["must", "shall", "required", "forbidden", "limit", "maximum", "minimum"],
+    "constraint": [
+        "must",
+        "shall",
+        "required",
+        "forbidden",
+        "limit",
+        "maximum",
+        "minimum",
+    ],
     "preference": ["prefer", "recommend", "better", "best", "avoid", "default"],
     "debug": ["when.*error", "if.*fails", "workaround", "fix", "gotcha", "caveat"],
 }
@@ -30,9 +38,19 @@ def detect_operational_rule(text: str) -> bool:
 
     # Must have imperative or prescriptive tone
     imperative_markers = [
-        "always", "never", "must", "should", "do not", "don't",
-        "make sure", "remember to", "important:", "note:",
-        "rule:", "tip:", "trick:",
+        "always",
+        "never",
+        "must",
+        "should",
+        "do not",
+        "don't",
+        "make sure",
+        "remember to",
+        "important:",
+        "note:",
+        "rule:",
+        "tip:",
+        "trick:",
     ]
 
     return any(marker in text_lower for marker in imperative_markers)

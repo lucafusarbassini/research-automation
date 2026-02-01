@@ -23,9 +23,17 @@ class DataHandler:
         """Detect file format from extension."""
         suffix = self.path.suffix.lower()
         format_map = {
-            ".csv": "csv", ".tsv": "tsv", ".json": "json", ".jsonl": "jsonl",
-            ".parquet": "parquet", ".feather": "feather", ".pkl": "pickle",
-            ".h5": "hdf5", ".hdf5": "hdf5", ".npy": "numpy", ".npz": "numpy",
+            ".csv": "csv",
+            ".tsv": "tsv",
+            ".json": "json",
+            ".jsonl": "jsonl",
+            ".parquet": "parquet",
+            ".feather": "feather",
+            ".pkl": "pickle",
+            ".h5": "hdf5",
+            ".hdf5": "hdf5",
+            ".npy": "numpy",
+            ".npz": "numpy",
         }
         self.format = format_map.get(suffix, "unknown")
         return self.format
@@ -60,6 +68,7 @@ def downsample_data(
         Downsampled list.
     """
     import random
+
     rng = random.Random(seed)
     n = max(1, int(len(data) * fraction))
     return rng.sample(data, min(n, len(data)))
@@ -139,7 +148,11 @@ class ReportGenerator:
 
     def render_markdown(self) -> str:
         """Render the report as Markdown."""
-        lines = [f"# {self.title}", f"\nGenerated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", ""]
+        lines = [
+            f"# {self.title}",
+            f"\nGenerated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            "",
+        ]
         for section in self.sections:
             lines.append(f"## {section['heading']}")
             lines.append("")

@@ -148,9 +148,7 @@ class TestOptimizeContext:
         if to_unload:
             # browser (tier 3) should be suggested before filesystem (tier 1)
             browser_idx = to_unload.index("browser") if "browser" in to_unload else 999
-            fs_idx = (
-                to_unload.index("filesystem") if "filesystem" in to_unload else 999
-            )
+            fs_idx = to_unload.index("filesystem") if "filesystem" in to_unload else 999
             assert browser_idx < fs_idx
 
 

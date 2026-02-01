@@ -76,7 +76,10 @@ class TestBridgeRun:
 
     def test_run_timeout_raises(self, bridge):
         import subprocess as sp
-        with patch("core.claude_flow.subprocess.run", side_effect=sp.TimeoutExpired("cmd", 10)):
+
+        with patch(
+            "core.claude_flow.subprocess.run", side_effect=sp.TimeoutExpired("cmd", 10)
+        ):
             with pytest.raises(ClaudeFlowUnavailable, match="timed out"):
                 bridge._run("slow")
 
@@ -89,7 +92,9 @@ class TestBridgeRun:
 class TestSpawnAgent:
     def test_spawn_agent_maps_type(self, bridge):
         with patch("core.claude_flow.subprocess.run") as mock:
-            mock.return_value = _mock_run(stdout='{"status": "success", "output": "done"}')
+            mock.return_value = _mock_run(
+                stdout='{"status": "success", "output": "done"}'
+            )
             result = bridge.spawn_agent("coder", "fix the bug")
             assert result["status"] == "success"
             call_args = mock.call_args[0][0]
@@ -193,22 +198,29 @@ class TestSession:
 class TestMultiRepoSync:
     def test_multi_repo_sync(self, bridge):
         with patch("core.claude_flow.subprocess.run") as mock:
-            mock.return_value = _mock_run(
-                stdout='{"repo-a": true, "repo-b": true}'
-            )
+            mock.return_value = _mock_run(stdout='{"repo-a": true, "repo-b": true}')
             result = bridge.multi_repo_sync("sync commit", ["repo-a", "repo-b"])
             assert result["repo-a"] is True
 
 
 class TestAgentTypeMap:
     def test_all_our_types_mapped(self):
-        expected = {"master", "researcher", "coder", "reviewer", "falsifier", "writer", "cleaner"}
+        expected = {
+            "master",
+            "researcher",
+            "coder",
+            "reviewer",
+            "falsifier",
+            "writer",
+            "cleaner",
+        }
         assert expected == set(AGENT_TYPE_MAP.keys())
 
 
 class TestGetBridge:
     def test_get_bridge_raises_when_unavailable(self):
         import core.claude_flow as cf_mod
+
         old = cf_mod._bridge_instance
         cf_mod._bridge_instance = None
         try:
@@ -220,6 +232,7 @@ class TestGetBridge:
 
     def test_get_bridge_returns_singleton(self):
         import core.claude_flow as cf_mod
+
         old = cf_mod._bridge_instance
         cf_mod._bridge_instance = None
         try:

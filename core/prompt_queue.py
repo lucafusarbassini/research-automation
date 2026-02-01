@@ -86,12 +86,14 @@ class SharedMemory:
     def record(self, prompt_id: str, key: str, value: str) -> None:
         """Record a context entry (thread-safe)."""
         with self._lock:
-            self.entries.append({
-                "prompt_id": prompt_id,
-                "key": key,
-                "value": value,
-                "timestamp": datetime.now().isoformat(),
-            })
+            self.entries.append(
+                {
+                    "prompt_id": prompt_id,
+                    "key": key,
+                    "value": value,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
 
     def get_context_for(self, prompt_id: str, max_entries: int = 50) -> list[str]:
         """Get context lines relevant to a prompt (all entries before it)."""
@@ -106,9 +108,7 @@ class SharedMemory:
     def get_all_context(self, max_entries: int = 50) -> list[str]:
         """Get all accumulated context lines."""
         with self._lock:
-            return [
-                f"[{e['key']}] {e['value']}" for e in self.entries
-            ][-max_entries:]
+            return [f"[{e['key']}] {e['value']}" for e in self.entries][-max_entries:]
 
     def search(self, query: str) -> list[str]:
         """Search memory entries for a query string."""
@@ -263,7 +263,11 @@ class PromptQueue:
                         for e in self._queue
                     ],
                     "running": [
-                        {"id": e.prompt_id, "text": e.text[:60], "agent": e.agent.value if e.agent else "routing"}
+                        {
+                            "id": e.prompt_id,
+                            "text": e.text[:60],
+                            "agent": e.agent.value if e.agent else "routing",
+                        }
                         for e in self._running.values()
                     ],
                     "completed": [
@@ -388,7 +392,9 @@ class PromptQueue:
                 return False
 
             # Find highest-priority prompt whose dependencies are met
-            completed_ids = {e.prompt_id for e in self._completed if e.status == "success"}
+            completed_ids = {
+                e.prompt_id for e in self._completed if e.status == "success"
+            }
             best_idx = None
             best_priority = -1
 
@@ -400,7 +406,9 @@ class PromptQueue:
 
             if best_idx is None:
                 # Check for dead dependencies (failed deps)
-                failed_ids = {e.prompt_id for e in self._completed if e.status == "failure"}
+                failed_ids = {
+                    e.prompt_id for e in self._completed if e.status == "failure"
+                }
                 for i, entry in enumerate(self._queue):
                     if any(d in failed_ids for d in entry.depends_on):
                         entry.status = "failure"

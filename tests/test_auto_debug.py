@@ -15,7 +15,6 @@ from core.auto_debug import (
     suggest_fix,
 )
 
-
 # ---------------------------------------------------------------------------
 # 1. DebugResult dataclass
 # ---------------------------------------------------------------------------
@@ -50,7 +49,7 @@ class TestDebugResult:
 class TestParseError:
     def test_python_traceback(self):
         stderr = (
-            'Traceback (most recent call last):\n'
+            "Traceback (most recent call last):\n"
             '  File "main.py", line 42, in <module>\n'
             "    foo()\n"
             "NameError: name 'foo' is not defined\n"
@@ -80,9 +79,7 @@ class TestParseError:
         assert "Undefined control sequence" in result["message"]
 
     def test_pytest_failure(self):
-        stderr = (
-            "FAILED tests/test_foo.py::test_bar - AssertionError: assert 1 == 2\n"
-        )
+        stderr = "FAILED tests/test_foo.py::test_bar - AssertionError: assert 1 == 2\n"
         result = parse_error(stderr)
         assert result["error_type"] == "pytest"
         assert "test_foo.py" in result["file"]
@@ -144,8 +141,12 @@ class TestRunWithRetry:
 
     @patch("core.auto_debug.subprocess.run")
     def test_retries_on_failure_then_succeeds(self, mock_run):
-        fail = subprocess.CompletedProcess(args="cmd", returncode=1, stdout="", stderr="err")
-        ok = subprocess.CompletedProcess(args="cmd", returncode=0, stdout="ok", stderr="")
+        fail = subprocess.CompletedProcess(
+            args="cmd", returncode=1, stdout="", stderr="err"
+        )
+        ok = subprocess.CompletedProcess(
+            args="cmd", returncode=0, stdout="ok", stderr=""
+        )
         mock_run.side_effect = [fail, fail, ok]
         result = run_with_retry("cmd", retries=3)
         assert result.returncode == 0
@@ -153,7 +154,9 @@ class TestRunWithRetry:
 
     @patch("core.auto_debug.subprocess.run")
     def test_exhausts_retries(self, mock_run):
-        fail = subprocess.CompletedProcess(args="cmd", returncode=1, stdout="", stderr="err")
+        fail = subprocess.CompletedProcess(
+            args="cmd", returncode=1, stdout="", stderr="err"
+        )
         mock_run.return_value = fail
         result = run_with_retry("cmd", retries=2)
         assert result.returncode == 1
@@ -183,7 +186,7 @@ class TestAutoDebugLoop:
             returncode=1,
             stdout="",
             stderr=(
-                'Traceback (most recent call last):\n'
+                "Traceback (most recent call last):\n"
                 '  File "main.py", line 1, in <module>\n'
                 "    import foo\n"
                 "ModuleNotFoundError: No module named 'foo'\n"

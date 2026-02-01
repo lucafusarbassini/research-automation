@@ -98,6 +98,7 @@ def test_config_has_apidog_in_tier2():
 def test_get_priority_mcps_includes_sequential_thinking():
     """get_priority_mcps always returns sequential-thinking as tier-0."""
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.mcps._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         mcps = get_priority_mcps()
     assert "sequential-thinking" in mcps
@@ -116,8 +117,11 @@ def test_get_priority_mcps_includes_claude_flow_when_available():
 def test_install_priority_mcps_returns_dict():
     """install_priority_mcps returns a dict mapping names to booleans."""
     from core.claude_flow import ClaudeFlowUnavailable
-    with patch("core.mcps._get_bridge", side_effect=ClaudeFlowUnavailable("no")), \
-         patch("core.mcps.install_mcp", return_value=True) as mock_install:
+
+    with (
+        patch("core.mcps._get_bridge", side_effect=ClaudeFlowUnavailable("no")),
+        patch("core.mcps.install_mcp", return_value=True) as mock_install,
+    ):
         results = install_priority_mcps()
     assert isinstance(results, dict)
     # sequential-thinking should be present
@@ -126,6 +130,7 @@ def test_install_priority_mcps_returns_dict():
 
 def test_get_claude_flow_mcp_config_unavailable():
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.mcps._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         config = get_claude_flow_mcp_config()
         assert config == {}

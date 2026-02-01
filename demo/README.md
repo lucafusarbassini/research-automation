@@ -1,4 +1,4 @@
-# Research Automation Demo Suite
+# ricet Demo Suite
 
 Exercises 100% of the public API across 9 phases, simulating a complete
 research project lifecycle from initialization to deployment.

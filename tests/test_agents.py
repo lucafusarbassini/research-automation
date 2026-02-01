@@ -2,7 +2,13 @@
 
 from unittest.mock import MagicMock, patch
 
-from core.agents import AgentType, TaskResult, _route_task_keywords, execute_agent_task, route_task
+from core.agents import (
+    AgentType,
+    TaskResult,
+    _route_task_keywords,
+    execute_agent_task,
+    route_task,
+)
 
 
 def test_route_to_researcher():
@@ -41,6 +47,7 @@ def test_route_default():
 
 # --- Bridge-integrated tests ---
 
+
 def test_route_task_keywords_fallback():
     """_route_task_keywords always uses keyword matching."""
     assert _route_task_keywords("search for papers") == AgentType.RESEARCHER
@@ -58,6 +65,7 @@ def test_route_task_via_bridge():
 def test_route_task_bridge_unavailable_falls_back():
     """When bridge raises, route_task falls back to keyword matching."""
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.agents._get_bridge", side_effect=ClaudeFlowUnavailable("nope")):
         assert route_task("implement the feature") == AgentType.CODER
 
@@ -81,10 +89,13 @@ def test_execute_agent_task_via_bridge():
 def test_execute_agent_task_bridge_fallback():
     """When bridge is unavailable, execute_agent_task falls back to legacy."""
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.agents._get_bridge", side_effect=ClaudeFlowUnavailable("nope")):
         with patch("core.agents._execute_agent_task_legacy") as mock_legacy:
             mock_legacy.return_value = TaskResult(
-                agent=AgentType.CODER, task="test", status="success",
+                agent=AgentType.CODER,
+                task="test",
+                status="success",
             )
             result = execute_agent_task(AgentType.CODER, "test")
             assert result.status == "success"

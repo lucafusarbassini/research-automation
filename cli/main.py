@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Research automation CLI."""
+"""ricet CLI - Scientific research automation powered by Claude Code."""
 
 import json
 import shutil
@@ -24,26 +24,34 @@ __version__ = "0.2.0"
 
 def version_callback(value: bool):
     if value:
-        print(f"research-automation {__version__}")
+        print(f"ricet {__version__}")
         raise typer.Exit()
 
 
 app = typer.Typer(
-    help="Scientific Research Automation - manage research projects with Claude Code.",
-    epilog="Run 'research COMMAND --help' for more info on a command.",
+    help="ricet - Scientific research automation powered by Claude Code.",
+    epilog="Run 'ricet COMMAND --help' for more info on a command.",
 )
 console = Console()
 
 
 @app.callback()
 def main(
-    version: bool = typer.Option(None, "--version", "-v", callback=version_callback, is_eager=True, help="Show version and exit"),
+    version: bool = typer.Option(
+        None,
+        "--version",
+        "-v",
+        callback=version_callback,
+        is_eager=True,
+        help="Show version and exit",
+    ),
 ):
-    """Scientific Research Automation CLI."""
+    """ricet CLI - Scientific research automation powered by Claude Code."""
     pass
 
+
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
-CONFIG_DIR = Path.home() / ".research-automation"
+CONFIG_DIR = Path.home() / ".ricet"
 SETUP_SCRIPT = Path(__file__).parent.parent / "scripts" / "setup_claude_flow.sh"
 
 
@@ -64,7 +72,9 @@ def init(
 
     # Full onboarding questionnaire
     def _prompt(prompt, default=""):
-        return typer.prompt(prompt, default=default) if default else typer.prompt(prompt)
+        return (
+            typer.prompt(prompt, default=default) if default else typer.prompt(prompt)
+        )
 
     answers = collect_answers(project_name, prompt_fn=_prompt)
 
@@ -118,7 +128,7 @@ def init(
     console.print(f"\n[green]Project created at {project_path}[/green]")
     console.print("\nNext steps:")
     console.print(f"  cd {project_path}")
-    console.print("  research start")
+    console.print("  ricet start")
 
 
 def _inject_claude_flow_mcp(project_path: Path) -> None:
@@ -140,31 +150,40 @@ def _inject_claude_flow_mcp(project_path: Path) -> None:
 
 @app.command()
 def config(
-    section: str = typer.Argument(None, help="Section to reconfigure (notifications, compute, credentials)"),
+    section: str = typer.Argument(
+        None, help="Section to reconfigure (notifications, compute, credentials)"
+    ),
 ):
     """View or reconfigure project settings."""
     settings = load_settings(Path.cwd())
     if not settings:
-        console.print("[red]No settings found. Run 'research init' first.[/red]")
+        console.print("[red]No settings found. Run 'ricet init' first.[/red]")
         raise typer.Exit(1)
 
     if section is None:
         # Show current settings
         import yaml
+
         console.print("[bold]Current Settings:[/bold]")
         console.print(yaml.dump(settings, default_flow_style=False))
         return
 
     if section == "notifications":
-        method = typer.prompt("Notification method (email, slack, none)", default="none")
+        method = typer.prompt(
+            "Notification method (email, slack, none)", default="none"
+        )
         settings.setdefault("notifications", {})["method"] = method
         settings["notifications"]["enabled"] = method != "none"
         if method == "email":
             settings["notifications"]["email"] = typer.prompt("Email address")
         elif method == "slack":
-            settings["notifications"]["slack_webhook"] = typer.prompt("Slack webhook URL")
+            settings["notifications"]["slack_webhook"] = typer.prompt(
+                "Slack webhook URL"
+            )
     elif section == "compute":
-        ctype = typer.prompt("Compute type (local-cpu, local-gpu, cloud, cluster)", default="local-cpu")
+        ctype = typer.prompt(
+            "Compute type (local-cpu, local-gpu, cloud, cluster)", default="local-cpu"
+        )
         settings.setdefault("compute", {})["type"] = ctype
         if ctype == "local-gpu":
             settings["compute"]["gpu"] = typer.prompt("GPU name", default="")
@@ -177,8 +196,11 @@ def config(
         raise typer.Exit(1)
 
     import yaml
+
     settings_path = Path.cwd() / "config" / "settings.yml"
-    settings_path.write_text(yaml.dump(settings, default_flow_style=False, sort_keys=False))
+    settings_path.write_text(
+        yaml.dump(settings, default_flow_style=False, sort_keys=False)
+    )
     console.print("[green]Settings updated.[/green]")
 
 
@@ -335,6 +357,7 @@ def agents():
     except ClaudeFlowUnavailable:
         console.print("[yellow]claude-flow not available[/yellow]")
         from core.agents import get_active_agents_status
+
         active = get_active_agents_status()
         if active:
             for a in active:
@@ -364,8 +387,11 @@ def memory(
         else:
             console.print("No matches found")
     except ClaudeFlowUnavailable:
-        console.print("[yellow]claude-flow not available. Using keyword search.[/yellow]")
+        console.print(
+            "[yellow]claude-flow not available. Using keyword search.[/yellow]"
+        )
         from core.knowledge import search_knowledge
+
         results = search_knowledge(query)
         for r in results[:top_k]:
             console.print(f"  {r}")
@@ -385,6 +411,7 @@ def metrics():
     except ClaudeFlowUnavailable:
         console.print("[yellow]claude-flow not available[/yellow]")
         from core.resources import monitor_resources
+
         snap = monitor_resources()
         console.print("[bold]Local Resources:[/bold]")
         if snap.ram_total_gb > 0:
@@ -422,12 +449,14 @@ def paper(
             console.print("[green]All figure references resolved.[/green]")
 
         from core.paper import list_citations
+
         citations = list_citations()
         console.print(f"\nCitations: {len(citations)}")
 
     elif action == "update":
         console.print("[bold]Updating paper references...[/bold]")
         from core.paper import list_citations
+
         citations = list_citations()
         console.print(f"Current citations: {len(citations)}")
         console.print("Use core.paper.add_citation() to add references.")
@@ -435,6 +464,7 @@ def paper(
     elif action == "modernize":
         console.print("[bold]Style analysis...[/bold]")
         from core.style_transfer import analyze_paper_style
+
         paper_tex = Path("paper/main.tex")
         if paper_tex.exists():
             profile = analyze_paper_style(paper_tex.read_text())
@@ -460,7 +490,9 @@ def mobile(
     try:
         from core.mobile import mobile_server
     except ImportError:
-        console.print("[red]core.mobile not available. Install mobile dependencies first.[/red]")
+        console.print(
+            "[red]core.mobile not available. Install mobile dependencies first.[/red]"
+        )
         raise typer.Exit(1)
 
     if action == "start":
@@ -488,7 +520,9 @@ def website(
     try:
         from core.website import site_manager
     except ImportError:
-        console.print("[red]core.website not available. Install website dependencies first.[/red]")
+        console.print(
+            "[red]core.website not available. Install website dependencies first.[/red]"
+        )
         raise typer.Exit(1)
 
     if action == "init":
@@ -520,10 +554,14 @@ def publish(
     try:
         from core.social_media import publish_to_platform
     except ImportError:
-        console.print("[red]core.social_media not available. Install social media dependencies first.[/red]")
+        console.print(
+            "[red]core.social_media not available. Install social media dependencies first.[/red]"
+        )
         raise typer.Exit(1)
 
-    title = typer.prompt("Post title", default="") if platform.lower() == "medium" else ""
+    title = (
+        typer.prompt("Post title", default="") if platform.lower() == "medium" else ""
+    )
     body = typer.prompt("Post body")
     console.print(f"[bold]Publishing to {platform}...[/bold]")
     result = publish_to_platform(platform, title=title, body=body)
@@ -546,7 +584,9 @@ def verify(
     try:
         from core.verification import verify_text
     except ImportError:
-        console.print("[red]core.verification not available. Install verification dependencies first.[/red]")
+        console.print(
+            "[red]core.verification not available. Install verification dependencies first.[/red]"
+        )
         raise typer.Exit(1)
 
     console.print("[bold]Running verification...[/bold]")
@@ -569,7 +609,9 @@ def debug(
     try:
         from core.auto_debug import auto_debug_loop
     except ImportError:
-        console.print("[red]core.auto_debug not available. Install debug dependencies first.[/red]")
+        console.print(
+            "[red]core.auto_debug not available. Install debug dependencies first.[/red]"
+        )
         raise typer.Exit(1)
 
     console.print(f"[bold]Starting auto-debug for:[/bold] {command}")
@@ -592,7 +634,9 @@ def projects(
     try:
         from core.multi_project import project_manager
     except ImportError:
-        console.print("[red]core.multi_project not available. Install multi-project dependencies first.[/red]")
+        console.print(
+            "[red]core.multi_project not available. Install multi-project dependencies first.[/red]"
+        )
         raise typer.Exit(1)
 
     if action == "list":
@@ -628,7 +672,9 @@ def worktree(
     try:
         from core.git_worktrees import worktree_manager
     except ImportError:
-        console.print("[red]core.git_worktrees not available. Install worktree dependencies first.[/red]")
+        console.print(
+            "[red]core.git_worktrees not available. Install worktree dependencies first.[/red]"
+        )
         raise typer.Exit(1)
 
     if action == "add":

@@ -2,7 +2,7 @@
 # Docs — deploy GitHub Pages documentation site
 # ============================================================================
 # Badge:
-#   ![Docs](https://github.com/<owner>/research-automation/actions/workflows/docs.yml/badge.svg)
+#   ![Docs](https://github.com/<owner>/ricet/actions/workflows/docs.yml/badge.svg)
 
 name: Deploy Docs
 
@@ -10,6 +10,7 @@ on:
   push:
     paths:
       - "docs/**"
+      - "mkdocs.yml"
     branches: [main, master]
   workflow_dispatch:
 

@@ -42,13 +42,15 @@ def scan_figures(
             if item.parent != figures_dir:
                 run_id = item.parent.name
 
-            entries.append(FigureEntry(
-                path=item,
-                name=item.stem,
-                format=item.suffix.lstrip("."),
-                size_kb=round(item.stat().st_size / 1024, 1),
-                run_id=run_id,
-            ))
+            entries.append(
+                FigureEntry(
+                    path=item,
+                    name=item.stem,
+                    format=item.suffix.lstrip("."),
+                    size_kb=round(item.stat().st_size / 1024, 1),
+                    run_id=run_id,
+                )
+            )
 
     return entries
 

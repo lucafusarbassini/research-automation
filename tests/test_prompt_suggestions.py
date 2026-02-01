@@ -11,10 +11,10 @@ from core.prompt_suggestions import (
     suggest_next_steps,
 )
 
-
 # ---------------------------------------------------------------------------
 # suggest_next_steps
 # ---------------------------------------------------------------------------
+
 
 class TestSuggestNextSteps:
     def test_returns_list_of_strings(self):
@@ -55,6 +55,7 @@ class TestSuggestNextSteps:
 # generate_follow_up_prompts
 # ---------------------------------------------------------------------------
 
+
 class TestGenerateFollowUpPrompts:
     def test_returns_list_of_strings(self):
         result = generate_follow_up_prompts(
@@ -82,6 +83,7 @@ class TestGenerateFollowUpPrompts:
 # ---------------------------------------------------------------------------
 # detect_stuck_pattern
 # ---------------------------------------------------------------------------
+
 
 class TestDetectStuckPattern:
     def test_detects_repeated_actions(self):
@@ -117,6 +119,7 @@ class TestDetectStuckPattern:
 # suggest_decomposition
 # ---------------------------------------------------------------------------
 
+
 class TestSuggestDecomposition:
     def test_returns_list_of_subtasks(self):
         result = suggest_decomposition(
@@ -138,6 +141,7 @@ class TestSuggestDecomposition:
 # ---------------------------------------------------------------------------
 # compress_context
 # ---------------------------------------------------------------------------
+
 
 class TestCompressContext:
     def test_short_context_returned_as_is(self):
@@ -171,6 +175,7 @@ class TestCompressContext:
 # ---------------------------------------------------------------------------
 # COMMON_PATTERNS
 # ---------------------------------------------------------------------------
+
 
 class TestCommonPatterns:
     def test_is_dict(self):

@@ -40,7 +40,9 @@ def _load_routines(path: Path = ROUTINES_FILE) -> list[ScheduledRoutine]:
         return []
 
 
-def _save_routines(routines: list[ScheduledRoutine], path: Path = ROUTINES_FILE) -> None:
+def _save_routines(
+    routines: list[ScheduledRoutine], path: Path = ROUTINES_FILE
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps([r.to_dict() for r in routines], indent=2))
 

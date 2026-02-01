@@ -73,7 +73,9 @@ class LazyMCPLoader:
             tier=tier,
             trigger_keywords=trigger_keywords,
         )
-        logger.debug("Registered MCP %s (tier %d, keywords=%s)", name, tier, trigger_keywords)
+        logger.debug(
+            "Registered MCP %s (tier %d, keywords=%s)", name, tier, trigger_keywords
+        )
 
     # ── Task matching ───────────────────────────────────────────────
 

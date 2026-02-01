@@ -82,11 +82,13 @@ def scan_for_secrets(
         for i, line in enumerate(content.splitlines(), 1):
             for pattern in patterns:
                 if pattern.search(line):
-                    findings.append({
-                        "file": str(file_path),
-                        "line": i,
-                        "pattern": pattern.pattern[:60],
-                    })
+                    findings.append(
+                        {
+                            "file": str(file_path),
+                            "line": i,
+                            "pattern": pattern.pattern[:60],
+                        }
+                    )
                     break  # One finding per line
 
     # Merge claude-flow security scan results if available
@@ -98,11 +100,13 @@ def scan_for_secrets(
         for cf in cf_findings:
             key = (cf.get("file", ""), cf.get("line", 0))
             if key not in seen:
-                findings.append({
-                    "file": cf.get("file", ""),
-                    "line": cf.get("line", 0),
-                    "pattern": cf.get("pattern", "claude-flow"),
-                })
+                findings.append(
+                    {
+                        "file": cf.get("file", ""),
+                        "line": cf.get("line", 0),
+                        "pattern": cf.get("pattern", "claude-flow"),
+                    }
+                )
     except ClaudeFlowUnavailable:
         pass
 
@@ -143,15 +147,34 @@ def _collect_scannable_files(directory: Path, max_files: int = 500) -> list[Path
     scannable = []
     skip_dirs = {".git", "node_modules", "__pycache__", ".venv", "venv"}
     text_suffixes = {
-        ".py", ".yml", ".yaml", ".json", ".toml", ".cfg", ".ini",
-        ".sh", ".bash", ".env", ".txt", ".md", ".tex", ".bib",
-        ".js", ".ts", ".r", ".R",
+        ".py",
+        ".yml",
+        ".yaml",
+        ".json",
+        ".toml",
+        ".cfg",
+        ".ini",
+        ".sh",
+        ".bash",
+        ".env",
+        ".txt",
+        ".md",
+        ".tex",
+        ".bib",
+        ".js",
+        ".ts",
+        ".r",
+        ".R",
     }
 
     for item in directory.rglob("*"):
         if any(part in skip_dirs for part in item.parts):
             continue
-        if item.is_file() and item.suffix in text_suffixes and item.stat().st_size < 1_000_000:
+        if (
+            item.is_file()
+            and item.suffix in text_suffixes
+            and item.stat().st_size < 1_000_000
+        ):
             scannable.append(item)
             if len(scannable) >= max_files:
                 break

@@ -42,7 +42,9 @@ class TestRegisterProject:
     def test_register_creates_entry(self, registry: ProjectRegistry, tmp_path: Path):
         proj_dir = tmp_path / "my_project"
         proj_dir.mkdir()
-        result = registry.register_project("my_project", proj_dir, project_type="research")
+        result = registry.register_project(
+            "my_project", proj_dir, project_type="research"
+        )
         assert result["name"] == "my_project"
         assert result["project_type"] == "research"
         assert result["path"] == str(proj_dir)
@@ -54,7 +56,9 @@ class TestRegisterProject:
         data = json.loads(registry.registry_file.read_text())
         assert any(p["name"] == "persist_test" for p in data["projects"])
 
-    def test_register_duplicate_updates(self, registry: ProjectRegistry, tmp_path: Path):
+    def test_register_duplicate_updates(
+        self, registry: ProjectRegistry, tmp_path: Path
+    ):
         d1 = tmp_path / "v1"
         d1.mkdir()
         d2 = tmp_path / "v2"
@@ -66,7 +70,9 @@ class TestRegisterProject:
         assert names.count("dup") == 1
         assert projects[0]["path"] == str(d2)
 
-    def test_register_nonexistent_path_raises(self, registry: ProjectRegistry, tmp_path: Path):
+    def test_register_nonexistent_path_raises(
+        self, registry: ProjectRegistry, tmp_path: Path
+    ):
         with pytest.raises(FileNotFoundError):
             registry.register_project("ghost", tmp_path / "nonexistent")
 
@@ -108,7 +114,9 @@ class TestGetActiveProject:
         with pytest.raises(RuntimeError):
             registry.get_active_project()
 
-    def test_active_after_register_first(self, registry: ProjectRegistry, tmp_path: Path):
+    def test_active_after_register_first(
+        self, registry: ProjectRegistry, tmp_path: Path
+    ):
         proj = tmp_path / "first"
         proj.mkdir()
         registry.register_project("first", proj)

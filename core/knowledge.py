@@ -215,7 +215,9 @@ def import_knowledge(
         encyclopedia_path.parent.mkdir(parents=True, exist_ok=True)
         encyclopedia_path.write_text(imported_content)
         logger.info("Replaced encyclopedia with imported content")
-        return len([l for l in imported_content.splitlines() if l.strip().startswith("- [")])
+        return len(
+            [l for l in imported_content.splitlines() if l.strip().startswith("- [")]
+        )
 
     # Merge: extract entries from imported content and append
     existing = encyclopedia_path.read_text()
@@ -224,7 +226,9 @@ def import_knowledge(
         stripped = line.strip()
         if stripped.startswith("- [") and stripped not in existing:
             # Find which section it belongs to by context
-            append_learning("Tricks", stripped.lstrip("- "), encyclopedia_path=encyclopedia_path)
+            append_learning(
+                "Tricks", stripped.lstrip("- "), encyclopedia_path=encyclopedia_path
+            )
             count += 1
 
     logger.info("Imported %d entries", count)

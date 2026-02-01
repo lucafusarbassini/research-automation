@@ -1,14 +1,14 @@
 # FAQ
 
-Frequently asked questions about Research Automation.
+Frequently asked questions about ricet.
 
 ---
 
 ## General
 
-### What is Research Automation?
+### What is ricet?
 
-Research Automation is a CLI tool and framework that manages scientific research projects using Claude Code. It provides multi-agent orchestration, persistent knowledge, reproducibility enforcement, a paper pipeline, and overnight autonomous execution -- all from a single `research` command.
+ricet is a CLI tool and framework that manages scientific research projects using Claude Code. It provides multi-agent orchestration, persistent knowledge, reproducibility enforcement, a paper pipeline, and overnight autonomous execution -- all from a single `ricet` command.
 
 ### Who is this for?
 
@@ -16,7 +16,7 @@ Researchers, data scientists, and engineers who use AI assistants for scientific
 
 ### What models does it use?
 
-Research Automation is built around Anthropic's Claude models. The model router selects between Claude Haiku (simple tasks), Claude Sonnet (medium tasks), and Claude Opus (complex/critical tasks) based on task complexity and remaining budget.
+ricet is built around Anthropic's Claude models. The model router selects between Claude Haiku (simple tasks), Claude Sonnet (medium tasks), and Claude Opus (complex/critical tasks) based on task complexity and remaining budget.
 
 ### Is claude-flow required?
 
@@ -60,12 +60,12 @@ The core Python modules work on Windows. Some shell scripts (`scripts/*.sh`) and
 ### How do I create a new project?
 
 ```bash
-research init my-project
+ricet init my-project
 ```
 
 This runs an interactive wizard that asks for your goal, project type, and constraints, then scaffolds the full project directory.
 
-### What happens during `research start`?
+### What happens during `ricet start`?
 
 1. A session record is created in `state/sessions/`.
 2. The pre-task hook loads knowledge and logs the start.
@@ -131,7 +131,7 @@ The file `knowledge/ENCYCLOPEDIA.md` is a living document that accumulates proje
 
 ### How does vector search work?
 
-When claude-flow is installed, knowledge entries are dual-written to both the markdown file and an HNSW vector index. The `research memory search "query"` command performs semantic search over indexed entries. Without claude-flow, search falls back to keyword grep.
+When claude-flow is installed, knowledge entries are dual-written to both the markdown file and an HNSW vector index. The `ricet memory search "query"` command performs semantic search over indexed entries. Without claude-flow, search falls back to keyword grep.
 
 ### Is knowledge shared across projects?
 

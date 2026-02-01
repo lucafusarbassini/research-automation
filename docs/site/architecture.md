@@ -1,6 +1,6 @@
 # Architecture
 
-This page describes the system architecture, module relationships, and data flow within Research Automation.
+This page describes the system architecture, module relationships, and data flow within ricet.
 
 ---
 
@@ -98,7 +98,7 @@ graph LR
 
 3. **Domain-specific modules are isolated.** `paper.py`, `reproducibility.py`, `voice.py`, `style_transfer.py`, `meta_rules.py`, and `automation_utils.py` do not depend on the claude-flow bridge and operate independently.
 
-4. **`onboarding.py` is entry-only.** It is called during `research init` and does not participate in ongoing session execution.
+4. **`onboarding.py` is entry-only.** It is called during `ricet init` and does not participate in ongoing session execution.
 
 ---
 
@@ -180,7 +180,7 @@ sequenceDiagram
     participant T as templates/
     participant G as Git
 
-    U->>CLI: research init my-project
+    U->>CLI: ricet init my-project
     CLI->>OB: collect_answers()
     OB->>U: Interactive questionnaire
     U->>OB: Goal, type, constraints
@@ -275,7 +275,7 @@ This ensures the system works identically with or without claude-flow installed.
 
 ### Agent Type Mapping
 
-| Research Automation | claude-flow Equivalent |
+| ricet | claude-flow Equivalent |
 |--------------------|-----------------------|
 | MASTER | hierarchical-coordinator (queen) |
 | RESEARCHER | researcher |

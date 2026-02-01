@@ -38,6 +38,7 @@ def discover_system() -> SystemInfo:
     # RAM
     try:
         import os
+
         if hasattr(os, "sysconf"):
             pages = os.sysconf("SC_PHYS_PAGES")
             page_size = os.sysconf("SC_PAGE_SIZE")
@@ -139,6 +140,8 @@ def generate_system_md(info: Optional[SystemInfo] = None) -> str:
         lines.append("- **GPU**: None detected")
 
     lines.append(f"- **Conda**: {'Available' if info.conda_available else 'Not found'}")
-    lines.append(f"- **Docker**: {'Available' if info.docker_available else 'Not found'}")
+    lines.append(
+        f"- **Docker**: {'Available' if info.docker_available else 'Not found'}"
+    )
 
     return "\n".join(lines)

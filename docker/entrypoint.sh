@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# research-automation Docker entrypoint
+# ricet Docker entrypoint
 #
 # Usage:
 #   docker compose up          -> starts web terminal on :7681
@@ -26,22 +26,28 @@ error() { echo -e "${RED}[entrypoint]${NC} $*"; }
 ok()    { echo -e "${GREEN}[entrypoint]${NC} $*"; }
 
 # ---------------------------------------------------------------------------
-# 1. Check required API keys
+# 1. Check Claude authentication
 # ---------------------------------------------------------------------------
-info "Checking environment..."
+info "Checking authentication..."
 
-MISSING_KEYS=()
+CLAUDE_AUTHENTICATED=false
 
-if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-    MISSING_KEYS+=("ANTHROPIC_API_KEY")
+# Check for browser-based auth (preferred)
+if [ -d /root/.claude ] && [ -n "$(ls -A /root/.claude 2>/dev/null)" ]; then
+    ok "Claude authenticated via browser login."
+    CLAUDE_AUTHENTICATED=true
 fi
 
-if [ ${#MISSING_KEYS[@]} -gt 0 ]; then
-    warn "Missing API keys: ${MISSING_KEYS[*]}"
-    warn "Some features will be unavailable."
-    warn "Set them in docker-compose.yml or pass with -e flag."
-else
-    ok "ANTHROPIC_API_KEY present."
+# Check for API key auth (fallback for CI/headless)
+if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    ok "Claude authenticated via API key."
+    CLAUDE_AUTHENTICATED=true
+fi
+
+if [ "$CLAUDE_AUTHENTICATED" = false ]; then
+    warn "No Claude authentication found."
+    warn "Run 'claude auth login' on the host first (recommended),"
+    warn "or set ANTHROPIC_API_KEY in docker-compose.yml / pass with -e flag."
 fi
 
 # Optional keys — just inform
@@ -95,7 +101,7 @@ fi
 print_banner() {
     echo -e "${BOLD}"
     echo "  ╔══════════════════════════════════════════╗"
-    echo "  ║   research-automation  v0.2.0            ║"
+    echo "  ║   ricet  v0.2.0                          ║"
     echo "  ║   Python $(python3 --version 2>&1 | cut -d' ' -f2)  |  Node $(node --version)         ║"
     echo "  ╚══════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -121,9 +127,9 @@ case "${1:-}" in
         exec ttyd \
             --port "${TTYD_PORT:-7681}" \
             --writable \
-            --title-fixed "research-automation" \
+            --title-fixed "ricet" \
             --base-path / \
-            bash --login -c "cd /workspace && print_banner() { echo 'research-automation ready. Type: research --help'; }; print_banner; exec bash"
+            bash --login -c "cd /workspace && print_banner() { echo 'ricet ready. Type: ricet --help'; }; print_banner; exec bash"
         ;;
 
     --shell)
@@ -138,12 +144,12 @@ case "${1:-}" in
         info "Starting overnight autonomous mode..."
         shift
         cd /workspace
-        exec research overnight "$@"
+        exec ricet overnight "$@"
         ;;
 
     --help|-h)
         print_banner
-        echo "Usage: docker run research-automation [MODE]"
+        echo "Usage: docker run ricet [MODE]"
         echo ""
         echo "Modes:"
         echo "  --web          Start web terminal (default, port 7681)"
@@ -152,7 +158,8 @@ case "${1:-}" in
         echo "  <command>      Run arbitrary command"
         echo ""
         echo "Environment variables:"
-        echo "  ANTHROPIC_API_KEY   Required for Claude features"
+        echo "  ~/.claude/          Auth via 'claude auth login' (preferred)"
+    echo "  ANTHROPIC_API_KEY   Fallback for CI/headless environments"
         echo "  OPENAI_API_KEY      Optional, for embeddings"
         echo "  GITHUB_TOKEN        Optional, for GitHub integration"
         echo "  TTYD_PORT           Web terminal port (default: 7681)"

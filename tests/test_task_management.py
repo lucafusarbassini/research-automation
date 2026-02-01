@@ -135,6 +135,7 @@ def test_plan_execute_iterate_with_mock():
 
     # Monkey-patch execute_parallel_tasks for this test
     import core.agents as agents_mod
+
     orig = agents_mod.execute_parallel_tasks
 
     def mock_parallel(tasks, **kwargs):
@@ -184,6 +185,7 @@ def test_execute_parallel_via_swarm():
 def test_execute_parallel_swarm_fallback():
     """When bridge fails, execute_parallel_tasks uses legacy executor."""
     from core.claude_flow import ClaudeFlowUnavailable
+
     tasks = [
         Task(id="t1", description="task one", agent=AgentType.CODER),
     ]

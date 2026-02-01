@@ -13,10 +13,10 @@ from core.mobile import (
     stop_server,
 )
 
-
 # ---------------------------------------------------------------------------
 # MobileAuth
 # ---------------------------------------------------------------------------
+
 
 def test_auth_generate_token():
     auth = MobileAuth()
@@ -47,6 +47,7 @@ def test_auth_revoke_token():
 # ---------------------------------------------------------------------------
 # MobileServer — route registration and dispatch
 # ---------------------------------------------------------------------------
+
 
 def test_server_has_all_routes():
     server = MobileServer()
@@ -105,7 +106,9 @@ def test_server_dispatch_auth_required():
     auth = MobileAuth()
     auth.generate_token()
     server = MobileServer(auth=auth)
-    response = server.dispatch("GET", "/status", headers={"Authorization": "Bearer wrong"})
+    response = server.dispatch(
+        "GET", "/status", headers={"Authorization": "Bearer wrong"}
+    )
     assert response["ok"] is False
     assert response["error"] == "unauthorized"
 
@@ -124,6 +127,7 @@ def test_server_dispatch_auth_accepted():
 # generate_mobile_url
 # ---------------------------------------------------------------------------
 
+
 def test_generate_mobile_url_contains_token():
     url = generate_mobile_url(host="192.168.1.10", port=8777)
     assert url.startswith("http://192.168.1.10:8777")
@@ -138,6 +142,7 @@ def test_generate_mobile_url_default():
 # ---------------------------------------------------------------------------
 # format_for_mobile
 # ---------------------------------------------------------------------------
+
 
 def test_format_for_mobile_truncates_long_values():
     data = {"message": "x" * 500, "count": 3}
@@ -154,6 +159,7 @@ def test_format_for_mobile_adds_timestamp():
 # ---------------------------------------------------------------------------
 # start_server / stop_server (lifecycle, no real socket)
 # ---------------------------------------------------------------------------
+
 
 def test_start_and_stop_server():
     """start_server launches a thread; stop_server shuts it down."""

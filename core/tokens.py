@@ -101,7 +101,14 @@ def _select_thinking_mode_keywords(task_description: str) -> str:
     if any(kw in task_lower for kw in critical_keywords):
         return "ultrathink"
 
-    complex_keywords = ["debug", "design", "architecture", "research", "why", "investigate"]
+    complex_keywords = [
+        "debug",
+        "design",
+        "architecture",
+        "research",
+        "why",
+        "investigate",
+    ]
     if any(kw in task_lower for kw in complex_keywords):
         return "extended"
 

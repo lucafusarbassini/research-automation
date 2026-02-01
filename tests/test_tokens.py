@@ -78,6 +78,7 @@ def test_estimate_tokens_via_bridge():
 
 def test_estimate_tokens_bridge_fallback():
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.tokens._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         assert estimate_tokens("abcd" * 25) == 25
 
@@ -120,6 +121,7 @@ def test_select_thinking_mode_keywords_fallback():
 
 def test_check_budget_bridge_unavailable():
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.tokens._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         budget = TokenBudget(session_limit=1000, daily_limit=5000, current_session=500)
         result = check_budget(budget, estimated_cost=100)
@@ -130,6 +132,7 @@ def test_check_budget_bridge_unavailable():
 
 def test_select_thinking_mode_bridge_unavailable():
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.tokens._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         assert select_thinking_mode("validate the paper") == "ultrathink"
         assert select_thinking_mode("debug something") == "extended"

@@ -1,12 +1,12 @@
 # Features
 
-A complete reference for every major feature in Research Automation.
+A complete reference for every major feature in ricet.
 
 ---
 
 ## Multi-Agent Orchestration
 
-Research Automation uses a hierarchical agent system where a Master agent routes tasks to six specialized sub-agents.
+ricet uses a hierarchical agent system where a Master agent routes tasks to six specialized sub-agents.
 
 ### Agent Types
 
@@ -39,7 +39,7 @@ When claude-flow is available, swarm execution delegates to the bridge for enhan
 
 ## MCP Auto-Discovery
 
-Research Automation includes a catalog of 70+ Model Context Protocol (MCP) integrations organized into eight tiers. MCPs are loaded automatically based on task keywords.
+ricet includes a catalog of 70+ Model Context Protocol (MCP) integrations organized into eight tiers. MCPs are loaded automatically based on task keywords.
 
 ### Tiers
 
@@ -65,7 +65,7 @@ When claude-flow is installed, it is injected as a tier-0 MCP providing swarm or
 Run autonomous research while you sleep:
 
 ```bash
-research overnight --iterations 20
+ricet overnight --iterations 20
 ```
 
 ### How It Works
@@ -107,7 +107,7 @@ After every task, the post-task hook and knowledge module can append new entries
 
 ### Vector Search
 
-When claude-flow is available, knowledge entries are dual-written to both the markdown file and an HNSW vector index. This enables semantic search over accumulated knowledge using `research memory search "query"`.
+When claude-flow is available, knowledge entries are dual-written to both the markdown file and an HNSW vector index. This enables semantic search over accumulated knowledge using `ricet memory search "query"`.
 
 ### Cross-Project Knowledge
 
@@ -293,8 +293,8 @@ When the remaining budget drops below 20%, all tasks route to Haiku regardless o
 ### Creating Sessions
 
 ```bash
-research start                          # Auto-named by timestamp
-research start --session-name "exp-v2"  # Named session
+ricet start                          # Auto-named by timestamp
+ricet start --session-name "exp-v2"  # Named session
 ```
 
 ### Session Data
@@ -391,7 +391,7 @@ routine = ScheduledRoutine(
     name="nightly-validation",
     description="Re-run all experiments and check reproducibility",
     schedule="daily",
-    command="research overnight --iterations 5",
+    command="ricet overnight --iterations 5",
 )
 add_routine(routine)
 ```

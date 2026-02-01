@@ -16,12 +16,21 @@ def test_classify_simple():
 
 def test_classify_complex():
     assert classify_task_complexity("debug the training loop") == TaskComplexity.COMPLEX
-    assert classify_task_complexity("research transformer architectures") == TaskComplexity.COMPLEX
+    assert (
+        classify_task_complexity("research transformer architectures")
+        == TaskComplexity.COMPLEX
+    )
 
 
 def test_classify_critical():
-    assert classify_task_complexity("validate the final results") == TaskComplexity.CRITICAL
-    assert classify_task_complexity("prepare to publish the paper") == TaskComplexity.CRITICAL
+    assert (
+        classify_task_complexity("validate the final results")
+        == TaskComplexity.CRITICAL
+    )
+    assert (
+        classify_task_complexity("prepare to publish the paper")
+        == TaskComplexity.CRITICAL
+    )
 
 
 def test_classify_medium_default():
@@ -79,7 +88,10 @@ def test_fallback_unknown_model():
 
 from unittest.mock import MagicMock, patch
 
-from core.model_router import _classify_task_complexity_keywords, _route_to_model_keywords
+from core.model_router import (
+    _classify_task_complexity_keywords,
+    _route_to_model_keywords,
+)
 
 
 def test_classify_via_bridge():
@@ -98,7 +110,10 @@ def test_classify_via_bridge_tier_fallback():
 
 def test_classify_bridge_unavailable():
     from core.claude_flow import ClaudeFlowUnavailable
-    with patch("core.model_router._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+
+    with patch(
+        "core.model_router._get_bridge", side_effect=ClaudeFlowUnavailable("no")
+    ):
         assert classify_task_complexity("debug something") == TaskComplexity.COMPLEX
 
 

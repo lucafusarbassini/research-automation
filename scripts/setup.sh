@@ -2,7 +2,7 @@
 # Project setup script - run once after cloning or init
 set -euo pipefail
 
-echo "=== Research Automation Setup ==="
+echo "=== ricet Setup ==="
 
 # Create required directories
 mkdir -p state/sessions
@@ -45,4 +45,4 @@ else
 fi
 
 echo ""
-echo "Setup complete. Run 'research start' to begin."
+echo "Setup complete. Run 'ricet start' to begin."

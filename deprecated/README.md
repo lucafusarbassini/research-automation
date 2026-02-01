@@ -1,7 +1,7 @@
 # Deprecated / Historical Documents
 
 This directory contains planning and brainstorming documents from the initial
-design phase of the research-automation project. They are preserved for
+design phase of the ricet project. They are preserved for
 historical reference but are **not** used by any active code, configuration,
 or workflow.
 

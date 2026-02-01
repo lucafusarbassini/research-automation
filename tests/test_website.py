@@ -16,10 +16,10 @@ from core.website import (
     update_page,
 )
 
-
 # ---------------------------------------------------------------------------
 # 1. init_website
 # ---------------------------------------------------------------------------
+
 
 def test_init_website_academic(tmp_path: Path):
     """init_website creates an academic site scaffold with expected files."""
@@ -57,6 +57,7 @@ def test_init_website_idempotent(tmp_path: Path):
 # 2. WebsiteProject
 # ---------------------------------------------------------------------------
 
+
 def test_website_project_pages(tmp_path: Path):
     """WebsiteProject.pages lists all HTML pages in the project."""
     project_path = init_website(tmp_path / "proj", template="academic")
@@ -77,6 +78,7 @@ def test_website_project_config(tmp_path: Path):
 # 3. update_page
 # ---------------------------------------------------------------------------
 
+
 def test_update_page_success(tmp_path: Path):
     """update_page replaces a page's content and returns True."""
     project_path = init_website(tmp_path / "site", template="academic")
@@ -96,6 +98,7 @@ def test_update_page_nonexistent(tmp_path: Path):
 # 4. add_page
 # ---------------------------------------------------------------------------
 
+
 def test_add_page(tmp_path: Path):
     """add_page creates a new page and adds it to the navigation."""
     project_path = init_website(tmp_path / "site", template="academic")
@@ -111,6 +114,7 @@ def test_add_page(tmp_path: Path):
 # 5. build_site
 # ---------------------------------------------------------------------------
 
+
 def test_build_site(tmp_path: Path):
     """build_site copies files to a _build directory and returns True."""
     project_path = init_website(tmp_path / "site", template="academic")
@@ -125,6 +129,7 @@ def test_build_site(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # 6. deploy_site
 # ---------------------------------------------------------------------------
+
 
 def test_deploy_site_github_pages(tmp_path: Path):
     """deploy_site returns a dict with deployment info."""
@@ -149,6 +154,7 @@ def test_deploy_site_unsupported_method(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # 7. add_publication
 # ---------------------------------------------------------------------------
+
 
 def test_add_publication(tmp_path: Path):
     """add_publication appends a publication entry to publications.html."""
@@ -179,6 +185,7 @@ def test_add_publication_no_page(tmp_path: Path):
 # 8. update_cv
 # ---------------------------------------------------------------------------
 
+
 def test_update_cv(tmp_path: Path):
     """update_cv updates a section of the CV page."""
     project_path = init_website(tmp_path / "site", template="academic")
@@ -198,6 +205,7 @@ def test_update_cv_no_page(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # 9. preview_site
 # ---------------------------------------------------------------------------
+
 
 def test_preview_site(tmp_path: Path):
     """preview_site returns the local URL and can be stopped."""

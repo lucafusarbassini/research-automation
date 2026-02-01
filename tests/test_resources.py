@@ -99,6 +99,7 @@ def test_monitor_resources_merges_bridge_gpu():
 
 def test_monitor_resources_bridge_unavailable():
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.resources._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         snap = monitor_resources()
         assert snap.timestamp > 0

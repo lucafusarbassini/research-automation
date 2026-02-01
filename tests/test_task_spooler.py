@@ -6,8 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from core.task_spooler import TaskSpooler, FallbackSpooler
-
+from core.task_spooler import FallbackSpooler, TaskSpooler
 
 # ---------------------------------------------------------------------------
 # TaskSpooler (tsp backend) tests
@@ -95,7 +94,8 @@ class TestTaskSpoolerResult:
     def test_result_returns_output(self, mock_run, _mock_which):
         # First call: tsp -i <id> for info, second: tsp -c <id> for output
         info_result = subprocess.CompletedProcess(
-            args=[], returncode=0,
+            args=[],
+            returncode=0,
             stdout="Exit status: 0\nCommand: echo hello\n",
             stderr="",
         )

@@ -37,11 +37,13 @@ def extract_code_blocks(md_text: str) -> list[dict]:
     """
     blocks: list[dict] = []
     for m in _CODE_BLOCK_RE.finditer(md_text):
-        blocks.append({
-            "language": m.group(1) or "",
-            "code": m.group(2).rstrip("\n"),
-            "start": m.start(),
-        })
+        blocks.append(
+            {
+                "language": m.group(1) or "",
+                "code": m.group(2).rstrip("\n"),
+                "start": m.start(),
+            }
+        )
     return blocks
 
 
@@ -56,11 +58,13 @@ def parse_todo_to_tasks(md_path: Path) -> list[dict]:
     text = md_path.read_text()
     tasks: list[dict] = []
     for m in _TODO_RE.finditer(text):
-        tasks.append({
-            "done": m.group(1).lower() == "x",
-            "priority": m.group(2) or "",
-            "description": m.group(3).strip(),
-        })
+        tasks.append(
+            {
+                "done": m.group(1).lower() == "x",
+                "priority": m.group(2) or "",
+                "description": m.group(3).strip(),
+            }
+        )
     return tasks
 
 
@@ -89,11 +93,13 @@ def parse_runbook(md_path: Path) -> list[dict]:
             if h_offset < block["start"]:
                 heading = h_text
                 break
-        steps.append({
-            "heading": heading,
-            "language": block["language"],
-            "code": block["code"],
-        })
+        steps.append(
+            {
+                "heading": heading,
+                "language": block["language"],
+                "code": block["code"],
+            }
+        )
     return steps
 
 
@@ -165,7 +171,9 @@ def update_todo_status(md_path: Path, task_idx: int, status: bool) -> None:
     text = md_path.read_text()
     matches = list(_TODO_RE.finditer(text))
     if task_idx < 0 or task_idx >= len(matches):
-        raise IndexError(f"task_idx {task_idx} out of range (found {len(matches)} tasks)")
+        raise IndexError(
+            f"task_idx {task_idx} out of range (found {len(matches)} tasks)"
+        )
 
     m = matches[task_idx]
     mark = "x" if status else " "

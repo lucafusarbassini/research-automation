@@ -13,27 +13,87 @@ logger = logging.getLogger(__name__)
 
 _GOAL_QUALITY_KEYWORDS = {
     "specific": ["accuracy", "f1", "loss", "metric", "percent", "%", "score", "auc"],
-    "dataset": ["dataset", "data", "corpus", "benchmark", "cifar", "imagenet", "csv", "json"],
+    "dataset": [
+        "dataset",
+        "data",
+        "corpus",
+        "benchmark",
+        "cifar",
+        "imagenet",
+        "csv",
+        "json",
+    ],
     "architecture": [
-        "resnet", "transformer", "bert", "gpt", "cnn", "rnn", "lstm", "mlp",
-        "model", "architecture", "network", "classifier", "regressor",
+        "resnet",
+        "transformer",
+        "bert",
+        "gpt",
+        "cnn",
+        "rnn",
+        "lstm",
+        "mlp",
+        "model",
+        "architecture",
+        "network",
+        "classifier",
+        "regressor",
     ],
     "compute": ["gpu", "tpu", "cpu", "a100", "v100", "cloud", "cluster", "ram"],
-    "framework": ["pytorch", "tensorflow", "jax", "keras", "scikit", "sklearn", "pandas"],
-    "metric": ["accuracy", "precision", "recall", "f1", "bleu", "rouge", "rmse", "mse", "auc"],
+    "framework": [
+        "pytorch",
+        "tensorflow",
+        "jax",
+        "keras",
+        "scikit",
+        "sklearn",
+        "pandas",
+    ],
+    "metric": [
+        "accuracy",
+        "precision",
+        "recall",
+        "f1",
+        "bleu",
+        "rouge",
+        "rmse",
+        "mse",
+        "auc",
+    ],
     "output": ["paper", "report", "dashboard", "plot", "table", "figure", "notebook"],
 }
 
 _VAGUE_PHRASES = [
-    "do something", "play around", "try stuff", "figure out", "look into",
-    "explore", "maybe", "somehow", "something with",
+    "do something",
+    "play around",
+    "try stuff",
+    "figure out",
+    "look into",
+    "explore",
+    "maybe",
+    "somehow",
+    "something with",
 ]
 
-_PAPER_KEYWORDS = ["paper", "manuscript", "journal", "conference", "submission", "latex", "write up", "write-up"]
+_PAPER_KEYWORDS = [
+    "paper",
+    "manuscript",
+    "journal",
+    "conference",
+    "submission",
+    "latex",
+    "write up",
+    "write-up",
+]
 
 _REQUIREMENT_DIMENSIONS = [
-    "dataset", "architecture", "metric", "compute", "framework",
-    "output", "timeline", "evaluation",
+    "dataset",
+    "architecture",
+    "metric",
+    "compute",
+    "framework",
+    "output",
+    "timeline",
+    "evaluation",
 ]
 
 
@@ -89,7 +149,9 @@ def assess_doability(
     goal_lower = goal.lower()
 
     # --- 1. Check if goal is specific enough ---
-    is_vague = any(phrase in goal_lower for phrase in _VAGUE_PHRASES) or len(goal.split()) < 4
+    is_vague = (
+        any(phrase in goal_lower for phrase in _VAGUE_PHRASES) or len(goal.split()) < 4
+    )
     report.checklist["goal_specific"] = not is_vague
 
     # --- 2. Check each dimension ---
@@ -97,8 +159,10 @@ def assess_doability(
     present_dimensions: list[str] = []
 
     combined_text = (
-        goal_lower + " "
-        + " ".join(str(v).lower() for v in constraints.values()) + " "
+        goal_lower
+        + " "
+        + " ".join(str(v).lower() for v in constraints.values())
+        + " "
         + " ".join(str(v).lower() for v in available_resources.values())
     )
 
@@ -115,18 +179,26 @@ def assess_doability(
     report.checklist["resources_listed"] = has_resources
     if not has_resources:
         missing.append("No resources specified — unclear what is available")
-        report.suggestions.append("List available resources (data, compute, libraries).")
+        report.suggestions.append(
+            "List available resources (data, compute, libraries)."
+        )
 
     has_constraints = len(constraints) > 0
     report.checklist["constraints_defined"] = has_constraints
     if not has_constraints:
-        report.suggestions.append("Define constraints such as timeline and compute budget.")
+        report.suggestions.append(
+            "Define constraints such as timeline and compute budget."
+        )
 
     # --- 4. Feasibility decision ---
-    critical_missing = [m for m in missing if m in ("dataset", "metric", "architecture")]
+    critical_missing = [
+        m for m in missing if m in ("dataset", "metric", "architecture")
+    ]
     if is_vague:
         report.is_feasible = False
-        report.missing_info.append("Goal is too vague — provide a specific, measurable objective.")
+        report.missing_info.append(
+            "Goal is too vague — provide a specific, measurable objective."
+        )
     elif len(critical_missing) >= 2 and not has_resources:
         report.is_feasible = False
     else:
@@ -157,7 +229,8 @@ def assess_doability(
     if "metric" in missing:
         report.suggestions.append("Define a clear evaluation metric.")
     if "compute" in missing and any(
-        kw in goal_lower for kw in ["train", "fine-tune", "finetune", "large", "7b", "13b", "70b"]
+        kw in goal_lower
+        for kw in ["train", "fine-tune", "finetune", "large", "7b", "13b", "70b"]
     ):
         report.suggestions.append("Clarify GPU/compute requirements for training.")
 
@@ -221,7 +294,9 @@ def check_project_readiness(project_path: Path) -> ReadinessReport:
         try:
             goal_text = goal_path.read_text(encoding="utf-8").lower()
         except OSError:
-            report.warnings.append("Could not read GOAL.md to check for paper references.")
+            report.warnings.append(
+                "Could not read GOAL.md to check for paper references."
+            )
 
     if any(kw in goal_text for kw in _PAPER_KEYWORDS):
         templates_dir = project_path / "templates"
@@ -265,17 +340,98 @@ def extract_missing_requirements(user_prompt: str) -> list[str]:
     missing: list[str] = []
 
     dimension_keywords: dict[str, list[str]] = {
-        "dataset": ["dataset", "data", "corpus", "csv", "json", "sql", "cifar", "imagenet", "benchmark"],
-        "architecture": [
-            "model", "resnet", "transformer", "bert", "gpt", "cnn", "rnn", "lstm",
-            "architecture", "network", "classifier", "regressor", "xgboost", "random forest",
+        "dataset": [
+            "dataset",
+            "data",
+            "corpus",
+            "csv",
+            "json",
+            "sql",
+            "cifar",
+            "imagenet",
+            "benchmark",
         ],
-        "metric": ["accuracy", "precision", "recall", "f1", "bleu", "rouge", "rmse", "mse", "auc", "metric", "evaluate"],
-        "compute": ["gpu", "tpu", "cpu", "a100", "v100", "cloud", "cluster", "machine", "server"],
-        "framework": ["pytorch", "tensorflow", "jax", "keras", "scikit", "sklearn", "pandas", "numpy"],
-        "output": ["paper", "report", "plot", "figure", "notebook", "dashboard", "table", "output", "result"],
-        "timeline": ["deadline", "week", "month", "day", "date", "timeline", "by", "before", "until"],
-        "evaluation": ["test set", "validation", "cross-val", "holdout", "split", "evaluated", "benchmark"],
+        "architecture": [
+            "model",
+            "resnet",
+            "transformer",
+            "bert",
+            "gpt",
+            "cnn",
+            "rnn",
+            "lstm",
+            "architecture",
+            "network",
+            "classifier",
+            "regressor",
+            "xgboost",
+            "random forest",
+        ],
+        "metric": [
+            "accuracy",
+            "precision",
+            "recall",
+            "f1",
+            "bleu",
+            "rouge",
+            "rmse",
+            "mse",
+            "auc",
+            "metric",
+            "evaluate",
+        ],
+        "compute": [
+            "gpu",
+            "tpu",
+            "cpu",
+            "a100",
+            "v100",
+            "cloud",
+            "cluster",
+            "machine",
+            "server",
+        ],
+        "framework": [
+            "pytorch",
+            "tensorflow",
+            "jax",
+            "keras",
+            "scikit",
+            "sklearn",
+            "pandas",
+            "numpy",
+        ],
+        "output": [
+            "paper",
+            "report",
+            "plot",
+            "figure",
+            "notebook",
+            "dashboard",
+            "table",
+            "output",
+            "result",
+        ],
+        "timeline": [
+            "deadline",
+            "week",
+            "month",
+            "day",
+            "date",
+            "timeline",
+            "by",
+            "before",
+            "until",
+        ],
+        "evaluation": [
+            "test set",
+            "validation",
+            "cross-val",
+            "holdout",
+            "split",
+            "evaluated",
+            "benchmark",
+        ],
     }
 
     for dimension, keywords in dimension_keywords.items():
@@ -337,10 +493,10 @@ def _check_referenced_files(
 
     # Simple heuristic: find quoted paths or common extensions
     patterns = [
-        r'["\']([^"\']+\.\w{1,5})["\']',      # quoted filenames
-        r'`([^`]+\.\w{1,5})`',                  # backtick filenames
-        r'\b(uploads?/[\w./-]+)',                # uploads/ references
-        r'\b(data/[\w./-]+)',                    # data/ references
+        r'["\']([^"\']+\.\w{1,5})["\']',  # quoted filenames
+        r"`([^`]+\.\w{1,5})`",  # backtick filenames
+        r"\b(uploads?/[\w./-]+)",  # uploads/ references
+        r"\b(data/[\w./-]+)",  # data/ references
     ]
 
     referenced: set[str] = set()

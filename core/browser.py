@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 # Lightweight HTML-to-text helper (no external dependency)
 # ---------------------------------------------------------------------------
 
+
 class _HTMLTextExtractor(html.parser.HTMLParser):
     """Minimal HTML→plain-text converter."""
 
@@ -60,6 +61,7 @@ def _html_to_text(html_source: str) -> str:
 # ---------------------------------------------------------------------------
 # BrowserSession
 # ---------------------------------------------------------------------------
+
 
 class BrowserSession:
     """Unified browser-automation session.
@@ -120,7 +122,9 @@ class BrowserSession:
         a live DOM, so it always returns *False*.
         """
         if not self._puppeteer_available:
-            logger.warning("fill_form requires Puppeteer — unavailable, returning False")
+            logger.warning(
+                "fill_form requires Puppeteer — unavailable, returning False"
+            )
             return False
 
         result = self._puppeteer_call("fill_form", url=url, fields=fields)
@@ -133,7 +137,9 @@ class BrowserSession:
         The fallback backend cannot evaluate selectors, so it returns *False*.
         """
         if not self._puppeteer_available:
-            logger.warning("wait_for_element requires Puppeteer — unavailable, returning False")
+            logger.warning(
+                "wait_for_element requires Puppeteer — unavailable, returning False"
+            )
             return False
 
         result = self._puppeteer_call(
@@ -186,7 +192,11 @@ class BrowserSession:
                 timeout=30,
             )
             return json.loads(result.stdout) if result.stdout else {}
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
+        except (
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+            json.JSONDecodeError,
+        ) as exc:
             logger.error("Puppeteer call failed (%s): %s", action, exc)
             return {}
 
@@ -221,22 +231,60 @@ class BrowserSession:
     def _find_screenshot_cmd(url: str, output: Path) -> list[str]:
         """Build a CLI command for taking a screenshot."""
         for tool, builder in [
-            ("chromium-browser", lambda t: [t, "--headless", "--disable-gpu", f"--screenshot={output}", url]),
-            ("google-chrome", lambda t: [t, "--headless", "--disable-gpu", f"--screenshot={output}", url]),
+            (
+                "chromium-browser",
+                lambda t: [
+                    t,
+                    "--headless",
+                    "--disable-gpu",
+                    f"--screenshot={output}",
+                    url,
+                ],
+            ),
+            (
+                "google-chrome",
+                lambda t: [
+                    t,
+                    "--headless",
+                    "--disable-gpu",
+                    f"--screenshot={output}",
+                    url,
+                ],
+            ),
             ("cutycapt", lambda t: [t, f"--url={url}", f"--out={output}"]),
             ("wkhtmltoimage", lambda t: [t, url, str(output)]),
         ]:
             path = shutil.which(tool)
             if path:
                 return builder(path)
-        raise RuntimeError("No screenshot tool found (need chromium, cutycapt, or wkhtmltoimage)")
+        raise RuntimeError(
+            "No screenshot tool found (need chromium, cutycapt, or wkhtmltoimage)"
+        )
 
     @staticmethod
     def _find_pdf_cmd(url: str, output: Path) -> list[str]:
         """Build a CLI command for rendering a page to PDF."""
         for tool, builder in [
-            ("chromium-browser", lambda t: [t, "--headless", "--disable-gpu", f"--print-to-pdf={output}", url]),
-            ("google-chrome", lambda t: [t, "--headless", "--disable-gpu", f"--print-to-pdf={output}", url]),
+            (
+                "chromium-browser",
+                lambda t: [
+                    t,
+                    "--headless",
+                    "--disable-gpu",
+                    f"--print-to-pdf={output}",
+                    url,
+                ],
+            ),
+            (
+                "google-chrome",
+                lambda t: [
+                    t,
+                    "--headless",
+                    "--disable-gpu",
+                    f"--print-to-pdf={output}",
+                    url,
+                ],
+            ),
             ("wkhtmltopdf", lambda t: [t, url, str(output)]),
         ]:
             path = shutil.which(tool)

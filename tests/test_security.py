@@ -36,7 +36,9 @@ def test_scan_for_secrets_directory(tmp_path: Path):
 
 def test_scan_for_secrets_private_key(tmp_path: Path):
     f = tmp_path / "key.pem"
-    f.write_text("-----BEGIN RSA PRIVATE KEY-----\ndata\n-----END RSA PRIVATE KEY-----\n")
+    f.write_text(
+        "-----BEGIN RSA PRIVATE KEY-----\ndata\n-----END RSA PRIVATE KEY-----\n"
+    )
     findings = scan_for_secrets(f)
     assert len(findings) >= 1
 
@@ -68,7 +70,7 @@ from unittest.mock import MagicMock, patch
 
 def test_scan_merges_bridge_findings(tmp_path: Path):
     f = tmp_path / "clean.py"
-    f.write_text('x = 42\n')
+    f.write_text("x = 42\n")
     mock_bridge = MagicMock()
     mock_bridge.scan_security.return_value = {
         "findings": [{"file": str(f), "line": 1, "pattern": "custom-pattern"}]
@@ -95,8 +97,9 @@ def test_scan_deduplicates_bridge_findings(tmp_path: Path):
 
 def test_scan_bridge_unavailable(tmp_path: Path):
     f = tmp_path / "clean.py"
-    f.write_text('x = 42\n')
+    f.write_text("x = 42\n")
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.security._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         findings = scan_for_secrets(f)
         assert len(findings) == 0

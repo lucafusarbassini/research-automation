@@ -11,11 +11,10 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core.auto_debug import DebugResult, auto_debug_loop, parse_error, suggest_fix
-from core.task_spooler import FallbackSpooler, TaskSpooler
 from core.autonomous import ScheduledRoutine, add_routine, list_routines
 from core.claude_flow import ClaudeFlowUnavailable
 from core.resources import ResourceSnapshot, monitor_resources
-
+from core.task_spooler import FallbackSpooler, TaskSpooler
 
 # ---------------------------------------------------------------------------
 # auto_debug: parse_error
@@ -27,7 +26,7 @@ class TestParseError:
 
     def test_python_name_error(self):
         stderr = (
-            'Traceback (most recent call last):\n'
+            "Traceback (most recent call last):\n"
             '  File "app.py", line 42\n'
             "NameError: name 'foo' is not defined"
         )
@@ -39,7 +38,7 @@ class TestParseError:
 
     def test_python_module_not_found(self):
         stderr = (
-            'Traceback (most recent call last):\n'
+            "Traceback (most recent call last):\n"
             '  File "run.py", line 1\n'
             "ModuleNotFoundError: No module named 'numpy'"
         )
@@ -76,24 +75,44 @@ class TestSuggestFix:
     """suggest_fix should return actionable text for known error types."""
 
     def test_suggest_import_for_name_error(self):
-        error = {"error_type": "NameError", "message": "name 'os' is not defined", "file": "main.py", "line": 5}
+        error = {
+            "error_type": "NameError",
+            "message": "name 'os' is not defined",
+            "file": "main.py",
+            "line": 5,
+        }
         fix = suggest_fix(error)
         assert "os" in fix
         assert "import" in fix.lower() or "Import" in fix
 
     def test_suggest_pip_install_for_module_error(self):
-        error = {"error_type": "ModuleNotFoundError", "message": "No module named 'requests'", "file": "", "line": 0}
+        error = {
+            "error_type": "ModuleNotFoundError",
+            "message": "No module named 'requests'",
+            "file": "",
+            "line": 0,
+        }
         fix = suggest_fix(error)
         assert "pip install" in fix
         assert "requests" in fix
 
     def test_suggest_npm_fix(self):
-        error = {"error_type": "npm", "message": "npm error code ENOENT", "file": "", "line": 0}
+        error = {
+            "error_type": "npm",
+            "message": "npm error code ENOENT",
+            "file": "",
+            "line": 0,
+        }
         fix = suggest_fix(error)
         assert "npm" in fix.lower()
 
     def test_suggest_latex_fix(self):
-        error = {"error_type": "latex", "message": "Undefined control sequence", "file": "", "line": 15}
+        error = {
+            "error_type": "latex",
+            "message": "Undefined control sequence",
+            "file": "",
+            "line": 15,
+        }
         fix = suggest_fix(error)
         assert "LaTeX" in fix or "latex" in fix.lower()
 
@@ -115,12 +134,16 @@ class TestAutoDebugLoop:
     def test_loop_success_on_second_try(self):
         """Mocked subprocess succeeds on the second call."""
         fail_proc = subprocess.CompletedProcess(
-            args="cmd", returncode=1,
-            stdout="", stderr="NameError: name 'x' is not defined",
+            args="cmd",
+            returncode=1,
+            stdout="",
+            stderr="NameError: name 'x' is not defined",
         )
         ok_proc = subprocess.CompletedProcess(
-            args="cmd", returncode=0,
-            stdout="All good", stderr="",
+            args="cmd",
+            returncode=0,
+            stdout="All good",
+            stderr="",
         )
         with patch("core.auto_debug.subprocess.run", side_effect=[fail_proc, ok_proc]):
             result = auto_debug_loop("fake_cmd", max_iterations=5)
@@ -133,8 +156,10 @@ class TestAutoDebugLoop:
     def test_loop_exhaust_all_iterations(self):
         """All iterations fail -- success should be False."""
         fail_proc = subprocess.CompletedProcess(
-            args="cmd", returncode=1,
-            stdout="", stderr="SyntaxError: invalid syntax",
+            args="cmd",
+            returncode=1,
+            stdout="",
+            stderr="SyntaxError: invalid syntax",
         )
         max_iter = 3
         with patch("core.auto_debug.subprocess.run", return_value=fail_proc):
@@ -155,8 +180,11 @@ class TestDebugResultDictCompat:
 
     def test_get_fixed(self):
         dr = DebugResult(
-            original_error="err", fix_applied="patch", success=True,
-            iterations=1, final_output="ok",
+            original_error="err",
+            fix_applied="patch",
+            success=True,
+            iterations=1,
+            final_output="ok",
         )
         assert dr.get("fixed") is True
         assert dr.get("patch") == "patch"
@@ -165,8 +193,11 @@ class TestDebugResultDictCompat:
 
     def test_get_missing_key_returns_default(self):
         dr = DebugResult(
-            original_error="", fix_applied="", success=False,
-            iterations=0, final_output="",
+            original_error="",
+            fix_applied="",
+            success=False,
+            iterations=0,
+            final_output="",
         )
         assert dr.get("nonexistent") is None
         assert dr.get("nonexistent", 42) == 42
@@ -239,8 +270,12 @@ class TestAutonomousRoutineManager:
     def test_replace_existing_routine(self, tmp_path):
         routines_file = tmp_path / "routines.json"
 
-        r1 = ScheduledRoutine(name="job", description="v1", schedule="hourly", command="echo v1")
-        r2 = ScheduledRoutine(name="job", description="v2", schedule="weekly", command="echo v2")
+        r1 = ScheduledRoutine(
+            name="job", description="v1", schedule="hourly", command="echo v1"
+        )
+        r2 = ScheduledRoutine(
+            name="job", description="v2", schedule="weekly", command="echo v2"
+        )
 
         add_routine(r1, routines_file=routines_file)
         add_routine(r2, routines_file=routines_file)
@@ -260,13 +295,17 @@ class TestResourceMonitoring:
     """monitor_resources should return a ResourceSnapshot with plausible values."""
 
     def test_monitor_resources_returns_snapshot(self):
-        with patch("core.resources._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")):
+        with patch(
+            "core.resources._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")
+        ):
             snap = monitor_resources()
         assert isinstance(snap, ResourceSnapshot)
         assert snap.timestamp > 0
 
     def test_resource_snapshot_has_ram(self):
-        with patch("core.resources._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")):
+        with patch(
+            "core.resources._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")
+        ):
             snap = monitor_resources()
         # On Linux, ram_total_gb should be positive; on other OSes it may be 0.
         assert snap.ram_total_gb >= 0
@@ -277,7 +316,9 @@ class TestResourceCheckDisk:
     """Disk monitoring should return a sensible free-space value."""
 
     def test_disk_free_positive(self):
-        with patch("core.resources._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")):
+        with patch(
+            "core.resources._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")
+        ):
             snap = monitor_resources()
         # We expect at least some free disk space on any real system.
         assert snap.disk_free_gb > 0

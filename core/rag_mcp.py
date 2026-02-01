@@ -12,10 +12,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class MCPEntry:
@@ -36,8 +36,15 @@ class MCPEntry:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "MCPEntry":
-        required = {"name", "description", "category", "keywords",
-                     "install_command", "config_template", "url"}
+        required = {
+            "name",
+            "description",
+            "category",
+            "keywords",
+            "install_command",
+            "config_template",
+            "url",
+        }
         missing = required - set(data.keys())
         if missing:
             raise KeyError(f"Missing required fields: {missing}")
@@ -47,6 +54,7 @@ class MCPEntry:
 # ---------------------------------------------------------------------------
 # Searchable index
 # ---------------------------------------------------------------------------
+
 
 class MCPIndex:
     """Keyword-searchable index of MCP servers."""
@@ -167,7 +175,15 @@ DEFAULT_ENTRIES: list[MCPEntry] = [
         name="git",
         description="Git repository operations including clone, commit, diff, and log",
         category="core",
-        keywords=["git", "repository", "commit", "diff", "version", "control", "branch"],
+        keywords=[
+            "git",
+            "repository",
+            "commit",
+            "diff",
+            "version",
+            "control",
+            "branch",
+        ],
         install_command="npx -y @modelcontextprotocol/server-git",
         config_template={
             "command": "npx",
@@ -203,7 +219,15 @@ DEFAULT_ENTRIES: list[MCPEntry] = [
         name="puppeteer",
         description="Browser automation with Puppeteer for web scraping and testing",
         category="browser",
-        keywords=["browser", "web", "scrape", "puppeteer", "automation", "screenshot", "headless"],
+        keywords=[
+            "browser",
+            "web",
+            "scrape",
+            "puppeteer",
+            "automation",
+            "screenshot",
+            "headless",
+        ],
         install_command="npx -y @modelcontextprotocol/server-puppeteer",
         config_template={
             "command": "npx",
@@ -215,7 +239,15 @@ DEFAULT_ENTRIES: list[MCPEntry] = [
         name="sequential-thinking",
         description="Chain-of-thought reasoning with structured sequential thinking",
         category="reasoning",
-        keywords=["thinking", "reasoning", "chain", "thought", "sequential", "logic", "plan"],
+        keywords=[
+            "thinking",
+            "reasoning",
+            "chain",
+            "thought",
+            "sequential",
+            "logic",
+            "plan",
+        ],
         install_command="npx -y @modelcontextprotocol/server-sequential-thinking",
         config_template={
             "command": "npx",
@@ -227,7 +259,16 @@ DEFAULT_ENTRIES: list[MCPEntry] = [
         name="apidog",
         description="API design, testing, and documentation with Apidog integration",
         category="api",
-        keywords=["api", "rest", "openapi", "swagger", "test", "design", "endpoint", "apidog"],
+        keywords=[
+            "api",
+            "rest",
+            "openapi",
+            "swagger",
+            "test",
+            "design",
+            "endpoint",
+            "apidog",
+        ],
         install_command="npx -y apidog-mcp-server",
         config_template={
             "command": "npx",
@@ -239,7 +280,15 @@ DEFAULT_ENTRIES: list[MCPEntry] = [
         name="arxiv",
         description="Search and retrieve academic papers from arXiv",
         category="research",
-        keywords=["arxiv", "paper", "academic", "research", "science", "publication", "preprint"],
+        keywords=[
+            "arxiv",
+            "paper",
+            "academic",
+            "research",
+            "science",
+            "publication",
+            "preprint",
+        ],
         install_command="pip install arxiv-mcp-server",
         config_template={
             "command": "python",
@@ -268,7 +317,11 @@ DEFAULT_ENTRIES: list[MCPEntry] = [
         install_command="npx -y @modelcontextprotocol/server-postgres",
         config_template={
             "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/mydb"],
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-postgres",
+                "postgresql://localhost/mydb",
+            ],
         },
         url="https://github.com/modelcontextprotocol/servers/tree/main/src/postgres",
     ),

@@ -75,9 +75,7 @@ _RE_PYTHON_TB_ERROR = re.compile(r"^(\w+Error):\s*(.+)", re.MULTILINE)
 _RE_NPM_CODE = re.compile(r"npm ERR! code (\S+)")
 _RE_LATEX_ERROR = re.compile(r"^!\s*(.+?)(?:\.|$)", re.MULTILINE)
 _RE_LATEX_LINE = re.compile(r"^l\.(\d+)\s", re.MULTILINE)
-_RE_PYTEST_FAIL = re.compile(
-    r"FAILED\s+([\w/\\.]+::\w+)\s*-\s*(.+)", re.MULTILINE
-)
+_RE_PYTEST_FAIL = re.compile(r"FAILED\s+([\w/\\.]+::\w+)\s*-\s*(.+)", re.MULTILINE)
 
 
 def parse_error(stderr: str) -> dict[str, Any]:
@@ -152,6 +150,7 @@ def parse_error(stderr: str) -> dict[str, Any]:
 # Fix suggestion
 # ---------------------------------------------------------------------------
 
+
 def suggest_fix(error: dict[str, Any]) -> str:
     """Return a human-readable fix suggestion for *error*.
 
@@ -183,7 +182,9 @@ def suggest_fix(error: dict[str, Any]) -> str:
         )
 
     if etype == "npm":
-        return f"Resolve npm issue ({message}). Try 'npm install' or check package.json."
+        return (
+            f"Resolve npm issue ({message}). Try 'npm install' or check package.json."
+        )
 
     if etype == "latex":
         return (
@@ -201,6 +202,7 @@ def suggest_fix(error: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 # Retry helper
 # ---------------------------------------------------------------------------
+
 
 def run_with_retry(
     command: str,
@@ -222,7 +224,9 @@ def run_with_retry(
         )
         if last.returncode == 0:
             return last
-        logger.debug("Attempt %d/%d failed (rc=%d)", attempt + 1, retries, last.returncode)
+        logger.debug(
+            "Attempt %d/%d failed (rc=%d)", attempt + 1, retries, last.returncode
+        )
     assert last is not None  # retries >= 1
     return last
 
@@ -230,6 +234,7 @@ def run_with_retry(
 # ---------------------------------------------------------------------------
 # Main loop
 # ---------------------------------------------------------------------------
+
 
 def auto_debug_loop(
     command: str,

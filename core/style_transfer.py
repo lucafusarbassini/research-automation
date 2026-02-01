@@ -35,9 +35,22 @@ _PASSIVE_MARKERS = re.compile(
     r"\b(is|are|was|were|been|being|be)\s+\w+ed\b", re.IGNORECASE
 )
 _HEDGING_WORDS = {
-    "may", "might", "could", "possibly", "perhaps", "likely",
-    "suggest", "suggests", "indicate", "indicates", "appear",
-    "appears", "seem", "seems", "approximately", "roughly",
+    "may",
+    "might",
+    "could",
+    "possibly",
+    "perhaps",
+    "likely",
+    "suggest",
+    "suggests",
+    "indicate",
+    "indicates",
+    "appear",
+    "appears",
+    "seem",
+    "seems",
+    "approximately",
+    "roughly",
 }
 _CITATION_PATTERN = re.compile(r"\\cite\{|\\citep\{|\\citet\{|\[\d+\]|\(.*?\d{4}\)")
 
@@ -141,7 +154,9 @@ def generate_transformation_prompt(
         instructions.append(f"- Use {target_profile.tense} tense")
 
     if len(instructions) == 1:
-        instructions.append("- The styles are similar; make minor refinements for consistency")
+        instructions.append(
+            "- The styles are similar; make minor refinements for consistency"
+        )
 
     return "\n".join(instructions)
 
@@ -164,9 +179,10 @@ def verify_no_plagiarism(
     Returns:
         List of dicts with 'ngram', 'source_index' for flagged overlaps.
     """
+
     def _ngrams(text: str, n: int) -> set[str]:
         words = text.lower().split()
-        return {" ".join(words[i:i+n]) for i in range(len(words) - n + 1)}
+        return {" ".join(words[i : i + n]) for i in range(len(words) - n + 1)}
 
     new_ngrams = _ngrams(new_text, threshold)
     flags: list[dict] = []

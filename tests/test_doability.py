@@ -14,7 +14,6 @@ from core.doability import (
     generate_clarifying_questions,
 )
 
-
 # ---------------------------------------------------------------------------
 # DoabilityReport dataclass
 # ---------------------------------------------------------------------------
@@ -53,7 +52,11 @@ def test_assess_doability_well_defined_goal():
     report = assess_doability(
         goal="Train a ResNet-50 on CIFAR-10 to 95% accuracy",
         constraints={"timeline": "2 weeks", "compute": "1xA100"},
-        available_resources={"dataset": "CIFAR-10", "gpu": "A100", "framework": "PyTorch"},
+        available_resources={
+            "dataset": "CIFAR-10",
+            "gpu": "A100",
+            "framework": "PyTorch",
+        },
     )
     assert isinstance(report, DoabilityReport)
     assert report.is_feasible is True
@@ -78,8 +81,10 @@ def test_assess_doability_missing_compute():
         constraints={"timeline": "1 month"},
         available_resources={},
     )
-    assert any("resource" in item.lower() or "compute" in item.lower() or "gpu" in item.lower()
-               for item in report.missing_info + report.suggestions)
+    assert any(
+        "resource" in item.lower() or "compute" in item.lower() or "gpu" in item.lower()
+        for item in report.missing_info + report.suggestions
+    )
 
 
 def test_assess_doability_returns_checklist():
@@ -154,8 +159,9 @@ def test_check_project_readiness_paper_needs_template(tmp_path):
     (tmp_path / ".env").write_text("KEY=val\n")
 
     report = check_project_readiness(tmp_path)
-    assert any("template" in f.lower() for f in report.missing_files) or \
-        any("template" in w.lower() for w in report.warnings)
+    assert any("template" in f.lower() for f in report.missing_files) or any(
+        "template" in w.lower() for w in report.warnings
+    )
 
 
 def test_check_project_readiness_missing_env(tmp_path):

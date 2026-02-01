@@ -3,12 +3,11 @@
 import json
 import threading
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Voice: language detection
@@ -93,7 +92,9 @@ class TestStructurePrompt:
             },
         }
 
-        result = structure_prompt("write documentation for the API", templates=templates)
+        result = structure_prompt(
+            "write documentation for the API", templates=templates
+        )
         assert "Write documentation for:" in result
 
     def test_structure_prompt_no_match_returns_original(self):
@@ -169,7 +170,9 @@ class TestMobileServerAllRoutes:
         headers = {"Authorization": f"Bearer {token}"}
 
         # POST /task
-        resp = server.dispatch("POST", "/task", {"prompt": "Run experiment 1"}, headers=headers)
+        resp = server.dispatch(
+            "POST", "/task", {"prompt": "Run experiment 1"}, headers=headers
+        )
         assert resp["ok"] is True
         assert "task_id" in resp
         assert resp["status"] == "queued"
@@ -187,7 +190,9 @@ class TestMobileServerAllRoutes:
         assert "sessions" in resp
 
         # POST /voice
-        resp = server.dispatch("POST", "/voice", {"text": "check status"}, headers=headers)
+        resp = server.dispatch(
+            "POST", "/voice", {"text": "check status"}, headers=headers
+        )
         assert resp["ok"] is True
         assert resp["source"] == "voice"
         assert "task_id" in resp
@@ -209,7 +214,9 @@ class TestMobileAuthRejection:
         server = MobileServer(auth=auth)
         bad_headers = {"Authorization": "Bearer totally-invalid-token-000"}
 
-        resp = server.dispatch("POST", "/task", {"prompt": "should fail"}, headers=bad_headers)
+        resp = server.dispatch(
+            "POST", "/task", {"prompt": "should fail"}, headers=bad_headers
+        )
         assert resp["ok"] is False
         assert resp["error"] == "unauthorized"
 

@@ -12,10 +12,10 @@ from core.verification import (
     verify_file_references,
 )
 
-
 # ---------------------------------------------------------------------------
 # VerificationResult dataclass
 # ---------------------------------------------------------------------------
+
 
 def test_verification_result_fields():
     vr = VerificationResult(
@@ -47,6 +47,7 @@ def test_verification_result_defaults():
 # verify_claims
 # ---------------------------------------------------------------------------
 
+
 def test_verify_claims_returns_list():
     results = verify_claims("The file main.py contains 200 lines.")
     assert isinstance(results, list)
@@ -67,6 +68,7 @@ def test_verify_claims_empty_text():
 # ---------------------------------------------------------------------------
 # build_verification_table
 # ---------------------------------------------------------------------------
+
 
 def test_build_verification_table_markdown_format():
     results = [
@@ -90,6 +92,7 @@ def test_build_verification_table_empty():
 # ---------------------------------------------------------------------------
 # verify_code_output
 # ---------------------------------------------------------------------------
+
 
 def test_verify_code_output_match():
     result = verify_code_output(
@@ -124,6 +127,7 @@ def test_verify_code_output_whitespace_tolerance():
 # verify_file_references
 # ---------------------------------------------------------------------------
 
+
 def test_verify_file_references_existing(tmp_path: Path):
     (tmp_path / "README.md").write_text("hi")
     text = f"See {tmp_path}/README.md for details."
@@ -146,6 +150,7 @@ def test_verify_file_references_no_paths():
 # verify_citations
 # ---------------------------------------------------------------------------
 
+
 def test_verify_citations_wellformed():
     text = "As shown by Smith et al. (2023), transformers are effective."
     results = verify_citations(text)
@@ -161,6 +166,7 @@ def test_verify_citations_no_citations():
 # ---------------------------------------------------------------------------
 # auto_verify_response
 # ---------------------------------------------------------------------------
+
 
 def test_auto_verify_response_appends_table():
     response = "The file core/agents.py has 500 lines."

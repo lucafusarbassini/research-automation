@@ -9,10 +9,10 @@ import pytest
 
 from core.rag_mcp import DEFAULT_ENTRIES, MCPEntry, MCPIndex
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_entries() -> list[MCPEntry]:
@@ -23,7 +23,10 @@ def sample_entries() -> list[MCPEntry]:
             category="core",
             keywords=["file", "read", "write", "directory", "fs"],
             install_command="npx -y @modelcontextprotocol/server-filesystem",
-            config_template={"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]},
+            config_template={
+                "command": "npx",
+                "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+            },
             url="https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
         ),
         MCPEntry(
@@ -32,16 +35,29 @@ def sample_entries() -> list[MCPEntry]:
             category="core",
             keywords=["git", "repository", "commit", "diff", "version control"],
             install_command="npx -y @modelcontextprotocol/server-git",
-            config_template={"command": "npx", "args": ["-y", "@modelcontextprotocol/server-git"]},
+            config_template={
+                "command": "npx",
+                "args": ["-y", "@modelcontextprotocol/server-git"],
+            },
             url="https://github.com/modelcontextprotocol/servers/tree/main/src/git",
         ),
         MCPEntry(
             name="puppeteer",
             description="Browser automation with Puppeteer for web scraping and testing",
             category="browser",
-            keywords=["browser", "web", "scrape", "puppeteer", "automation", "screenshot"],
+            keywords=[
+                "browser",
+                "web",
+                "scrape",
+                "puppeteer",
+                "automation",
+                "screenshot",
+            ],
             install_command="npx -y @modelcontextprotocol/server-puppeteer",
-            config_template={"command": "npx", "args": ["-y", "@modelcontextprotocol/server-puppeteer"]},
+            config_template={
+                "command": "npx",
+                "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+            },
             url="https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer",
         ),
     ]
@@ -62,6 +78,7 @@ def empty_index() -> MCPIndex:
 # ---------------------------------------------------------------------------
 # MCPEntry dataclass tests
 # ---------------------------------------------------------------------------
+
 
 class TestMCPEntry:
     def test_creation(self):
@@ -90,6 +107,7 @@ class TestMCPEntry:
 # ---------------------------------------------------------------------------
 # MCPIndex core tests
 # ---------------------------------------------------------------------------
+
 
 class TestMCPIndexBuild:
     def test_build_index_populates_entries(self, index, sample_entries):
@@ -146,6 +164,7 @@ class TestSuggestMCPs:
 # Persistence tests
 # ---------------------------------------------------------------------------
 
+
 class TestPersistence:
     def test_save_and_load_json(self, index):
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
@@ -178,6 +197,7 @@ class TestPersistence:
 # Default entries
 # ---------------------------------------------------------------------------
 
+
 class TestDefaultEntries:
     def test_default_entries_exist(self):
         assert len(DEFAULT_ENTRIES) >= 8
@@ -197,6 +217,7 @@ class TestDefaultEntries:
 # ---------------------------------------------------------------------------
 # Install suggested
 # ---------------------------------------------------------------------------
+
 
 class TestInstallSuggested:
     @patch("core.rag_mcp.subprocess.run")

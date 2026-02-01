@@ -28,7 +28,6 @@ from core.verification import (
     verify_text,
 )
 
-
 # ---------------------------------------------------------------------------
 # compile_paper (mocked)
 # ---------------------------------------------------------------------------
@@ -44,7 +43,10 @@ class TestCompilePaper:
 
         with patch("core.paper.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
-                args=["make", "all"], returncode=0, stdout="ok", stderr="",
+                args=["make", "all"],
+                returncode=0,
+                stdout="ok",
+                stderr="",
             )
             result = compile_paper(paper_dir)
 
@@ -65,7 +67,10 @@ class TestCompilePaper:
         paper_dir.mkdir()
         (paper_dir / "Makefile").write_text("all:\n\tfalse\n")
 
-        with patch("core.paper.subprocess.run", side_effect=subprocess.CalledProcessError(1, "make")):
+        with patch(
+            "core.paper.subprocess.run",
+            side_effect=subprocess.CalledProcessError(1, "make"),
+        ):
             result = compile_paper(paper_dir)
 
         assert result is False
@@ -85,7 +90,10 @@ class TestCleanPaper:
 
         with patch("core.paper.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
-                args=["make", "clean"], returncode=0, stdout="", stderr="",
+                args=["make", "clean"],
+                returncode=0,
+                stdout="",
+                stderr="",
             )
             clean_paper(paper_dir)
 
@@ -107,8 +115,11 @@ class TestFigureColors:
 
     def test_colors_are_hex(self):
         import re
+
         for name, code in COLORS.items():
-            assert re.match(r"^#[0-9A-Fa-f]{6}$", code), f"Invalid hex for {name}: {code}"
+            assert re.match(
+                r"^#[0-9A-Fa-f]{6}$", code
+            ), f"Invalid hex for {name}: {code}"
 
     def test_colors_are_distinct(self):
         values = list(COLORS.values())
@@ -211,8 +222,13 @@ class TestStyleProfileFields:
 
     def test_expected_fields_present(self):
         expected = {
-            "avg_sentence_length", "passive_voice_ratio", "hedging_ratio",
-            "citation_density", "vocabulary_richness", "common_phrases", "tense",
+            "avg_sentence_length",
+            "passive_voice_ratio",
+            "hedging_ratio",
+            "citation_density",
+            "vocabulary_richness",
+            "common_phrases",
+            "tense",
         }
         actual = set(StyleProfile.__dataclass_fields__.keys())
         assert expected.issubset(actual), f"Missing fields: {expected - actual}"
@@ -316,8 +332,20 @@ class TestBuildVerificationTable:
 
     def test_non_empty_table(self):
         results = [
-            VerificationResult(claim="X is Y", verified=True, method="test", confidence=0.9, evidence="ok"),
-            VerificationResult(claim="A is B", verified=False, method="test", confidence=0.2, evidence="nope"),
+            VerificationResult(
+                claim="X is Y",
+                verified=True,
+                method="test",
+                confidence=0.9,
+                evidence="ok",
+            ),
+            VerificationResult(
+                claim="A is B",
+                verified=False,
+                method="test",
+                confidence=0.2,
+                evidence="nope",
+            ),
         ]
         table = build_verification_table(results)
         assert "| #" in table

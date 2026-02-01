@@ -2,7 +2,7 @@
 # CI — lint + test + build check
 # ============================================================================
 # Badge:
-#   ![CI](https://github.com/<owner>/research-automation/actions/workflows/ci.yml/badge.svg)
+#   ![CI](https://github.com/<owner>/ricet/actions/workflows/ci.yml/badge.svg)
 
 name: CI
 

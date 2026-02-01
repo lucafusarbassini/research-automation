@@ -12,11 +12,12 @@ from core.claude_flow import ClaudeFlowBridge, ClaudeFlowUnavailable
 
 # Skip entire module if npx is not available
 pytestmark = pytest.mark.skipif(
-    subprocess.run(
-        ["npx", "--version"], capture_output=True, timeout=10
-    ).returncode != 0
-    if subprocess.run(["which", "npx"], capture_output=True).returncode == 0
-    else True,
+    (
+        subprocess.run(["npx", "--version"], capture_output=True, timeout=10).returncode
+        != 0
+        if subprocess.run(["which", "npx"], capture_output=True).returncode == 0
+        else True
+    ),
     reason="npx not available",
 )
 
@@ -95,7 +96,9 @@ class TestConfTestFixture:
         from core.agents import AgentType, execute_agent_task
 
         mock_bridge.spawn_agent.return_value = {
-            "status": "success", "output": "fixture test", "tokens_used": 50,
+            "status": "success",
+            "output": "fixture test",
+            "tokens_used": 50,
         }
         with patch("core.agents._get_bridge", return_value=mock_bridge):
             result = execute_agent_task(AgentType.RESEARCHER, "find papers")
@@ -150,7 +153,7 @@ class TestConfTestFixture:
     def test_mock_bridge_fixture_session(self, mock_bridge, tmp_path, monkeypatch):
         from unittest.mock import patch
 
-        from core.session import create_session, close_session
+        from core.session import close_session, create_session
 
         monkeypatch.setattr("core.session.SESSIONS_DIR", tmp_path / "sessions")
         with patch("core.session._get_bridge", return_value=mock_bridge):
@@ -180,8 +183,11 @@ class TestBridgeUnavailableGracefully:
         with patch("core.agents._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
             with patch("core.agents._execute_agent_task_legacy") as mock_legacy:
                 from core.agents import TaskResult
+
                 mock_legacy.return_value = TaskResult(
-                    agent=AgentType.CODER, task="test", status="success",
+                    agent=AgentType.CODER,
+                    task="test",
+                    status="success",
                 )
                 result = execute_agent_task(AgentType.CODER, "test fallback")
                 assert result.status == "success"
@@ -196,7 +202,9 @@ class TestBridgeUnavailableGracefully:
         enc = tmp_path / "ENCYCLOPEDIA.md"
         enc.write_text("# Test\n- [2024] keyword match\n")
 
-        with patch("core.knowledge._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        with patch(
+            "core.knowledge._get_bridge", side_effect=ClaudeFlowUnavailable("no")
+        ):
             results = search_knowledge("keyword", encyclopedia_path=enc)
             assert any("keyword" in r for r in results)
 
@@ -206,6 +214,8 @@ class TestBridgeUnavailableGracefully:
 
         from core.model_router import TaskComplexity, classify_task_complexity
 
-        with patch("core.model_router._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        with patch(
+            "core.model_router._get_bridge", side_effect=ClaudeFlowUnavailable("no")
+        ):
             result = classify_task_complexity("debug the issue")
             assert result == TaskComplexity.COMPLEX

@@ -1,5 +1,5 @@
-site_name: Research Automation
-site_description: Automate scientific research using Claude Code with multi-agent orchestration, overnight autonomous execution, and comprehensive tooling.
+site_name: ricet
+site_description: Scientific research automation powered by Claude Code.
 site_url: https://lucafusarbassini.github.io/research-automation/
 repo_url: https://github.com/lucafusarbassini/research-automation
 repo_name: research-automation
@@ -79,4 +79,4 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/lucafusarbassini/research-automation
 
-copyright: Copyright &copy; 2025-2026 Research Automation Contributors
+copyright: Copyright &copy; 2025-2026 ricet Contributors

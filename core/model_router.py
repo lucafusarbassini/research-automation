@@ -34,16 +34,42 @@ class ModelConfig:
 
 # Keyword sets for complexity classification
 _SIMPLE_KEYWORDS = {
-    "format", "list", "lookup", "rename", "move", "copy", "count", "sort",
-    "print", "echo", "display", "show",
+    "format",
+    "list",
+    "lookup",
+    "rename",
+    "move",
+    "copy",
+    "count",
+    "sort",
+    "print",
+    "echo",
+    "display",
+    "show",
 }
 _COMPLEX_KEYWORDS = {
-    "debug", "design", "architect", "research", "analyze", "investigate",
-    "compare", "benchmark", "profile", "optimize",
+    "debug",
+    "design",
+    "architect",
+    "research",
+    "analyze",
+    "investigate",
+    "compare",
+    "benchmark",
+    "profile",
+    "optimize",
 }
 _CRITICAL_KEYWORDS = {
-    "validate", "prove", "paper", "publish", "submit", "security", "audit",
-    "falsify", "verify", "production",
+    "validate",
+    "prove",
+    "paper",
+    "publish",
+    "submit",
+    "security",
+    "audit",
+    "falsify",
+    "verify",
+    "production",
 }
 
 # Default model configs

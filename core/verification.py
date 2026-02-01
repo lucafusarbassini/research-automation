@@ -56,6 +56,7 @@ _NUMBER_RE = re.compile(r"\b\d[\d,.]*\b")
 # Data model
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class VerificationResult:
     """Outcome of a single claim verification attempt."""
@@ -70,6 +71,7 @@ class VerificationResult:
 # ---------------------------------------------------------------------------
 # Claim extraction helpers
 # ---------------------------------------------------------------------------
+
 
 def _extract_factual_sentences(text: str) -> list[str]:
     """Return sentences that look like factual claims worth verifying."""
@@ -90,6 +92,7 @@ def _extract_factual_sentences(text: str) -> list[str]:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def verify_claims(text: str) -> list[VerificationResult]:
     """Extract factual claims from *text* and attempt to verify each.

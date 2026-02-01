@@ -12,7 +12,13 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-PROJECT_TYPES = ["ml-research", "data-analysis", "paper-writing", "computational", "general"]
+PROJECT_TYPES = [
+    "ml-research",
+    "data-analysis",
+    "paper-writing",
+    "computational",
+    "general",
+]
 COMPUTE_TYPES = ["local-cpu", "local-gpu", "cloud", "cluster"]
 NOTIFICATION_METHODS = ["email", "slack", "none"]
 
@@ -207,7 +213,9 @@ def verify_uploaded_files(
                 "Place any data files or supporting materials there."
             )
     else:
-        warnings.append("uploads/ directory does not exist. Run setup_workspace() first.")
+        warnings.append(
+            "uploads/ directory does not exist. Run setup_workspace() first."
+        )
 
     # If a github repo was specified, check for reference code
     if answers.github_repo and answers.github_repo != "skip":
@@ -242,7 +250,9 @@ def collect_answers(
         Filled OnboardingAnswers.
     """
     if prompt_fn is None:
-        prompt_fn = lambda prompt, default="": input(f"{prompt} [{default}]: ") or default
+        prompt_fn = (
+            lambda prompt, default="": input(f"{prompt} [{default}]: ") or default
+        )
 
     answers = OnboardingAnswers(project_name=project_name)
 
@@ -353,7 +363,9 @@ def write_settings(project_path: Path, answers: OnboardingAnswers) -> Path:
 
     settings_path = project_path / "config" / "settings.yml"
     settings_path.parent.mkdir(parents=True, exist_ok=True)
-    settings_path.write_text(yaml.dump(settings, default_flow_style=False, sort_keys=False))
+    settings_path.write_text(
+        yaml.dump(settings, default_flow_style=False, sort_keys=False)
+    )
 
     logger.info("Settings written to %s", settings_path)
     return settings_path
@@ -375,9 +387,7 @@ def write_goal_file(project_path: Path, answers: OnboardingAnswers) -> None:
 
     if answers.success_criteria:
         criteria_text = "\n".join(f"- [ ] {c}" for c in answers.success_criteria)
-        content = content.replace(
-            "- [ ] Criterion 1\n- [ ] Criterion 2", criteria_text
-        )
+        content = content.replace("- [ ] Criterion 1\n- [ ] Criterion 2", criteria_text)
 
     if answers.timeline and answers.timeline != "flexible":
         content = content.replace("<!-- e.g., 3 months -->", answers.timeline)

@@ -165,7 +165,9 @@ def check_figure_references(paper_dir: Path = PAPER_DIR) -> list[str]:
         full_path = paper_dir / fig_path
         # Try with common extensions if no extension given
         if not full_path.suffix:
-            candidates = [full_path.with_suffix(ext) for ext in [".pdf", ".png", ".jpg"]]
+            candidates = [
+                full_path.with_suffix(ext) for ext in [".pdf", ".png", ".jpg"]
+            ]
             if not any(c.exists() for c in candidates):
                 missing.append(fig_path)
         elif not full_path.exists():

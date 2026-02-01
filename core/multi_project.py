@@ -4,7 +4,7 @@ Manages multiple concurrent projects (e.g., update a website while working
 on a paper). Provides a registry for tracking projects, switching active
 context, running tasks across projects, and sharing knowledge between them.
 
-Registry is persisted at ``~/.research-automation/projects.json``.
+Registry is persisted at ``~/.ricet/projects.json``.
 """
 
 import json
@@ -16,7 +16,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_REGISTRY_PATH = Path.home() / ".research-automation" / "projects.json"
+DEFAULT_REGISTRY_PATH = Path.home() / ".ricet" / "projects.json"
 
 
 class ProjectRegistry:
@@ -142,7 +142,9 @@ class ProjectRegistry:
         """
         active_name = self._data.get("active")
         if active_name is None:
-            raise RuntimeError("No active project. Register or switch to a project first.")
+            raise RuntimeError(
+                "No active project. Register or switch to a project first."
+            )
         return self._get_project(active_name)
 
     def run_task_in_project(self, project_name: str, task: str) -> dict:
@@ -256,7 +258,7 @@ _default_registry: Optional[ProjectRegistry] = None
 def _get_default_registry() -> ProjectRegistry:
     global _default_registry
     # Re-derive path each call so monkeypatched HOME is respected
-    path = Path.home() / ".research-automation" / "projects.json"
+    path = Path.home() / ".ricet" / "projects.json"
     if _default_registry is None or _default_registry.registry_file != path:
         _default_registry = ProjectRegistry(registry_file=path)
     return _default_registry

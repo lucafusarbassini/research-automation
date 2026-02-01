@@ -1,6 +1,6 @@
 # Code Style (For The Tool Itself)
 
-This guide is for the research-automation tool's own codebase, not user projects.
+This guide is for the ricet tool's own codebase, not user projects.
 
 ---
 
@@ -79,7 +79,7 @@ def process_task(
 ## Project Structure
 
 ```
-research-automation/
+ricet/
 ├── cli/
 │   └── main.py              # Entry point (typer app)
 ├── core/
@@ -175,17 +175,17 @@ notifications:
 from typing import Optional
 
 
-class ResearchAutomationError(Exception):
-    """Base exception for research-automation."""
+class RicetError(Exception):
+    """Base exception for ricet."""
     pass
 
 
-class SessionNotFoundError(ResearchAutomationError):
+class SessionNotFoundError(RicetError):
     """Raised when session doesn't exist."""
     pass
 
 
-class MCPInstallError(ResearchAutomationError):
+class MCPInstallError(RicetError):
     """Raised when MCP installation fails."""
     pass
 
@@ -323,7 +323,7 @@ SessionNotFoundError with helpful message.
 ### pyproject.toml
 ```toml
 [project]
-name = "research-automation"
+name = "ricet"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
@@ -343,7 +343,7 @@ dev = [
 ]
 
 [project.scripts]
-research = "cli.main:app"
+ricet = "cli.main:app"
 ```
 
 ---

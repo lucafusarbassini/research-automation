@@ -8,7 +8,7 @@ notifications when done.
 **Time:** ~20 minutes
 
 **Prerequisites:**
-- A project created with `research init` ([Tutorial 3](first-project.md))
+- A project created with `ricet init` ([Tutorial 3](first-project.md))
 - A well-defined `state/TODO.md` with clear, specific tasks
 - Optional: Slack webhook for notifications ([Tutorial 1](getting-api-keys.md))
 
@@ -108,7 +108,7 @@ TODO list. Each task should be:
 
 ```bash
 $ cd ~/projects/my-first-project
-$ research overnight --iterations 20
+$ ricet overnight --iterations 20
 ```
 
 Options:
@@ -132,18 +132,18 @@ To keep it running after you close your terminal:
 
 ```bash
 # Option 1: nohup
-$ nohup research overnight --iterations 30 > overnight.log 2>&1 &
+$ nohup ricet overnight --iterations 30 > overnight.log 2>&1 &
 $ echo $!    # note the process ID
 
 # Option 2: tmux (recommended)
 $ tmux new -s overnight
-$ research overnight --iterations 30
+$ ricet overnight --iterations 30
 # Press Ctrl+B then D to detach
 # Reconnect later: tmux attach -t overnight
 
 # Option 3: screen
 $ screen -S overnight
-$ research overnight --iterations 30
+$ ricet overnight --iterations 30
 # Press Ctrl+A then D to detach
 # Reconnect later: screen -r overnight
 ```
@@ -154,8 +154,8 @@ $ research overnight --iterations 30
 ### Running in Docker
 
 ```bash
-$ docker compose -f docker/docker-compose.yml run --rm research \
-    bash -c "cd /workspace/my-project && research overnight --iterations 20"
+$ docker compose -f docker/docker-compose.yml run --rm app \
+    bash -c "cd /workspace/my-project && ricet overnight --iterations 20"
 ```
 
 ---
@@ -168,7 +168,7 @@ While overnight mode runs, you can check progress:
 
 ```bash
 $ cd ~/projects/my-first-project
-$ research status
+$ ricet status
 ```
 
 ### Watch the log file
@@ -333,7 +333,7 @@ Overnight run complete: 13/15 succeeded
 Configure email in your project:
 
 ```bash
-$ research config notifications
+$ ricet config notifications
 Notification method (email, slack, none) [none]: email
 Email address: you@example.com
 ```
@@ -357,7 +357,7 @@ When you wake up, here is your checklist:
 
 ```bash
 $ cd ~/projects/my-first-project
-$ research status
+$ ricet status
 ```
 
 ### 2. Read the metrics
@@ -394,7 +394,7 @@ Review the snapshot to understand what went wrong.
 Start an interactive session and use the falsifier:
 
 ```bash
-$ research start --session-name "morning-review"
+$ ricet start --session-name "morning-review"
 ```
 
 ```
@@ -443,7 +443,7 @@ iteration.
 
 ```bash
 $ rm state/DONE
-$ research overnight --iterations 20
+$ ricet overnight --iterations 20
 ```
 
 ### High API costs

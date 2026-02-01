@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -36,9 +36,17 @@ class FallbackSpooler:
         """Execute *command* in a shell and capture output."""
         try:
             proc = subprocess.run(
-                command, shell=True, capture_output=True, text=True, timeout=3600,
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=3600,
             )
-            return {"exit_code": proc.returncode, "output": proc.stdout, "stderr": proc.stderr}
+            return {
+                "exit_code": proc.returncode,
+                "output": proc.stdout,
+                "stderr": proc.stderr,
+            }
         except subprocess.TimeoutExpired:
             return {"exit_code": -1, "output": "", "stderr": "timeout"}
 
@@ -106,7 +114,9 @@ class FallbackSpooler:
 
     def clear_finished(self) -> int:
         with self._lock:
-            to_remove = [jid for jid, info in self._jobs.items() if info["state"] == "finished"]
+            to_remove = [
+                jid for jid, info in self._jobs.items() if info["state"] == "finished"
+            ]
             for jid in to_remove:
                 del self._jobs[jid]
             return len(to_remove)

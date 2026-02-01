@@ -2,7 +2,7 @@
 # Auto Test — nightly full test suite with failure reporting
 # ============================================================================
 # Badge:
-#   ![Nightly](https://github.com/<owner>/research-automation/actions/workflows/auto-test.yml/badge.svg)
+#   ![Nightly](https://github.com/<owner>/ricet/actions/workflows/auto-test.yml/badge.svg)
 
 name: Nightly Tests
 

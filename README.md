@@ -1,25 +1,21 @@
 <p align="center">
-  <h1 align="center">Research Automation</h1>
+  <h1 align="center">ricet</h1>
   <p align="center">
-    End-to-end scientific research automation powered by Claude Code and multi-agent orchestration.
+    Scientific research automation powered by Claude Code.
   </p>
 </p>
 
 <p align="center">
   <a href="https://github.com/lucafusarbassini/research-automation/actions/workflows/ci.yml"><img src="https://github.com/lucafusarbassini/research-automation/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://pypi.org/project/research-automation/"><img src="https://img.shields.io/pypi/v/research-automation.svg" alt="PyPI"></a>
   <img src="https://img.shields.io/badge/python-3.11%2B-blue.svg" alt="Python 3.11+">
   <a href="https://github.com/lucafusarbassini/research-automation/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <a href="https://lucafusarbassini.github.io/research-automation/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-brightgreen.svg" alt="Docs"></a>
 </p>
 
-<p align="center">
-  <!-- Replace with an actual screenshot or demo GIF -->
-  <img src="https://via.placeholder.com/800x400?text=research+start+%E2%80%94+demo+coming+soon" alt="Demo" width="700">
-</p>
-
 ---
 
-Research Automation turns a research idea into reproducible code, validated results, and a publication-ready LaTeX paper -- all from your terminal. A master agent breaks your goal into subtasks and dispatches them to specialized sub-agents (researcher, coder, reviewer, falsifier, writer, cleaner) that execute inside a Docker-isolated environment with 70+ MCP integrations auto-discovered on demand.
+ricet turns a research idea into reproducible code, validated results, and a publication-ready LaTeX paper -- all from your terminal. A master agent breaks your goal into subtasks and dispatches them to specialized sub-agents (researcher, coder, reviewer, falsifier, writer, cleaner) that execute inside a Docker-isolated environment with 70+ MCP integrations auto-discovered on demand.
 
 ## Prerequisites
 
@@ -29,7 +25,7 @@ Research Automation turns a research idea into reproducible code, validated resu
 | **Node.js** | 20+ | [nodejs.org](https://nodejs.org/) |
 | **Docker** | 24+ | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
 | **Git** | 2.40+ | [git-scm.com](https://git-scm.com/) |
-| **Claude API key** | -- | [console.anthropic.com](https://console.anthropic.com/) |
+| **Claude authentication** | -- | `claude auth login` (preferred) or [API key](https://console.anthropic.com/) for CI |
 | **GitHub SSH key** | -- | [docs.github.com/authentication](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) |
 
 > Docker is optional for local-only usage but strongly recommended for overnight autonomous runs.
@@ -38,14 +34,14 @@ Research Automation turns a research idea into reproducible code, validated resu
 
 ```bash
 # 1. Install
-pip install research-automation
+pip install ricet
 
 # 2. Create a new project (interactive onboarding)
-research init my-experiment
+ricet init my-experiment
 
 # 3. Launch an interactive research session
 cd my-experiment
-research start
+ricet start
 ```
 
 That's it. The onboarding wizard will ask for your research goal, compute preferences, and notification settings, then scaffold a fully configured project.
@@ -72,7 +68,7 @@ Token budgets are automatically distributed across agents and monitored througho
 Every insight, decision, and finding is persisted to a growing **Encyclopedia** backed by HNSW vector search (via claude-flow). Agents query memory semantically so knowledge compounds across sessions instead of being lost.
 
 ```bash
-research memory "effect of learning rate on convergence"
+ricet memory "effect of learning rate on convergence"
 ```
 
 ### Paper Pipeline
@@ -83,14 +79,14 @@ A complete LaTeX publication workflow ships with every project:
 - BibTeX citation management
 - Automatic figure reference checking
 - Style analysis and transfer (sentence length, passive voice, hedging metrics)
-- One-command compilation: `research paper build`
+- One-command compilation: `ricet paper build`
 
 ### Overnight Autonomous Mode
 
 Queue a task list and let the system work unattended:
 
 ```bash
-research overnight --iterations 30
+ricet overnight --iterations 30
 ```
 
 The system executes your TODO list iteratively, checkpoints progress after every subtask, and stops when the completion signal is detected or the iteration cap is reached. Supports both claude-flow swarm orchestration and a raw-loop fallback.
@@ -141,21 +137,21 @@ Automatically scans, catalogs, and organizes experiment figures by run ID and fo
 ### From PyPI (recommended)
 
 ```bash
-pip install research-automation
+pip install ricet
 ```
 
 ### With ML extras
 
 ```bash
-pip install "research-automation[ml]"     # numpy, pandas, scipy, scikit-learn, matplotlib
-pip install "research-automation[all]"    # + chromadb, sentence-transformers, torch, jupyter
+pip install "ricet[ml]"     # numpy, pandas, scipy, scikit-learn, matplotlib
+pip install "ricet[all]"    # + chromadb, sentence-transformers, torch, jupyter
 ```
 
 ### Docker
 
 ```bash
-docker build -t research-automation docker/
-docker run -it -v $(pwd):/workspace research-automation
+docker build -t ricet docker/
+docker run -it -v $(pwd):/workspace ricet
 ```
 
 ### From source
@@ -168,7 +164,7 @@ pip install -e ".[dev]"
 
 ## Configuration
 
-After running `research init`, your project contains `config/settings.yml`:
+After running `ricet init`, your project contains `config/settings.yml`:
 
 ```yaml
 project:
@@ -192,13 +188,19 @@ preferences:
 Reconfigure any section interactively:
 
 ```bash
-research config notifications
-research config compute
+ricet config notifications
+ricet config compute
 ```
 
-### API Keys
+### Authentication
 
-Store credentials in a `.env` file at the project root (auto-loaded, never committed):
+The recommended way to authenticate with Claude is browser login (no API key needed):
+
+```bash
+claude auth login
+```
+
+For CI/headless environments, store an API key in a `.env` file at the project root (auto-loaded, never committed):
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
@@ -209,19 +211,19 @@ GITHUB_TOKEN=ghp_...
 
 | Command | Description |
 |---------|-------------|
-| `research init <name>` | Scaffold a new research project with interactive onboarding |
-| `research start` | Launch an interactive Claude Code session |
-| `research overnight` | Run autonomous overnight mode with configurable iterations |
-| `research status` | Show current TODO, progress, and resource metrics |
-| `research config [section]` | View or update project settings |
-| `research paper <action>` | Paper pipeline: `build`, `check`, `update`, `modernize` |
-| `research memory <query>` | Semantic search across vector memory |
-| `research agents` | Show active swarm agent status |
-| `research metrics` | Display token usage, cost, and system resource stats |
-| `research list-sessions` | List all past and active sessions |
-| `research --version` | Print version |
+| `ricet init <name>` | Scaffold a new research project with interactive onboarding |
+| `ricet start` | Launch an interactive Claude Code session |
+| `ricet overnight` | Run autonomous overnight mode with configurable iterations |
+| `ricet status` | Show current TODO, progress, and resource metrics |
+| `ricet config [section]` | View or update project settings |
+| `ricet paper <action>` | Paper pipeline: `build`, `check`, `update`, `modernize` |
+| `ricet memory <query>` | Semantic search across vector memory |
+| `ricet agents` | Show active swarm agent status |
+| `ricet metrics` | Display token usage, cost, and system resource stats |
+| `ricet list-sessions` | List all past and active sessions |
+| `ricet --version` | Print version |
 
-Run `research <command> --help` for full option details.
+Run `ricet <command> --help` for full option details.
 
 ## Architecture
 
@@ -229,7 +231,7 @@ Run `research <command> --help` for full option details.
 research-automation/
 |
 |-- cli/                        # Typer CLI entry points
-|   |-- main.py                 #   research command definitions
+|   |-- main.py                 #   ricet command definitions
 |   |-- dashboard.py            #   Rich TUI dashboard
 |   +-- gallery.py              #   Figure gallery viewer
 |
@@ -272,7 +274,7 @@ research-automation/
 ### How it works
 
 ```
-You --> research start --> Master Agent --> Sub-agents (researcher, coder, ...)
+You --> ricet start --> Master Agent --> Sub-agents (researcher, coder, ...)
                               |                    |
                          claude-flow          Vector Memory
                          (swarm, MCP)         (HNSW index)
@@ -280,12 +282,12 @@ You --> research start --> Master Agent --> Sub-agents (researcher, coder, ...)
                          Docker sandbox     knowledge/ENCYCLOPEDIA.md
 ```
 
-1. `research init` scaffolds a project from templates and runs interactive onboarding.
-2. `research start` launches a Claude Code session governed by the master agent.
+1. `ricet init` scaffolds a project from templates and runs interactive onboarding.
+2. `ricet start` launches a Claude Code session governed by the master agent.
 3. The master agent reads your goal, plans subtasks, and dispatches them to specialized sub-agents.
 4. Each sub-agent executes inside the project environment, commits results, and updates shared memory.
 5. The falsifier agent validates outputs before anything is marked complete.
-6. `research overnight` repeats this cycle unattended until the task list is done.
+6. `ricet overnight` repeats this cycle unattended until the task list is done.
 
 ## Contributing
 

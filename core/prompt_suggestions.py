@@ -69,9 +69,35 @@ COMMON_PATTERNS: dict[str, list[str]] = {
 
 # Keywords used to match a task description to a pattern category.
 _CATEGORY_KEYWORDS: dict[str, list[str]] = {
-    "research": ["research", "survey", "literature", "study", "explore", "investigate", "analyze data"],
-    "implementation": ["implement", "build", "create", "develop", "code", "feature", "module", "function"],
-    "debugging": ["debug", "fix", "bug", "error", "issue", "broken", "failing", "crash"],
+    "research": [
+        "research",
+        "survey",
+        "literature",
+        "study",
+        "explore",
+        "investigate",
+        "analyze data",
+    ],
+    "implementation": [
+        "implement",
+        "build",
+        "create",
+        "develop",
+        "code",
+        "feature",
+        "module",
+        "function",
+    ],
+    "debugging": [
+        "debug",
+        "fix",
+        "bug",
+        "error",
+        "issue",
+        "broken",
+        "failing",
+        "crash",
+    ],
     "review": ["review", "PR", "pull request", "code review", "feedback", "audit"],
     "deployment": ["deploy", "release", "ship", "rollout", "CI", "CD", "pipeline"],
     "writing": ["write", "document", "draft", "blog", "paper", "README", "docs"],
@@ -94,6 +120,7 @@ def _match_category(text: str) -> str | None:
 # ---------------------------------------------------------------------------
 # suggest_next_steps
 # ---------------------------------------------------------------------------
+
 
 def suggest_next_steps(
     current_task: str,
@@ -144,9 +171,7 @@ def suggest_next_steps(
     return suggestions[:5]
 
 
-def _filter_remaining_steps(
-    pattern_steps: list[str], progress: list[str]
-) -> list[str]:
+def _filter_remaining_steps(pattern_steps: list[str], progress: list[str]) -> list[str]:
     """Return pattern steps that have not yet been accomplished."""
     progress_lower = {p.lower() for p in progress}
     remaining: list[str] = []
@@ -154,8 +179,7 @@ def _filter_remaining_steps(
         # Fuzzy: skip if any progress item shares significant words.
         step_words = set(re.findall(r"\w{4,}", step.lower()))
         already_done = any(
-            len(step_words & set(re.findall(r"\w{4,}", p))) >= 2
-            for p in progress_lower
+            len(step_words & set(re.findall(r"\w{4,}", p))) >= 2 for p in progress_lower
         )
         if not already_done:
             remaining.append(step)
@@ -185,6 +209,7 @@ def _generate_generic_suggestions(
 # generate_follow_up_prompts
 # ---------------------------------------------------------------------------
 
+
 def generate_follow_up_prompts(
     completed_task: str,
     result: str,
@@ -210,8 +235,14 @@ def generate_follow_up_prompts(
 
     # Result-aware follow-ups.
     if "error" in result.lower() or "fail" in result.lower():
-        prompts.append(f"Investigate why '{completed_task}' produced errors: {result[:120]}")
-    if "success" in result.lower() or "passing" in result.lower() or "deployed" in result.lower():
+        prompts.append(
+            f"Investigate why '{completed_task}' produced errors: {result[:120]}"
+        )
+    if (
+        "success" in result.lower()
+        or "passing" in result.lower()
+        or "deployed" in result.lower()
+    ):
         prompts.append(f"Run a broader validation after: {completed_task}")
         prompts.append("Update documentation to reflect the changes")
 
@@ -233,6 +264,7 @@ def generate_follow_up_prompts(
 # ---------------------------------------------------------------------------
 # detect_stuck_pattern
 # ---------------------------------------------------------------------------
+
 
 def detect_stuck_pattern(history: list[str]) -> bool:
     """Detect if the user/agent is going in circles.
@@ -274,6 +306,7 @@ def detect_stuck_pattern(history: list[str]) -> bool:
 # suggest_decomposition
 # ---------------------------------------------------------------------------
 
+
 def suggest_decomposition(complex_task: str) -> list[str]:
     """Break a complex task into smaller, actionable subtasks.
 
@@ -304,7 +337,9 @@ def suggest_decomposition(complex_task: str) -> list[str]:
         subtasks.append("Integrate, review, and iterate")
 
     # 3. Final step: validate and wrap up.
-    subtasks.append(f"Validate the complete result against the original goal: {complex_task}")
+    subtasks.append(
+        f"Validate the complete result against the original goal: {complex_task}"
+    )
 
     return subtasks
 
@@ -312,6 +347,7 @@ def suggest_decomposition(complex_task: str) -> list[str]:
 # ---------------------------------------------------------------------------
 # compress_context
 # ---------------------------------------------------------------------------
+
 
 def compress_context(context: str, max_tokens: int = 2000) -> str:
     """Compress context while preserving key information.
@@ -341,10 +377,30 @@ def compress_context(context: str, max_tokens: int = 2000) -> str:
 
     # Score each sentence by signal density.
     high_signal_words = {
-        "important", "critical", "must", "required", "key", "essential",
-        "error", "warning", "note", "todo", "fixme", "hack", "bug",
-        "api", "config", "secret", "password", "token", "deploy",
-        "deadline", "blocking", "urgent", "never", "always",
+        "important",
+        "critical",
+        "must",
+        "required",
+        "key",
+        "essential",
+        "error",
+        "warning",
+        "note",
+        "todo",
+        "fixme",
+        "hack",
+        "bug",
+        "api",
+        "config",
+        "secret",
+        "password",
+        "token",
+        "deploy",
+        "deadline",
+        "blocking",
+        "urgent",
+        "never",
+        "always",
     }
 
     scored: list[tuple[float, int, str]] = []
@@ -373,7 +429,5 @@ def compress_context(context: str, max_tokens: int = 2000) -> str:
         return context[:chars_budget]
 
     # Reconstruct in original order.
-    compressed_parts = [
-        sentences[i] for i in sorted(selected_indices)
-    ]
+    compressed_parts = [sentences[i] for i in sorted(selected_indices)]
     return " ".join(compressed_parts)

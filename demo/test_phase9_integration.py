@@ -18,28 +18,30 @@ runner = CliRunner()
 
 
 class TestCliVersion:
-    """``research --version`` via CliRunner."""
+    """``ricet --version`` via CliRunner."""
 
     def test_cli_version(self):
         result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
-        assert "research-automation" in result.output
+        assert "ricet" in result.output
         assert "0.2.0" in result.output
 
 
 class TestCliInit:
-    """``research init test-proj`` via CliRunner (mock onboarding)."""
+    """``ricet init test-proj`` via CliRunner (mock onboarding)."""
 
     def test_cli_init(self, tmp_path):
-        with patch("cli.main.collect_answers") as mock_collect, \
-             patch("cli.main.setup_workspace"), \
-             patch("cli.main.write_settings"), \
-             patch("cli.main.write_goal_file"), \
-             patch("cli.main.shutil.copytree"), \
-             patch("cli.main.subprocess.run"), \
-             patch("cli.main._inject_claude_flow_mcp"), \
-             patch("cli.main.TEMPLATE_DIR", tmp_path / "templates"), \
-             patch("cli.main.SETUP_SCRIPT", tmp_path / "nonexistent_script"):
+        with (
+            patch("cli.main.collect_answers") as mock_collect,
+            patch("cli.main.setup_workspace"),
+            patch("cli.main.write_settings"),
+            patch("cli.main.write_goal_file"),
+            patch("cli.main.shutil.copytree"),
+            patch("cli.main.subprocess.run"),
+            patch("cli.main._inject_claude_flow_mcp"),
+            patch("cli.main.TEMPLATE_DIR", tmp_path / "templates"),
+            patch("cli.main.SETUP_SCRIPT", tmp_path / "nonexistent_script"),
+        ):
 
             mock_collect.return_value = MagicMock()
 
@@ -56,7 +58,7 @@ class TestCliInit:
 
 
 class TestCliStatus:
-    """``research status`` via CliRunner."""
+    """``ricet status`` via CliRunner."""
 
     def test_cli_status(self, tmp_path, monkeypatch):
         # Create minimal state files
@@ -69,7 +71,10 @@ class TestCliStatus:
 
         from core.claude_flow import ClaudeFlowUnavailable
 
-        with patch("core.claude_flow._get_bridge", side_effect=ClaudeFlowUnavailable("no bridge")):
+        with patch(
+            "core.claude_flow._get_bridge",
+            side_effect=ClaudeFlowUnavailable("no bridge"),
+        ):
             result = runner.invoke(app, ["status"])
 
         # Should show TODO content
@@ -78,7 +83,7 @@ class TestCliStatus:
 
 
 class TestCliVerify:
-    """``research verify "test claim"`` via CliRunner."""
+    """``ricet verify "test claim"`` via CliRunner."""
 
     def test_cli_verify(self):
         mock_report = {"verdict": "unverified", "issues": ["No sources found"]}
@@ -91,11 +96,13 @@ class TestCliVerify:
 
 
 class TestCliPaper:
-    """``research paper check`` via CliRunner."""
+    """``ricet paper check`` via CliRunner."""
 
     def test_cli_paper_check(self):
-        with patch("core.paper.check_figure_references", return_value=[]), \
-             patch("core.paper.list_citations", return_value=["ref1", "ref2"]):
+        with (
+            patch("core.paper.check_figure_references", return_value=[]),
+            patch("core.paper.list_citations", return_value=["ref1", "ref2"]),
+        ):
             result = runner.invoke(app, ["paper", "check"])
 
         assert result.exit_code == 0
@@ -103,7 +110,7 @@ class TestCliPaper:
 
 
 class TestCliMobile:
-    """``research mobile url`` via CliRunner."""
+    """``ricet mobile url`` via CliRunner."""
 
     def test_cli_mobile_url(self):
         with patch("core.mobile.mobile_server") as mock_ms:
@@ -115,7 +122,7 @@ class TestCliMobile:
 
 
 class TestCliWebsite:
-    """``research website init`` via CliRunner (mock filesystem)."""
+    """``ricet website init`` via CliRunner (mock filesystem)."""
 
     def test_cli_website_init(self):
         with patch("core.website.site_manager") as mock_sm:
@@ -128,7 +135,7 @@ class TestCliWebsite:
 
 
 class TestCliProjects:
-    """``research projects list`` via CliRunner."""
+    """``ricet projects list`` via CliRunner."""
 
     def test_cli_projects_list(self):
         mock_entries = [
@@ -145,7 +152,7 @@ class TestCliProjects:
 
 
 class TestCliWorktree:
-    """``research worktree list`` via CliRunner."""
+    """``ricet worktree list`` via CliRunner."""
 
     def test_cli_worktree_list(self):
         mock_trees = [
@@ -160,13 +167,18 @@ class TestCliWorktree:
 
 
 class TestCliAgents:
-    """``research agents`` via CliRunner."""
+    """``ricet agents`` via CliRunner."""
 
     def test_cli_agents(self):
         from core.claude_flow import ClaudeFlowUnavailable
 
-        with patch("core.claude_flow._get_bridge", side_effect=ClaudeFlowUnavailable("not available")), \
-             patch("core.agents.get_active_agents_status", return_value=[]):
+        with (
+            patch(
+                "core.claude_flow._get_bridge",
+                side_effect=ClaudeFlowUnavailable("not available"),
+            ),
+            patch("core.agents.get_active_agents_status", return_value=[]),
+        ):
             result = runner.invoke(app, ["agents"])
 
         assert result.exit_code == 0
@@ -176,13 +188,20 @@ class TestCliAgents:
 
 
 class TestCliMemory:
-    """``research memory test`` via CliRunner."""
+    """``ricet memory test`` via CliRunner."""
 
     def test_cli_memory(self):
         from core.claude_flow import ClaudeFlowUnavailable
 
-        with patch("core.claude_flow._get_bridge", side_effect=ClaudeFlowUnavailable("not available")), \
-             patch("core.knowledge.search_knowledge", return_value=["result 1", "result 2"]):
+        with (
+            patch(
+                "core.claude_flow._get_bridge",
+                side_effect=ClaudeFlowUnavailable("not available"),
+            ),
+            patch(
+                "core.knowledge.search_knowledge", return_value=["result 1", "result 2"]
+            ),
+        ):
             result = runner.invoke(app, ["memory", "test"])
 
         assert result.exit_code == 0
@@ -221,7 +240,7 @@ class TestFullLifecycle:
         active = reg.get_active_project()
         assert active["name"] == "lifecycle"
 
-        # -- Step 2: Create a session file (simulating ``research start``) --
+        # -- Step 2: Create a session file (simulating ``ricet start``) --
         session_file = proj_dir / "state" / "sessions" / "test-session.json"
         session_data = {
             "name": "test-session",
@@ -236,6 +255,7 @@ class TestFullLifecycle:
         mock_report = {"verdict": "verified", "issues": []}
         with patch("core.verification.verify_text", return_value=mock_report):
             from core.verification import verify_text
+
             report = verify_text("Water boils at 100 degrees Celsius at sea level")
         assert report["verdict"] == "verified"
         assert len(report["issues"]) == 0
@@ -245,6 +265,7 @@ class TestFullLifecycle:
             mock_sm.init.return_value = None
             mock_sm.build.return_value = None
             from core.website import site_manager
+
             site_manager.init()
             site_manager.build()
             mock_sm.init.assert_called_once()

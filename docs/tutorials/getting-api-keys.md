@@ -1,16 +1,17 @@
 # Tutorial 1: Getting API Keys
 
-This tutorial walks you through obtaining every API key and credential that
-Research Automation can use. Only the Anthropic API key is strictly required.
-Everything else is optional and can be added later.
+This tutorial walks you through authenticating with Claude and obtaining every
+credential that ricet can use. Browser login via `claude auth login`
+is the recommended method. API keys are available as a fallback for CI/headless
+environments. Everything else is optional and can be added later.
 
-**Time:** ~15 minutes
+**Time:** ~10 minutes
 
 ---
 
 ## Table of Contents
 
-1. [Anthropic API Key (required)](#1-anthropic-api-key-required)
+1. [Claude Authentication (required)](#1-claude-authentication-required)
 2. [GitHub SSH Key (required for git push)](#2-github-ssh-key-required-for-git-push)
 3. [OpenAI API Key (optional)](#3-openai-api-key-optional)
 4. [Slack Webhook (optional)](#4-slack-incoming-webhook-optional)
@@ -20,24 +21,41 @@ Everything else is optional and can be added later.
 
 ---
 
-## 1. Anthropic API Key (required)
+## 1. Claude Authentication (required)
 
-The Anthropic key powers Claude Code, which is the engine behind every agent in
-Research Automation.
+Claude Code is the engine behind every agent in ricet. The
+recommended way to authenticate is browser login -- no API key needed.
 
-### Steps
+### Recommended: Browser Login
+
+Run the following command and follow the prompts in your browser:
+
+```bash
+$ claude auth login
+```
+
+This stores credentials in `~/.claude/` and keeps them refreshed automatically.
+No API key management required.
+
+### Verify
+
+```bash
+$ claude --version
+```
+
+If the command succeeds without authentication errors, you are ready to go.
+
+### Alternative: API Key (for CI/headless environments)
+
+If you are running in a CI pipeline, headless server, or environment where
+browser login is not possible, use an API key instead.
 
 1. Go to [console.anthropic.com](https://console.anthropic.com/).
 2. Sign up or log in.
 3. Navigate to **Settings > API Keys** in the left sidebar.
 4. Click **Create Key**.
-5. Give it a name like `research-automation`.
+5. Give it a name like `ricet`.
 6. Copy the key immediately -- it will not be shown again.
-
-> **Screenshot:** The Anthropic console API Keys page showing the "Create Key"
-> button in the top-right corner and a list of existing keys below.
-
-### Set the key in your environment
 
 ```bash
 # Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
@@ -50,19 +68,11 @@ Reload your shell:
 $ source ~/.bashrc   # or ~/.zshrc
 ```
 
-### Verify
-
-```bash
-$ echo $ANTHROPIC_API_KEY | head -c 12
-sk-ant-api03
-```
-
-If you see the prefix, the key is loaded.
-
 ### Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
+| `claude auth login` fails | Ensure you have a working browser. On headless systems, use an API key instead. |
 | "Invalid API key" errors | Make sure there are no extra spaces or newlines. Copy the key again from the console. |
 | Key stops working | Check your billing at console.anthropic.com. Free-tier credits may have expired. |
 | Accidentally committed a key | Revoke it immediately in the console, generate a new one, and add `*.env` to `.gitignore`. |
@@ -71,7 +81,7 @@ If you see the prefix, the key is loaded.
 
 ## 2. GitHub SSH Key (required for git push)
 
-Research Automation commits to git frequently. An SSH key lets it push to GitHub
+ricet commits to git frequently. An SSH key lets it push to GitHub
 without entering your password every time.
 
 ### Steps
@@ -171,7 +181,7 @@ $ export OPENAI_API_KEY="sk-..."
 
 ## 4. Slack Incoming Webhook (optional)
 
-A Slack webhook lets Research Automation send you notifications (task complete,
+A Slack webhook lets ricet send you notifications (task complete,
 errors, overnight run summary) to a Slack channel.
 
 ### Steps
@@ -195,7 +205,7 @@ $ export NOTIFICATION_WEBHOOK="https://hooks.slack.com/services/T00000000/B00000
 ```bash
 $ curl -s -X POST "$NOTIFICATION_WEBHOOK" \
     -H "Content-Type: application/json" \
-    -d '{"text": "Research Automation test notification"}'
+    -d '{"text": "ricet test notification"}'
 ok
 ```
 
@@ -219,7 +229,7 @@ about your research directly to Medium.
 
 1. Go to [medium.com/me/settings/security](https://medium.com/me/settings/security).
 2. Scroll to **Integration tokens**.
-3. Enter a description (`research-automation`) and click **Get token**.
+3. Enter a description (`ricet`) and click **Get token**.
 4. Copy the token.
 
 ```bash
@@ -273,7 +283,7 @@ $ export LINKEDIN_ACCESS_TOKEN="..."
 
 ## 7. Storing Your Keys Safely
 
-Never commit API keys to git. Research Automation uses two mechanisms for safe
+Never commit API keys to git. ricet uses two mechanisms for safe
 key storage.
 
 ### Option A: Environment variables in your shell profile
@@ -334,7 +344,8 @@ rotate them immediately.
 
 | Key | Required | Where to Get It | Environment Variable |
 |-----|----------|----------------|---------------------|
-| Anthropic API Key | Yes | console.anthropic.com | `ANTHROPIC_API_KEY` |
+| Claude Auth (browser login) | Yes | `claude auth login` | `~/.claude/` |
+| Anthropic API Key (fallback) | CI/headless only | console.anthropic.com | `ANTHROPIC_API_KEY` |
 | GitHub SSH Key | For git push | ssh-keygen locally | N/A (file-based) |
 | GitHub Token | For API features | github.com/settings/tokens | `GITHUB_TOKEN` |
 | OpenAI API Key | No | platform.openai.com | `OPENAI_API_KEY` |

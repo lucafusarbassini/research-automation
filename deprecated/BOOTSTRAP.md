@@ -31,7 +31,7 @@ research-automation/           # THIS TOOL (what you're building now)
 └── docs/                      # Documentation
 ```
 
-When a user runs `research init my-project`, the tool:
+When a user runs `ricetinit my-project`, the tool:
 1. Runs interactive onboarding (asks for goal, credentials, preferences)
 2. Creates project directory with templates
 3. Sets up Docker container

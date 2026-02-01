@@ -1,14 +1,14 @@
 # Tutorial 2: Docker Setup
 
-This tutorial covers installing Docker on your system and running Research
-Automation inside a container. The Docker setup provides a fully isolated
+This tutorial covers installing Docker on your system and running ricet
+inside a container. The Docker setup provides a fully isolated
 environment with Python 3.12, Node.js 20, LaTeX, and all required dependencies
 pre-installed.
 
 **Time:** ~20 minutes
 
 **Prerequisites:** [Tutorial 1: Getting API Keys](getting-api-keys.md) completed
-(you need at least the Anthropic API key).
+(you need Claude authentication via `claude auth login` or an Anthropic API key).
 
 ---
 
@@ -111,11 +111,19 @@ $ cd research-automation
 
 ## 4. Configure Environment Variables
 
-Create a `.env` file in the project root with your API keys:
+If you used `claude auth login` on the host, your credentials in `~/.claude/`
+are automatically mounted into the container (see
+[Mounting Auth Credentials](#mounting-auth-credentials) below). No `.env`
+changes are needed for Claude authentication.
+
+For CI/headless environments or additional keys, create a `.env` file in the
+project root:
 
 ```bash
 $ cat > .env << 'EOF'
+# Only needed if NOT using `claude auth login`:
 ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+
 GITHUB_TOKEN=github_pat_your-token-here
 
 # Paths for Docker volume mounts
@@ -194,7 +202,7 @@ This starts the container with the default `--web` entrypoint, which exposes:
 If you prefer a direct terminal session:
 
 ```bash
-$ docker compose -f docker/docker-compose.yml run --rm research bash
+$ docker compose -f docker/docker-compose.yml run --rm app bash
 ```
 
 You are now inside the container at `/workspace`:
@@ -206,14 +214,14 @@ Python 3.12.x
 root@container:/workspace$ claude --version
 Claude Code vX.X.X
 
-root@container:/workspace$ research --version
-research-automation 0.1.0
+root@container:/workspace$ ricet --version
+ricet 0.2.0
 ```
 
 ### Start a research project inside the container
 
 ```bash
-root@container:/workspace$ research init my-first-project
+root@container:/workspace$ ricet init my-first-project
 ```
 
 Follow the interactive prompts (covered in detail in [Tutorial 3](first-project.md)).
@@ -240,6 +248,50 @@ Key points:
   reference papers or secret files.
 - Resource limits are set to 8 CPUs and 32 GB RAM by default. Edit
   `docker/docker-compose.yml` to adjust.
+
+---
+
+## Mounting Auth Credentials
+
+The `docker-compose.yml` automatically mounts your host `~/.claude/` directory
+into the container so that browser-based authentication works without any extra
+configuration:
+
+```yaml
+volumes:
+  - ${CLAUDE_AUTH_DIR:-~/.claude}:/root/.claude:ro
+```
+
+This means if you have already run `claude auth login` on your host machine,
+the container will pick up those credentials automatically.
+
+### How it works
+
+1. Run `claude auth login` on the **host** (outside Docker).
+2. The credentials are saved to `~/.claude/` on the host.
+3. When the container starts, the directory is mounted read-only at `/root/.claude`.
+4. Claude Code inside the container uses the mounted credentials.
+
+### Custom auth directory
+
+If your Claude credentials are stored somewhere other than `~/.claude/`, set
+the `CLAUDE_AUTH_DIR` environment variable:
+
+```bash
+$ CLAUDE_AUTH_DIR=/path/to/custom/.claude docker compose -f docker/docker-compose.yml up
+```
+
+### Fallback: API key
+
+If you cannot use browser login (CI pipelines, headless servers), set
+`ANTHROPIC_API_KEY` in your `.env` file or pass it directly:
+
+```bash
+$ ANTHROPIC_API_KEY=sk-ant-... docker compose -f docker/docker-compose.yml up
+```
+
+The entrypoint script detects both authentication methods and reports which one
+is active.
 
 ---
 
@@ -347,6 +399,9 @@ ports:
 $ ANTHROPIC_API_KEY=sk-ant-... docker compose -f docker/docker-compose.yml up
 ```
 
+Or run `claude auth login` on the host and restart the container (the
+`~/.claude/` mount will provide credentials automatically).
+
 ---
 
 ## Quick Reference
@@ -357,7 +412,7 @@ $ ANTHROPIC_API_KEY=sk-ant-... docker compose -f docker/docker-compose.yml up
 | Start (foreground) | `docker compose -f docker/docker-compose.yml up` |
 | Start (background) | `docker compose -f docker/docker-compose.yml up -d` |
 | Stop | `docker compose -f docker/docker-compose.yml down` |
-| Shell into running container | `docker compose -f docker/docker-compose.yml exec research bash` |
+| Shell into running container | `docker compose -f docker/docker-compose.yml exec app bash` |
 | View logs | `docker compose -f docker/docker-compose.yml logs -f` |
 | Rebuild from scratch | `docker compose -f docker/docker-compose.yml build --no-cache` |
 

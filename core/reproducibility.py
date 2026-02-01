@@ -88,7 +88,9 @@ class ArtifactRegistry:
         self.registry_path.parent.mkdir(parents=True, exist_ok=True)
         self.registry_path.write_text(json.dumps(self._data, indent=2))
 
-    def register(self, name: str, path: Path, *, run_id: str = "", metadata: dict | None = None) -> str:
+    def register(
+        self, name: str, path: Path, *, run_id: str = "", metadata: dict | None = None
+    ) -> str:
         """Register an artifact with its checksum.
 
         Args:

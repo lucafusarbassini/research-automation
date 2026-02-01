@@ -1,6 +1,6 @@
 # User Onboarding Questions
 
-When a user runs `research init <project-name>`, the tool asks these questions interactively.
+When a user runs `ricet init <project-name>`, the tool asks these questions interactively.
 
 ---
 
@@ -151,12 +151,12 @@ credentials:
 
 Users can re-run onboarding with:
 ```bash
-research config
+ricet config
 ```
 
 Or edit specific settings:
 ```bash
-research config --notifications
-research config --compute
-research config --credentials
+ricet config --notifications
+ricet config --compute
+ricet config --credentials
 ```

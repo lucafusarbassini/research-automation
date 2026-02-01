@@ -68,11 +68,11 @@ def list_worktrees() -> list[dict]:
         if line.startswith("worktree "):
             if current:
                 worktrees.append(current)
-            current = {"path": line[len("worktree "):]}
+            current = {"path": line[len("worktree ") :]}
         elif line.startswith("HEAD "):
-            current["head"] = line[len("HEAD "):]
+            current["head"] = line[len("HEAD ") :]
         elif line.startswith("branch "):
-            current["branch"] = line[len("branch "):]
+            current["branch"] = line[len("branch ") :]
 
     if current:
         worktrees.append(current)
@@ -210,7 +210,9 @@ def merge_worktree_results(source_branch: str, target_branch: str = "main") -> b
         logger.info("Merged %s into %s", source_branch, target_branch)
         return True
     except subprocess.CalledProcessError as exc:
-        logger.warning("Merge of %s into %s failed: %s", source_branch, target_branch, exc)
+        logger.warning(
+            "Merge of %s into %s failed: %s", source_branch, target_branch, exc
+        )
         # Abort if merge is in progress
         subprocess.run(["git", "merge", "--abort"], capture_output=True)
         return False

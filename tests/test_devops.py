@@ -15,10 +15,10 @@ from core.devops import (
     setup_ci_cd,
 )
 
-
 # ---------------------------------------------------------------------------
 # check_infrastructure
 # ---------------------------------------------------------------------------
+
 
 class TestCheckInfrastructure:
     """Tests for check_infrastructure()."""
@@ -27,9 +27,7 @@ class TestCheckInfrastructure:
     @patch("core.devops.subprocess.run")
     def test_all_tools_available(self, mock_run, mock_which):
         mock_which.return_value = "/usr/bin/tool"
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="1.0.0\n", stderr=""
-        )
+        mock_run.return_value = MagicMock(returncode=0, stdout="1.0.0\n", stderr="")
         result = check_infrastructure()
         assert isinstance(result, dict)
         assert result["docker"]["available"] is True
@@ -45,9 +43,7 @@ class TestCheckInfrastructure:
             return f"/usr/bin/{name}"
 
         mock_which.side_effect = which_side
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="1.0.0\n", stderr=""
-        )
+        mock_run.return_value = MagicMock(returncode=0, stdout="1.0.0\n", stderr="")
         result = check_infrastructure()
         assert result["docker"]["available"] is False
         assert result["docker"]["version"] == ""
@@ -66,6 +62,7 @@ class TestCheckInfrastructure:
 # ---------------------------------------------------------------------------
 # DockerManager
 # ---------------------------------------------------------------------------
+
 
 class TestDockerManager:
     """Tests for DockerManager class."""
@@ -145,6 +142,7 @@ class TestDockerManager:
 # health_check
 # ---------------------------------------------------------------------------
 
+
 class TestHealthCheck:
     """Tests for health_check()."""
 
@@ -163,6 +161,7 @@ class TestHealthCheck:
     @patch("core.devops.urllib.request.urlopen")
     def test_unhealthy_timeout(self, mock_urlopen):
         from urllib.error import URLError
+
         mock_urlopen.side_effect = URLError("timeout")
         result = health_check("http://localhost:8080/health")
         assert result["healthy"] is False
@@ -172,6 +171,7 @@ class TestHealthCheck:
 # ---------------------------------------------------------------------------
 # deploy_github_pages
 # ---------------------------------------------------------------------------
+
 
 class TestDeployGithubPages:
     """Tests for deploy_github_pages()."""
@@ -198,6 +198,7 @@ class TestDeployGithubPages:
 # setup_ci_cd
 # ---------------------------------------------------------------------------
 
+
 class TestSetupCiCd:
     """Tests for setup_ci_cd()."""
 
@@ -222,6 +223,7 @@ class TestSetupCiCd:
 # ---------------------------------------------------------------------------
 # rotate_secrets
 # ---------------------------------------------------------------------------
+
 
 class TestRotateSecrets:
     """Tests for rotate_secrets()."""

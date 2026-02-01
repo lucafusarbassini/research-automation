@@ -98,6 +98,7 @@ def test_close_session_with_bridge(tmp_path: Path, monkeypatch):
 def test_create_session_bridge_unavailable(tmp_path: Path, monkeypatch):
     monkeypatch.setattr("core.session.SESSIONS_DIR", tmp_path / "sessions")
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.session._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         session = create_session("fallback-test")
         assert session.name == "fallback-test"
@@ -108,6 +109,7 @@ def test_close_session_bridge_unavailable(tmp_path: Path, monkeypatch):
     monkeypatch.setattr("core.session.SESSIONS_DIR", tmp_path / "sessions")
     session = create_session("close-fallback")
     from core.claude_flow import ClaudeFlowUnavailable
+
     with patch("core.session._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
         close_session(session)
         assert session.status == "completed"

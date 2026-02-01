@@ -1,6 +1,6 @@
 # Installation
 
-Research Automation supports three installation methods: pip (recommended), Docker, and from source.
+ricet supports three installation methods: pip (recommended), Docker, and from source.
 
 ---
 
@@ -18,7 +18,13 @@ Install Claude Code globally before proceeding:
 npm install -g @anthropic-ai/claude-code
 ```
 
-Set your Anthropic API key:
+Authenticate with Claude (recommended -- no API key needed):
+
+```bash
+claude auth login
+```
+
+Alternatively, for CI/headless environments, set an API key:
 
 ```bash
 export ANTHROPIC_API_KEY="your-key-here"
@@ -63,13 +69,13 @@ Adds `pytest`, `pytest-cov`, `black`, `isort`, and `mypy`.
 ### Verify installation
 
 ```bash
-research --version
+ricet --version
 ```
 
 Expected output:
 
 ```
-research-automation 0.1.0
+ricet 0.2.0
 ```
 
 ---
@@ -95,6 +101,7 @@ REFERENCE_PATH=/path/to/reference/papers
 OUTPUTS_PATH=/path/to/outputs
 SECRETS_PATH=/path/to/secrets
 SHARED_PATH=/path/to/shared/knowledge
+# If not using `claude auth login`, set an API key:
 ANTHROPIC_API_KEY=your-key-here
 GITHUB_TOKEN=your-token-here
 ```
@@ -106,7 +113,7 @@ docker compose up -d
 docker compose exec research bash
 ```
 
-Inside the container, the `research` command is available and the workspace is mounted at `/workspace`.
+Inside the container, the `ricet` command is available and the workspace is mounted at `/workspace`.
 
 ### What is included in the Docker image
 
@@ -145,7 +152,7 @@ pytest
 
 ```
 research-automation/
-├── cli/                 # CLI entry point (research command)
+├── cli/                 # CLI entry point (ricet command)
 ├── core/                # Python modules (20+ modules)
 ├── templates/           # Copied into new projects
 │   ├── config/          # MCP config, settings
@@ -163,7 +170,7 @@ research-automation/
 
 ## Optional: claude-flow Integration
 
-Research Automation optionally integrates with [claude-flow v3](https://github.com/ruvnet/claude-flow) for enhanced orchestration, HNSW vector memory, and 3-tier model routing. When claude-flow is not installed, every module gracefully falls back to its built-in implementation.
+ricet optionally integrates with [claude-flow v3](https://github.com/ruvnet/claude-flow) for enhanced orchestration, HNSW vector memory, and 3-tier model routing. When claude-flow is not installed, every module gracefully falls back to its built-in implementation.
 
 ### Install claude-flow
 
@@ -178,7 +185,7 @@ npx claude-flow@v3alpha --version
 ### Verify integration
 
 ```bash
-research metrics
+ricet metrics
 ```
 
 If claude-flow is available, metrics will report actual token counts and cost data. Otherwise, character-based estimates are used.
@@ -189,7 +196,7 @@ If claude-flow is available, metrics will report actual token counts and cost da
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | API key for Claude |
+| Claude authentication | Yes | `claude auth login` (preferred) or `ANTHROPIC_API_KEY` for CI/headless |
 | `GITHUB_TOKEN` | No | GitHub access for PRs, issues, Actions |
 | `NOTIFICATION_WEBHOOK` | No | Slack/webhook URL for notifications |
 | `SMTP_USER` / `SMTP_PASSWORD` | No | Email notification credentials |
@@ -198,13 +205,13 @@ If claude-flow is available, metrics will report actual token counts and cost da
 
 ## Troubleshooting
 
-### `research` command not found
+### `ricet` command not found
 
 Make sure the package is installed in your active Python environment:
 
 ```bash
 pip install -e .
-which research
+which ricet
 ```
 
 ### Claude Code not found

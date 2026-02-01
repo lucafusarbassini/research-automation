@@ -20,7 +20,9 @@ _GIT_ENV = {
 }
 
 
-def _run_git(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
+def _run_git(
+    args: list[str], cwd: Path, check: bool = True
+) -> subprocess.CompletedProcess:
     """Run a git command with deterministic author info."""
     env = {**os.environ, **_GIT_ENV}
     return subprocess.run(
@@ -51,12 +53,18 @@ class TwoRepoManager:
         Returns a dict like ``{"experiments": True, "clean": True}`` on success.
         """
         result: dict[str, bool] = {}
-        for name, repo_dir in [("experiments", self.experiments), ("clean", self.clean)]:
+        for name, repo_dir in [
+            ("experiments", self.experiments),
+            ("clean", self.clean),
+        ]:
             repo_dir.mkdir(parents=True, exist_ok=True)
             if not (repo_dir / ".git").is_dir():
                 _run_git(["init"], cwd=repo_dir)
                 # Create an initial empty commit so HEAD exists
-                _run_git(["commit", "--allow-empty", "-m", f"Initialise {name} repo"], cwd=repo_dir)
+                _run_git(
+                    ["commit", "--allow-empty", "-m", f"Initialise {name} repo"],
+                    cwd=repo_dir,
+                )
                 logger.info("Initialised %s repo at %s", name, repo_dir)
             result[name] = True
         return result
@@ -105,11 +113,16 @@ class TwoRepoManager:
             }
         """
         out: dict[str, dict] = {}
-        for name, repo_dir in [("experiments", self.experiments), ("clean", self.clean)]:
+        for name, repo_dir in [
+            ("experiments", self.experiments),
+            ("clean", self.clean),
+        ]:
             status_proc = _run_git(["status", "--porcelain"], cwd=repo_dir, check=False)
             dirty = len(status_proc.stdout.strip()) > 0
 
-            branch_proc = _run_git(["branch", "--show-current"], cwd=repo_dir, check=False)
+            branch_proc = _run_git(
+                ["branch", "--show-current"], cwd=repo_dir, check=False
+            )
             branch = branch_proc.stdout.strip() or "HEAD"
 
             out[name] = {"dirty": dirty, "branch": branch}

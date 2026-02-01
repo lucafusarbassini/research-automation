@@ -6,27 +6,27 @@ Module-level documentation for all core packages. Each section covers public cla
 
 ## `cli.main` -- CLI Entry Point
 
-The main Typer application providing the `research` command.
+The main Typer application providing the `ricet` command.
 
 ### Commands
 
 | Command | Description |
 |---------|-------------|
-| `research init <name>` | Initialize a new research project with interactive onboarding |
-| `research start` | Start an interactive research session |
-| `research overnight` | Run autonomous overnight mode |
-| `research status` | Show current TODO and progress |
-| `research paper build` | Compile the LaTeX paper |
-| `research dashboard` | Launch the TUI dashboard |
-| `research agents` | List agent types and their status |
-| `research memory search <query>` | Search the knowledge base |
-| `research metrics` | Display token and cost metrics |
-| `research --version` | Print version and exit |
+| `ricetinit <name>` | Initialize a new research project with interactive onboarding |
+| `ricetstart` | Start an interactive research session |
+| `ricetovernight` | Run autonomous overnight mode |
+| `ricetstatus` | Show current TODO and progress |
+| `ricetpaper build` | Compile the LaTeX paper |
+| `ricetdashboard` | Launch the TUI dashboard |
+| `ricetagents` | List agent types and their status |
+| `ricetmemory search <query>` | Search the knowledge base |
+| `ricetmetrics` | Display token and cost metrics |
+| `ricet--version` | Print version and exit |
 
 ### Options
 
 ```
-research init <name> [--path PATH]
+ricet init <name> [--path PATH]
 research start [--session-name NAME]
 research overnight [--task-file PATH] [--iterations N]
 ```

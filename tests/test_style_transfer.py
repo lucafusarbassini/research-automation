@@ -21,7 +21,9 @@ def test_analyze_basic():
 
 
 def test_analyze_passive_voice():
-    text = "The model was trained on the dataset. The results were evaluated by experts."
+    text = (
+        "The model was trained on the dataset. The results were evaluated by experts."
+    )
     profile = analyze_paper_style(text)
     assert profile.passive_voice_ratio > 0
 
@@ -45,8 +47,18 @@ def test_analyze_tense_past():
 
 
 def test_generate_transformation_prompt_different_styles():
-    source = StyleProfile(avg_sentence_length=10.0, passive_voice_ratio=0.5, hedging_ratio=0.01, tense="past")
-    target = StyleProfile(avg_sentence_length=20.0, passive_voice_ratio=0.1, hedging_ratio=0.03, tense="present")
+    source = StyleProfile(
+        avg_sentence_length=10.0,
+        passive_voice_ratio=0.5,
+        hedging_ratio=0.01,
+        tense="past",
+    )
+    target = StyleProfile(
+        avg_sentence_length=20.0,
+        passive_voice_ratio=0.1,
+        hedging_ratio=0.03,
+        tense="present",
+    )
     prompt = generate_transformation_prompt(source, target)
     assert "longer" in prompt.lower() or "complex" in prompt.lower()
     assert "active" in prompt.lower()

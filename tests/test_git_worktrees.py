@@ -16,7 +16,6 @@ from core.git_worktrees import (
     run_in_worktree,
 )
 
-
 # ---------------------------------------------------------------------------
 # create_worktree
 # ---------------------------------------------------------------------------
@@ -25,7 +24,9 @@ from core.git_worktrees import (
 @patch("core.git_worktrees.subprocess.run")
 def test_create_worktree_default_path(mock_run, tmp_path):
     """create_worktree derives path from branch name when path is None."""
-    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout="", stderr=""
+    )
 
     with patch("core.git_worktrees.WORKTREES_DIR", tmp_path / "worktrees"):
         result = create_worktree("feature/new-parser")
@@ -40,7 +41,9 @@ def test_create_worktree_default_path(mock_run, tmp_path):
 @patch("core.git_worktrees.subprocess.run")
 def test_create_worktree_explicit_path(mock_run, tmp_path):
     """create_worktree uses explicit path when provided."""
-    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout="", stderr=""
+    )
 
     target = tmp_path / "my-worktree"
     result = create_worktree("dev", path=target)
@@ -53,7 +56,9 @@ def test_create_worktree_explicit_path(mock_run, tmp_path):
 @patch("core.git_worktrees.subprocess.run")
 def test_create_worktree_git_failure(mock_run):
     """create_worktree raises on git failure."""
-    mock_run.side_effect = subprocess.CalledProcessError(1, "git", stderr="fatal: branch exists")
+    mock_run.side_effect = subprocess.CalledProcessError(
+        1, "git", stderr="fatal: branch exists"
+    )
 
     with pytest.raises(subprocess.CalledProcessError):
         create_worktree("broken-branch")
@@ -77,7 +82,9 @@ def test_list_worktrees(mock_run):
         "branch refs/heads/feat\n"
         "\n"
     )
-    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout=porcelain, stderr="")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout=porcelain, stderr=""
+    )
 
     trees = list_worktrees()
 
@@ -95,7 +102,9 @@ def test_list_worktrees(mock_run):
 @patch("core.git_worktrees.subprocess.run")
 def test_remove_worktree_success(mock_run):
     """remove_worktree returns True on success."""
-    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout="", stderr=""
+    )
 
     assert remove_worktree(Path("/tmp/wt")) is True
     cmd = mock_run.call_args[0][0]
@@ -122,7 +131,9 @@ def test_run_in_worktree(mock_ensure, mock_run, mock_remove):
     """run_in_worktree executes command inside the worktree directory."""
     wt_path = Path("/tmp/worktrees/feat")
     mock_ensure.return_value = wt_path
-    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="ok", stderr="")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout="ok", stderr=""
+    )
 
     result = run_in_worktree("feat", "echo hello")
 
@@ -204,7 +215,9 @@ def test_ensure_branch_worktree_creates_new(mock_list, mock_create):
 @patch("core.git_worktrees.subprocess.run")
 def test_merge_worktree_results_success(mock_run):
     """merge_worktree_results returns True on clean merge."""
-    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout="", stderr=""
+    )
 
     assert merge_worktree_results("feature-x", "main") is True
 
@@ -217,6 +230,7 @@ def test_merge_worktree_results_success(mock_run):
 @patch("core.git_worktrees.subprocess.run")
 def test_merge_worktree_results_conflict(mock_run):
     """merge_worktree_results returns False on merge conflict."""
+
     def side_effect(cmd, **kwargs):
         if "merge" in cmd and "--abort" not in cmd:
             raise subprocess.CalledProcessError(1, "git", stderr="CONFLICT")

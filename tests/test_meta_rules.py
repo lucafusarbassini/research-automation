@@ -26,15 +26,26 @@ def test_classify_rule_workflow():
 
 
 def test_classify_rule_constraint():
-    assert classify_rule_type("Must not exceed the maximum batch size limit") == "constraint"
+    assert (
+        classify_rule_type("Must not exceed the maximum batch size limit")
+        == "constraint"
+    )
 
 
 def test_classify_rule_preference():
-    assert classify_rule_type("Prefer using vectorized operations for better performance") == "preference"
+    assert (
+        classify_rule_type("Prefer using vectorized operations for better performance")
+        == "preference"
+    )
 
 
 def test_classify_rule_debug():
-    assert classify_rule_type("When CUDA error occurs, check GPU memory first as a workaround") == "debug"
+    assert (
+        classify_rule_type(
+            "When CUDA error occurs, check GPU memory first as a workaround"
+        )
+        == "debug"
+    )
 
 
 def test_classify_rule_general():
@@ -52,8 +63,12 @@ def test_append_to_cheatsheet_new_file(tmp_path: Path):
 
 def test_append_to_cheatsheet_existing(tmp_path: Path):
     cs = tmp_path / "CHEATSHEET.md"
-    cs.write_text("# Operational Cheatsheet\n\n## Workflow\n\n## Constraints\n\n## General\n")
-    append_to_cheatsheet("Must validate inputs", rule_type="constraint", cheatsheet_path=cs)
+    cs.write_text(
+        "# Operational Cheatsheet\n\n## Workflow\n\n## Constraints\n\n## General\n"
+    )
+    append_to_cheatsheet(
+        "Must validate inputs", rule_type="constraint", cheatsheet_path=cs
+    )
     content = cs.read_text()
     assert "Must validate inputs" in content
 

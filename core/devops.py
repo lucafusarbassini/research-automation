@@ -84,9 +84,12 @@ class DockerManager:
         try:
             proc = subprocess.run(
                 [
-                    "docker", "build",
-                    "-t", tag,
-                    "-f", str(dockerfile),
+                    "docker",
+                    "build",
+                    "-t",
+                    tag,
+                    "-f",
+                    str(dockerfile),
                     str(dockerfile.parent or "."),
                 ],
                 capture_output=True,
@@ -126,9 +129,7 @@ class DockerManager:
                 cmd.extend(["-v", f"{host_path}:{container_path}"])
         cmd.append(tag)
         try:
-            proc = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=60
-            )
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if proc.returncode != 0:
                 logger.error("docker run failed: %s", proc.stderr)
                 return ""
@@ -333,19 +334,40 @@ def setup_ci_cd(project_path: Path, template: str = "python") -> Path:
 
 # Patterns that strongly suggest a secret value
 _SECRET_PATTERNS = [
-    re.compile(r"(?i)(api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token)\s*=\s*\S+"),
+    re.compile(
+        r"(?i)(api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token)\s*=\s*\S+"
+    ),
     re.compile(r"(?i)(password|passwd|pwd)\s*=\s*\S+"),
     re.compile(r"(?i)token\s*=\s*[\"']?\w{10,}"),
-    re.compile(r"ghp_[A-Za-z0-9]{20,}"),          # GitHub personal access token
-    re.compile(r"sk-[A-Za-z0-9]{20,}"),            # OpenAI-style key
-    re.compile(r"AKIA[A-Z0-9]{16}"),               # AWS access key ID
+    re.compile(r"ghp_[A-Za-z0-9]{20,}"),  # GitHub personal access token
+    re.compile(r"sk-[A-Za-z0-9]{20,}"),  # OpenAI-style key
+    re.compile(r"AKIA[A-Z0-9]{16}"),  # AWS access key ID
     re.compile(r"(?i)(database_url|db_url)\s*=\s*\S+"),
 ]
 
-_SCAN_GLOBS = ["**/.env", "**/.env.*", "**/*.py", "**/*.js", "**/*.ts", "**/*.yml", "**/*.yaml", "**/*.json", "**/*.toml", "**/*.cfg"]
+_SCAN_GLOBS = [
+    "**/.env",
+    "**/.env.*",
+    "**/*.py",
+    "**/*.js",
+    "**/*.ts",
+    "**/*.yml",
+    "**/*.yaml",
+    "**/*.json",
+    "**/*.toml",
+    "**/*.cfg",
+]
 
 # Directories to skip
-_SKIP_DIRS = {".git", "node_modules", "__pycache__", ".tox", ".mypy_cache", "venv", ".venv"}
+_SKIP_DIRS = {
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".tox",
+    ".mypy_cache",
+    "venv",
+    ".venv",
+}
 
 
 def rotate_secrets(project_path: Path) -> list[str]:

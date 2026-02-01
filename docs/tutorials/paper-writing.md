@@ -7,7 +7,7 @@ style analysis, and compiling your manuscript.
 **Time:** ~30 minutes
 
 **Prerequisites:**
-- A project created with `research init` ([Tutorial 3](first-project.md))
+- A project created with `ricet init` ([Tutorial 3](first-project.md))
 - LaTeX installed (included in the Docker image; on host, install `texlive-full`)
 
 ---
@@ -28,7 +28,7 @@ style analysis, and compiling your manuscript.
 
 ## 1. The Paper Directory Structure
 
-Every project created with `research init` includes a `paper/` directory:
+Every project created with `ricet init` includes a `paper/` directory:
 
 ```
 paper/
@@ -177,7 +177,7 @@ In `main.tex`, use natbib citation commands:
 ### List all citations
 
 ```bash
-$ research paper check
+$ ricet paper check
 Checking paper...
 All figure references resolved.
 
@@ -260,7 +260,7 @@ save_figure(fig, "accuracy_comparison")
 ### Check for missing figures
 
 ```bash
-$ research paper check
+$ ricet paper check
 ```
 
 This scans `main.tex` for `\includegraphics` commands and reports any files
@@ -273,7 +273,7 @@ that do not exist on disk.
 ### Using the CLI
 
 ```bash
-$ research paper build
+$ ricet paper build
 Compiling paper...
 Paper compiled successfully.
 ```
@@ -315,7 +315,7 @@ metrics and can generate transformation prompts to match a target style.
 ### Analyze your paper's style
 
 ```bash
-$ research paper modernize
+$ ricet paper modernize
 Style analysis...
   Avg sentence length: 18.3 words
   Passive voice ratio: 0.35
@@ -417,7 +417,7 @@ Claude: [writes Python script using apply_rcparams() and COLORS, saves figure]
 
 You: Compile the paper and check for any issues.
 
-Claude: [runs research paper build, reports success or errors]
+Claude: [runs ricet paper build, reports success or errors]
 
 You: Run style analysis on what we have so far.
 
@@ -464,7 +464,7 @@ BIBTEX = bibtex     # change from biber
 
 - Check the path in `\includegraphics` is relative to `paper/`, not the project root
 - Verify the figure file exists: `ls figures/`
-- Run `research paper check` to see which figures are missing
+- Run `ricet paper check` to see which figures are missing
 
 ### Style analysis returns all zeros
 

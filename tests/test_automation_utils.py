@@ -69,6 +69,7 @@ def test_experiment_runner(tmp_path: Path):
     assert path.exists()
 
     import json
+
     data = json.loads(path.read_text())
     assert data["parameters"]["lr"] == 0.01
     assert data["results"]["accuracy"] == 0.95

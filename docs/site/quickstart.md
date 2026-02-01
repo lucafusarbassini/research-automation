@@ -15,8 +15,8 @@ git clone https://github.com/YOUR_USERNAME/research-automation
 cd research-automation
 pip install -e .
 
-# Set your API key
-export ANTHROPIC_API_KEY="your-key-here"
+# Authenticate with Claude (no API key needed)
+claude auth login
 ```
 
 ---
@@ -24,7 +24,7 @@ export ANTHROPIC_API_KEY="your-key-here"
 ## Step 2: Create a Project
 
 ```bash
-research init my-first-project
+ricet init my-first-project
 ```
 
 The interactive onboarding wizard will ask you:
@@ -61,7 +61,7 @@ my-first-project/
 
 ```bash
 cd my-first-project
-research start
+ricet start
 ```
 
 This creates a tracked session and launches Claude Code. The agent system follows the **Progressive Instruction Protocol**:
@@ -88,7 +88,7 @@ Open a new terminal:
 
 ```bash
 cd my-first-project
-research status
+ricet status
 ```
 
 This displays the current TODO list and progress log.
@@ -100,7 +100,7 @@ This displays the current TODO list and progress log.
 For longer tasks, use overnight mode:
 
 ```bash
-research overnight --iterations 20
+ricet overnight --iterations 20
 ```
 
 This runs Claude in an autonomous loop:
@@ -114,7 +114,7 @@ This runs Claude in an autonomous loop:
 Check results in the morning:
 
 ```bash
-research status
+ricet status
 git log --oneline -20
 ```
 
@@ -130,7 +130,7 @@ cd paper
 make all
 
 # Or use the CLI
-research paper build
+ricet paper build
 ```
 
 The paper pipeline provides:
@@ -146,7 +146,7 @@ The paper pipeline provides:
 For a richer view of your project:
 
 ```bash
-research dashboard
+ricet dashboard
 ```
 
 The TUI dashboard shows:
@@ -160,7 +160,7 @@ The TUI dashboard shows:
 
 ## What Happens Under the Hood
 
-When you run `research start`, the system:
+When you run `ricet start`, the system:
 
 1. Creates a session record in `state/sessions/`.
 2. Loads tier-1 MCPs (paper search, git, GitHub, filesystem, memory).

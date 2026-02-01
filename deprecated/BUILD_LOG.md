@@ -8,13 +8,13 @@ This document maps every sentence from Luca's initial prompt to what was actuall
 
 **Luca:** I intend to create an app and/or a Visual Studio Code extension that allows the automation of scientific research by fully leveraging the potential of cloud code.
 
-**Claude:** The project is built as a Python CLI tool (`research`) using Typer, not a VS Code extension. It automates research workflows via Claude Code subprocess calls (`cli/main.py`). When claude-flow is available (`core/claude_flow.py`), it bridges to `npx claude-flow@v3alpha` for swarm orchestration, HNSW vector memory, and 3-tier model routing. No VS Code extension has been developed. The CLI is the sole interface. **Status: COMPLETE** (as a CLI tool; VS Code extension not attempted).
+**Claude:** The project is built as a Python CLI tool (`ricet`) using Typer, not a VS Code extension. It automates research workflows via Claude Code subprocess calls (`cli/main.py`). When claude-flow is available (`core/claude_flow.py`), it bridges to `npx claude-flow@v3alpha` for swarm orchestration, HNSW vector memory, and 3-tier model routing. No VS Code extension has been developed. The CLI is the sole interface. **Status: COMPLETE** (as a CLI tool; VS Code extension not attempted).
 
 ---
 
 **Luca:** In particular, I would like to build a system that allows a user to initialize and develop a project.
 
-**Claude:** `research init <project-name>` creates a full project from templates, runs the onboarding questionnaire, sets up workspace directories, optionally configures claude-flow, and initializes git. `research start` launches a Claude Code session (tries claude-flow session first, falls back to `claude --session-id`). `research overnight` runs autonomous iterations (tries claude-flow swarm first, falls back to raw `claude -p` loop). Additional CLI commands include: `mobile`, `website`, `publish`, `verify`, `debug`, `projects`, `worktree`, `agents`, `memory`, `metrics`. Implemented in `cli/main.py`. **Status: COMPLETE.**
+**Claude:** `ricetinit <project-name>` creates a full project from templates, runs the onboarding questionnaire, sets up workspace directories, optionally configures claude-flow, and initializes git. `ricetstart` launches a Claude Code session (tries claude-flow session first, falls back to `claude --session-id`). `ricetovernight` runs autonomous iterations (tries claude-flow swarm first, falls back to raw `claude -p` loop). Additional CLI commands include: `mobile`, `website`, `publish`, `verify`, `debug`, `projects`, `worktree`, `agents`, `memory`, `metrics`. Implemented in `cli/main.py`. **Status: COMPLETE.**
 
 ---
 
@@ -302,7 +302,7 @@ This document maps every sentence from Luca's initial prompt to what was actuall
 
 **Luca:** In short a series of rules that we will then strengthen and that allow, when the user says "make me a version of the paper" or "modernize the version of the paper" or "continue integrating information from new results into the paper," and so on, the agent to do it autonomously.
 
-**Claude:** `research paper build` compiles the paper. `research paper modernize` runs style analysis via `core/style_transfer.py:analyze_paper_style()` and reports metrics. `research paper check` verifies figure references and citation count. `research paper update` shows current citations. The actual autonomous paper-writing (generating LaTeX content from results) would require an LLM call, which is not wired up -- the commands provide analysis and compilation, not content generation. **Status: PARTIAL** -- compilation, analysis, and checking work, but autonomous content generation is not implemented.
+**Claude:** `ricetpaper build` compiles the paper. `ricetpaper modernize` runs style analysis via `core/style_transfer.py:analyze_paper_style()` and reports metrics. `ricetpaper check` verifies figure references and citation count. `ricetpaper update` shows current citations. The actual autonomous paper-writing (generating LaTeX content from results) would require an LLM call, which is not wired up -- the commands provide analysis and compilation, not content generation. **Status: PARTIAL** -- compilation, analysis, and checking work, but autonomous content generation is not implemented.
 
 ---
 
@@ -572,7 +572,7 @@ This document maps every sentence from Luca's initial prompt to what was actuall
 
 **Luca:** We therefore want an all-nighter mode in addition to the daily mode based on constant user-agent interaction.
 
-**Claude:** `research overnight` = all-nighter mode. `research start` = interactive daily mode (launches Claude Code session). Both exist in `cli/main.py`. **Status: COMPLETE.**
+**Claude:** `ricetovernight` = all-nighter mode. `ricetstart` = interactive daily mode (launches Claude Code session). Both exist in `cli/main.py`. **Status: COMPLETE.**
 
 ---
 

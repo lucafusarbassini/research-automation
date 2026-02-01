@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "research-automation"
+name = "ricet"
 version = "0.2.0"
-description = "Scientific research automation framework powered by Claude Code"
+description = "Scientific research automation powered by Claude Code"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
@@ -67,12 +67,12 @@ dev = [
     "mypy",
 ]
 all = [
-    "research-automation[ml]",
-    "research-automation[data]",
+    "ricet[ml]",
+    "ricet[data]",
 ]
 
 [project.scripts]
-research = "cli.main:app"
+ricet = "cli.main:app"
 
 [tool.setuptools.packages.find]
 include = ["cli*", "core*"]

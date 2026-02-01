@@ -1,4 +1,4 @@
-"""Shared test fixtures and helpers for the research-automation test suite."""
+"""Shared test fixtures and helpers for the ricet test suite."""
 
 import shutil
 from unittest.mock import MagicMock, patch

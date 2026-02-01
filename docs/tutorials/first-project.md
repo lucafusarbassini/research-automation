@@ -16,7 +16,7 @@ with agents, knowledge files, a paper template, and a TODO list.
 
 ## Table of Contents
 
-1. [Install Research Automation](#1-install-research-automation)
+1. [Install ricet](#1-install-ricet)
 2. [Create a New Project](#2-create-a-new-project)
 3. [Understand the Generated Files](#3-understand-the-generated-files)
 4. [Start an Interactive Session](#4-start-an-interactive-session)
@@ -28,7 +28,7 @@ with agents, knowledge files, a paper template, and a TODO list.
 
 ---
 
-## 1. Install Research Automation
+## 1. Install ricet
 
 ### From the cloned repository
 
@@ -40,13 +40,13 @@ $ pip install -e ".[all]"
 ### Verify the installation
 
 ```bash
-$ research --version
-research-automation 0.1.0
+$ ricet--version
+ricet 0.2.0
 
-$ research --help
-Usage: research [OPTIONS] COMMAND [ARGS]...
+$ ricet--help
+Usage: ricet [OPTIONS] COMMAND [ARGS]...
 
-Scientific Research Automation - manage research projects with Claude Code.
+Scientific ricet - manage research projects with Claude Code.
 
 Commands:
   init            Initialize a new research project with full onboarding.
@@ -61,7 +61,7 @@ Commands:
   paper           Paper pipeline commands.
 ```
 
-> **Screenshot:** Terminal showing the help output of the `research` command with
+> **Screenshot:** Terminal showing the help output of the `ricet` command with
 > all available subcommands listed.
 
 ---
@@ -72,7 +72,7 @@ Pick a directory where you want your projects to live, then run:
 
 ```bash
 $ cd ~/projects    # or wherever you keep your work
-$ research init my-first-project
+$ ricetinit my-first-project
 ```
 
 The onboarding wizard will ask you a series of questions. Here is what each
@@ -116,7 +116,7 @@ Project created at /home/you/projects/my-first-project
 
 Next steps:
   cd /home/you/projects/my-first-project
-  research start
+  ricet start
 ```
 
 ---
@@ -200,7 +200,7 @@ Execute, Validate.
 ## 4. Start an Interactive Session
 
 ```bash
-$ research start
+$ ricetstart
 ```
 
 This command:
@@ -212,7 +212,7 @@ This command:
 You can also name your session:
 
 ```bash
-$ research start --session-name "literature-review"
+$ ricetstart --session-name "literature-review"
 ```
 
 > **Screenshot:** Terminal showing Claude Code starting up, reading CLAUDE.md,
@@ -247,7 +247,7 @@ Press `Ctrl+C` or type `/exit` to end the session. Your progress is saved in
 From your project directory, at any time:
 
 ```bash
-$ research status
+$ ricetstatus
 ```
 
 Output:
@@ -271,7 +271,7 @@ and checks off items in `TODO.md`.
 ### List past sessions
 
 ```bash
-$ research list-sessions
+$ ricetlist-sessions
   20260201_143022 - active (2026-02-01)
   literature-review - active (2026-02-01)
 ```
@@ -279,13 +279,13 @@ $ research list-sessions
 ### View agent status
 
 ```bash
-$ research agents
+$ ricetagents
 ```
 
 ### View resource metrics
 
 ```bash
-$ research metrics
+$ ricetmetrics
 ```
 
 ---
@@ -331,7 +331,7 @@ Keep it up to date.
 
 ## 7. Make Your First Commit
 
-Research Automation encourages aggressive committing. The post-task hook
+ricet encourages aggressive committing. The post-task hook
 auto-commits after each completed task, but you can also commit manually:
 
 ```bash
@@ -429,7 +429,7 @@ works without it by falling back to direct Claude CLI calls.
 
 ### Session does not persist
 
-Make sure you are running `research start` from inside your project directory
+Make sure you are running `ricet start` from inside your project directory
 (the one containing `.claude/` and `state/`).
 
 ---

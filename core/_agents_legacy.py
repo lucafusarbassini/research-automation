@@ -73,10 +73,12 @@ def execute_parallel_tasks_legacy(
     results: dict[str, TaskResult] = {}
 
     if executor_fn is None:
+
         def executor_fn(t: Task) -> TaskResult:
             agent = t.agent or route_task(t.description)
             return execute_agent_task_legacy(
-                agent, t.description,
+                agent,
+                t.description,
                 dangerously_skip_permissions=dangerously_skip_permissions,
             )
 

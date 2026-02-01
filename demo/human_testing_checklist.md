@@ -13,7 +13,7 @@ Complete them after the automated demo passes.
 
 ## Mobile Access (Phase 3)
 
-- [ ] **Start mobile server** — Run `research mobile start` or `python -c "from core.mobile import start_server; start_server()"`.
+- [ ] **Start mobile server** — Run `ricet mobile start` or `python -c "from core.mobile import start_server; start_server()"`.
 - [ ] **Connect from phone** — Open `http://<your-ip>:8777/progress` in your phone's browser. Should return JSON.
 - [ ] **Submit task from phone** — POST to `http://<your-ip>:8777/task` with `{"task": "check status"}`.
 - [ ] **Auth token flow** — Generate a token, add it as `Authorization: Bearer <token>` header, verify it works.
@@ -21,8 +21,8 @@ Complete them after the automated demo passes.
 
 ## Social Media (Phase 6)
 
-- [ ] **Publish to Medium** — Set `MEDIUM_TOKEN` in `.env`, run `research publish medium`. Verify the post appears on Medium.
-- [ ] **Publish to LinkedIn** — Set `LINKEDIN_TOKEN` in `.env`, run `research publish linkedin`. Verify the post appears.
+- [ ] **Publish to Medium** — Set `MEDIUM_TOKEN` in `.env`, run `ricet publish medium`. Verify the post appears on Medium.
+- [ ] **Publish to LinkedIn** — Set `LINKEDIN_TOKEN` in `.env`, run `ricet publish linkedin`. Verify the post appears.
 
 ## Notifications (Phase 6)
 
@@ -32,12 +32,12 @@ Complete them after the automated demo passes.
 
 ## Overnight Mode (Phase 4)
 
-- [ ] **Full overnight run** — Set `ANTHROPIC_API_KEY`. Create a TODO.md with 3 tasks. Run `research overnight state/TODO.md`. Monitor with `research status`. Check results next morning.
+- [ ] **Full overnight run** — Set `ANTHROPIC_API_KEY`. Create a TODO.md with 3 tasks. Run `ricet overnight state/TODO.md`. Monitor with `ricet status`. Check results next morning.
 
 ## Paper Pipeline (Phase 5)
 
-- [ ] **LaTeX compilation** — Install texlive. Place a paper in `paper/`. Run `research paper build`. Check PDF output.
-- [ ] **Nature template** — Download Nature LaTeX template files (`.cls`, `.bst`). Place in `templates/paper/journals/nature/`. Run `research paper build --journal nature`.
+- [ ] **LaTeX compilation** — Install texlive. Place a paper in `paper/`. Run `ricet paper build`. Check PDF output.
+- [ ] **Nature template** — Download Nature LaTeX template files (`.cls`, `.bst`). Place in `templates/paper/journals/nature/`. Run `ricet paper build --journal nature`.
 
 ## Docker (Phase 9)
 
@@ -52,6 +52,6 @@ Complete them after the automated demo passes.
 
 ## Multi-Project (Phase 7)
 
-- [ ] **Register 2 real projects** — Run `research projects register` twice with different paths.
-- [ ] **Switch between them** — Run `research projects switch <name>`.
+- [ ] **Register 2 real projects** — Run `ricet projects register` twice with different paths.
+- [ ] **Switch between them** — Run `ricet projects switch <name>`.
 - [ ] **Sync knowledge** — After both projects have encyclopedia entries, verify sync works.
