@@ -13,6 +13,32 @@
   <a href="https://lucafusarbassini.github.io/research-automation/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-brightgreen.svg" alt="Docs"></a>
 </p>
 
+<details>
+<summary><strong>Quick demo</strong> (click to expand)</summary>
+
+```console
+$ ricet init my-project
+  Creating project scaffold in ./my-project ...
+  Running environment checks ...
+  Python 3.12.3  Node 20.18.0  Docker 27.2.1  LaTeX ✓
+  Project ready. Run 'ricet start' to begin.
+
+$ cd my-project && ricet start
+  Starting session "my-project-001" ...
+  Master agent ready. What would you like to research?
+
+> Analyse the effect of learning rate on transformer convergence
+
+  Dispatching to RESEARCHER agent ...
+  Dispatching to CODER agent ...
+  Running experiment in Docker sandbox ...
+  Dispatching to REVIEWER agent for validation ...
+  Writing results to paper/main.tex ...
+  Session complete. Artifacts in output/
+```
+
+</details>
+
 ---
 
 ricet turns a research idea into reproducible code, validated results, and a publication-ready LaTeX paper -- all from your terminal. A master agent breaks your goal into subtasks and dispatches them to specialized sub-agents (researcher, coder, reviewer, falsifier, writer, cleaner) that execute inside a Docker-isolated environment with 70+ MCP integrations auto-discovered on demand.
