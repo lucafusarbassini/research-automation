@@ -39,14 +39,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: docs-pip-${{ runner.os }}-${{ hashFiles('docs/requirements.txt', 'pyproject.toml') }}
+          key: docs-pip-${{ runner.os }}-${{ hashFiles('docs/site/requirements.txt', 'pyproject.toml') }}
           restore-keys: |
             docs-pip-${{ runner.os }}-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f docs/requirements.txt ]; then
+          if [ -f docs/site/requirements.txt ]; then
+            pip install -r docs/site/requirements.txt
+          elif [ -f docs/requirements.txt ]; then
             pip install -r docs/requirements.txt
           else
             pip install mkdocs mkdocs-material mkdocstrings[python]

@@ -290,3 +290,24 @@ def run_task_in_project(project_name: str, task: str) -> dict:
 def sync_knowledge_across(source: str, target: str) -> int:
     """Sync knowledge between projects using the default registry."""
     return _get_default_registry().sync_knowledge_across(source, target)
+
+
+# ---------------------------------------------------------------------------
+# CLI adapter — ``from core.multi_project import project_manager``
+# ---------------------------------------------------------------------------
+
+
+class _ProjectManager:
+    """Thin CLI-facing adapter wrapping the module-level convenience functions."""
+
+    def list_projects(self) -> list[dict]:
+        return list_projects()
+
+    def switch(self, name: str) -> Path:
+        return switch_project(name)
+
+    def register(self, name: str, path: str, project_type: str = "research") -> None:
+        register_project(name, Path(path), project_type)
+
+
+project_manager = _ProjectManager()

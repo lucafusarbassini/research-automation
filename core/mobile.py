@@ -274,3 +274,24 @@ def _extract_bearer(headers: Optional[dict]) -> Optional[str]:
     if auth_value.startswith("Bearer "):
         return auth_value[7:]
     return None
+
+
+# ---------------------------------------------------------------------------
+# CLI adapter — ``from core.mobile import mobile_server``
+# ---------------------------------------------------------------------------
+
+
+class _MobileManager:
+    """Thin CLI-facing adapter wrapping the module-level start/stop functions."""
+
+    def start(self, host: str = "0.0.0.0", port: int = 8777) -> None:
+        start_server(host=host, port=port)
+
+    def stop(self) -> None:
+        stop_server()
+
+    def get_url(self, host: str = "0.0.0.0", port: int = 8777) -> str:
+        return generate_mobile_url(host=host, port=port)
+
+
+mobile_server = _MobileManager()

@@ -25,6 +25,17 @@ class DebugResult:
     iterations: int
     final_output: str
 
+    def get(self, key: str, default: Any = None) -> Any:
+        """Dict-like access for CLI compatibility."""
+        mapping = {
+            "fixed": self.success,
+            "patch": self.fix_applied,
+            "log": self.final_output,
+            "original_error": self.original_error,
+            "iterations": self.iterations,
+        }
+        return mapping.get(key, default)
+
 
 class DebugHistory:
     """Tracks all :class:`DebugResult` entries for a session."""

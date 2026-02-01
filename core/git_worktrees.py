@@ -221,3 +221,32 @@ def merge_worktree_results(source_branch: str, target_branch: str = "main") -> b
                 capture_output=True,
                 text=True,
             )
+
+
+# ---------------------------------------------------------------------------
+# CLI adapter — ``from core.git_worktrees import worktree_manager``
+# ---------------------------------------------------------------------------
+
+
+class _WorktreeManager:
+    """Thin CLI-facing adapter wrapping the module-level worktree functions."""
+
+    def add(self, branch: str) -> Path:
+        return create_worktree(branch)
+
+    def list(self) -> list[dict]:
+        return list_worktrees()
+
+    def remove(self, branch: str) -> bool:
+        for wt in list_worktrees():
+            wt_branch = wt.get("branch", "")
+            if wt_branch == f"refs/heads/{branch}" or wt_branch == branch:
+                return remove_worktree(Path(wt["path"]))
+        logger.warning("No worktree found for branch %s", branch)
+        return False
+
+    def prune(self) -> None:
+        prune_worktrees()
+
+
+worktree_manager = _WorktreeManager()

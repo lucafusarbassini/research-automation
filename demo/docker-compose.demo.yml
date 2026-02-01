@@ -1,0 +1,31 @@
+services:
+  demo:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - ANTHROPIC_API_KEY=demo-test-key-not-real
+      - OPENAI_API_KEY=demo-test-key-not-real
+      - GITHUB_TOKEN=demo-test-token-not-real
+    volumes:
+      - demo-workspace:/workspace
+    working_dir: /home/app
+    command: ["python", "-m", "pytest", "demo/", "-v", "--tb=short", "-x"]
+    mem_limit: 4g
+
+  demo-with-latex:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-demo-test-key}
+    volumes:
+      - demo-workspace:/workspace
+    working_dir: /home/app
+    command: ["python", "-m", "pytest", "demo/", "-v", "--tb=short"]
+    profiles:
+      - full
+    mem_limit: 8g
+
+volumes:
+  demo-workspace:

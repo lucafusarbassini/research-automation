@@ -255,3 +255,25 @@ def auto_verify_response(response: str, context: dict) -> str:
     table = build_verification_table(all_results)
 
     return f"{response}\n\n---\n### Verification Report\n\n{table}\n"
+
+
+# ---------------------------------------------------------------------------
+# CLI adapter — ``from core.verification import verify_text``
+# ---------------------------------------------------------------------------
+
+
+def verify_text(text: str, project_path: str = "") -> dict:
+    """Run all verifiers on *text* and return a summary dict.
+
+    Returns:
+        Dict with ``verdict`` (str) and ``issues`` (list[str]).
+    """
+    results: list[VerificationResult] = []
+    results.extend(verify_claims(text))
+    if project_path:
+        results.extend(verify_file_references(text, Path(project_path)))
+    results.extend(verify_citations(text))
+
+    issues = [r.claim for r in results if not r.verified]
+    verdict = "all_verified" if not issues else "issues_found"
+    return {"verdict": verdict, "issues": issues}

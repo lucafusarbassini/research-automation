@@ -4,6 +4,8 @@ site_url: https://lucafusarbassini.github.io/research-automation/
 repo_url: https://github.com/lucafusarbassini/research-automation
 repo_name: research-automation
 
+docs_dir: docs/site
+
 theme:
   name: material
   palette:

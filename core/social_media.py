@@ -276,3 +276,29 @@ def publish_linkedin(draft: PostDraft, api_token: str) -> dict:
     except Exception as exc:
         logger.error("Failed to publish to LinkedIn: %s", exc)
         return {"success": False, "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# CLI adapter — ``from core.social_media import publish_to_platform``
+# ---------------------------------------------------------------------------
+
+
+def publish_to_platform(platform: str, api_token: str = "") -> dict:
+    """Dispatch publishing to the appropriate platform function.
+
+    Args:
+        platform: One of ``"medium"``, ``"linkedin"``.
+        api_token: API token for authentication.
+
+    Returns:
+        Dict with ``success`` bool and ``url``/``error`` keys.
+    """
+    platform_lower = platform.lower()
+    draft = PostDraft(platform=platform_lower, body="", title="")
+
+    if platform_lower == "medium":
+        return publish_medium(draft, api_token)
+    elif platform_lower == "linkedin":
+        return publish_linkedin(draft, api_token)
+    else:
+        return {"success": False, "error": f"Unsupported platform: {platform}"}

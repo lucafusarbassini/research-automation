@@ -419,3 +419,30 @@ def _make_handler(directory: Path):
             logger.debug(format, *args)
 
     return Handler
+
+
+# ---------------------------------------------------------------------------
+# CLI adapter — ``from core.website import site_manager``
+# ---------------------------------------------------------------------------
+
+
+class _SiteManager:
+    """Thin CLI-facing adapter wrapping the module-level website functions."""
+
+    def __init__(self, project_path: Optional[Path] = None):
+        self._path = project_path or Path(".")
+
+    def init(self, template: str = "academic") -> None:
+        init_website(self._path, template=template)
+
+    def build(self) -> bool:
+        return build_site(self._path)
+
+    def deploy(self, method: str = "github-pages") -> dict:
+        return deploy_site(self._path, method=method)
+
+    def preview(self, port: int = 8000) -> str:
+        return preview_site(self._path, port=port)
+
+
+site_manager = _SiteManager()
