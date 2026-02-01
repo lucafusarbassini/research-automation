@@ -121,6 +121,89 @@ def search_knowledge(
     return results
 
 
+def export_knowledge(
+    project_name: str,
+    *,
+    encyclopedia_path: Path = ENCYCLOPEDIA_PATH,
+    output_path: Path | None = None,
+) -> Path:
+    """Export project knowledge to a portable JSON format.
+
+    Args:
+        project_name: Name of the current project.
+        encyclopedia_path: Path to the encyclopedia.
+        output_path: Where to write the export. Auto-generated if None.
+
+    Returns:
+        Path to the exported file.
+    """
+    if not encyclopedia_path.exists():
+        raise FileNotFoundError(f"Encyclopedia not found: {encyclopedia_path}")
+
+    stats = get_encyclopedia_stats(encyclopedia_path)
+    content = encyclopedia_path.read_text()
+    entries = search_knowledge("", encyclopedia_path)  # Get all lines
+
+    export_data = {
+        "project": project_name,
+        "exported": datetime.now().isoformat(),
+        "stats": stats,
+        "content": content,
+    }
+
+    if output_path is None:
+        output_path = encyclopedia_path.parent / f"{project_name}_export.json"
+
+    output_path.write_text(json.dumps(export_data, indent=2))
+    logger.info("Exported knowledge to %s", output_path)
+    return output_path
+
+
+def import_knowledge(
+    import_path: Path,
+    *,
+    encyclopedia_path: Path = ENCYCLOPEDIA_PATH,
+    merge: bool = True,
+) -> int:
+    """Import knowledge from a previously exported file.
+
+    Args:
+        import_path: Path to the exported JSON file.
+        encyclopedia_path: Path to the target encyclopedia.
+        merge: If True, append entries. If False, replace.
+
+    Returns:
+        Number of entries imported.
+    """
+    if not import_path.exists():
+        raise FileNotFoundError(f"Import file not found: {import_path}")
+
+    data = json.loads(import_path.read_text())
+    imported_content = data.get("content", "")
+
+    if not imported_content:
+        return 0
+
+    if not merge or not encyclopedia_path.exists():
+        encyclopedia_path.parent.mkdir(parents=True, exist_ok=True)
+        encyclopedia_path.write_text(imported_content)
+        logger.info("Replaced encyclopedia with imported content")
+        return len([l for l in imported_content.splitlines() if l.strip().startswith("- [")])
+
+    # Merge: extract entries from imported content and append
+    existing = encyclopedia_path.read_text()
+    count = 0
+    for line in imported_content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- [") and stripped not in existing:
+            # Find which section it belongs to by context
+            append_learning("Tricks", stripped.lstrip("- "), encyclopedia_path=encyclopedia_path)
+            count += 1
+
+    logger.info("Imported %d entries", count)
+    return count
+
+
 def get_encyclopedia_stats(
     encyclopedia_path: Path = ENCYCLOPEDIA_PATH,
 ) -> dict:

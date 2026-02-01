@@ -19,8 +19,28 @@ from core.onboarding import (
     write_settings,
 )
 
-app = typer.Typer(help="Scientific Research Automation")
+__version__ = "0.1.0"
+
+
+def version_callback(value: bool):
+    if value:
+        print(f"research-automation {__version__}")
+        raise typer.Exit()
+
+
+app = typer.Typer(
+    help="Scientific Research Automation - manage research projects with Claude Code.",
+    epilog="Run 'research COMMAND --help' for more info on a command.",
+)
 console = Console()
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(None, "--version", "-v", callback=version_callback, is_eager=True, help="Show version and exit"),
+):
+    """Scientific Research Automation CLI."""
+    pass
 
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 CONFIG_DIR = Path.home() / ".research-automation"
