@@ -67,3 +67,38 @@ def test_session_to_dict():
     assert d["name"] == "test"
     assert d["status"] == "active"
     assert "started" in d
+
+
+# --- Bridge-integrated tests ---
+
+from unittest.mock import MagicMock, patch
+
+
+def test_create_session_with_bridge(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr("core.session.SESSIONS_DIR", tmp_path / "sessions")
+    mock_bridge = MagicMock()
+    mock_bridge.start_session.return_value = {"session_id": "cf-123"}
+    with patch("core.session._get_bridge", return_value=mock_bridge):
+        session = create_session("bridge-test")
+        assert session.name == "bridge-test"
+        mock_bridge.start_session.assert_called_once_with("bridge-test")
+
+
+def test_close_session_with_bridge(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr("core.session.SESSIONS_DIR", tmp_path / "sessions")
+    session = create_session("close-bridge")
+    mock_bridge = MagicMock()
+    mock_bridge.end_session.return_value = {"summary": {}}
+    with patch("core.session._get_bridge", return_value=mock_bridge):
+        close_session(session)
+        mock_bridge.end_session.assert_called_once_with("close-bridge")
+        assert session.status == "completed"
+
+
+def test_create_session_bridge_unavailable(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr("core.session.SESSIONS_DIR", tmp_path / "sessions")
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.session._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        session = create_session("fallback-test")
+        assert session.name == "fallback-test"
+        assert (tmp_path / "sessions" / "fallback-test.json").exists()

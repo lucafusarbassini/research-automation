@@ -52,3 +52,38 @@ def test_enforce_permission_write(tmp_path: Path):
 def test_enforce_permission_unknown_repo(tmp_path: Path):
     repos_file = tmp_path / "linked.json"
     assert enforce_permission_boundaries("nonexistent", "read", repos_file=repos_file) is False
+
+
+# --- Bridge-integrated tests ---
+
+from unittest.mock import MagicMock, patch
+
+from core.cross_repo import coordinated_commit
+
+
+def test_coordinated_commit_via_bridge(tmp_path: Path):
+    repos_file = tmp_path / "linked.json"
+    link_repository("repo-a", "/a", permissions=["read", "commit"], repos_file=repos_file)
+    mock_bridge = MagicMock()
+    mock_bridge.multi_repo_sync.return_value = {"repo-a": True}
+    with patch("core.cross_repo._get_bridge", return_value=mock_bridge):
+        results = coordinated_commit("sync msg", ["repo-a"], repos_file=repos_file)
+        assert results["repo-a"] is True
+        mock_bridge.multi_repo_sync.assert_called_once()
+
+
+def test_coordinated_commit_bridge_unavailable(tmp_path: Path):
+    repos_file = tmp_path / "linked.json"
+    link_repository("repo-b", str(tmp_path), permissions=["read", "commit"], repos_file=repos_file)
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.cross_repo._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        # Falls back to local git; will fail since tmp_path is not a git repo, but tests fallback path
+        results = coordinated_commit("msg", ["repo-b"], repos_file=repos_file)
+        assert "repo-b" in results
+
+
+def test_coordinated_commit_permission_denied(tmp_path: Path):
+    repos_file = tmp_path / "linked.json"
+    link_repository("read-only", "/ro", permissions=["read"], repos_file=repos_file)
+    results = coordinated_commit("msg", ["read-only"], repos_file=repos_file)
+    assert results["read-only"] is False

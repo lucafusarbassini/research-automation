@@ -51,3 +51,25 @@ def test_get_mcps_for_task_ml():
     mcps = get_mcps_for_task("train a neural network")
     assert "jupyter-mcp-server" in mcps
     assert "huggingface-mcp" in mcps
+
+
+# --- Bridge-integrated tests ---
+
+from unittest.mock import MagicMock, patch
+
+from core.mcps import get_claude_flow_mcp_config
+
+
+def test_get_claude_flow_mcp_config_available():
+    mock_bridge = MagicMock()
+    with patch("core.mcps._get_bridge", return_value=mock_bridge):
+        config = get_claude_flow_mcp_config()
+        assert "tier0_claude_flow" in config
+        assert "claude-flow" in config["tier0_claude_flow"]["mcps"]
+
+
+def test_get_claude_flow_mcp_config_unavailable():
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.mcps._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        config = get_claude_flow_mcp_config()
+        assert config == {}

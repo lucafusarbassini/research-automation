@@ -1,4 +1,7 @@
-"""Resource management: monitoring, checkpoint policies, cleanup, decisions."""
+"""Resource management: monitoring, checkpoint policies, cleanup, decisions.
+
+When claude-flow is available, monitor_resources merges bridge metrics with local OS stats.
+"""
 
 import logging
 import os
@@ -7,6 +10,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +72,17 @@ def monitor_resources() -> ResourceSnapshot:
         cpu_count = os.cpu_count() or 1
         snap.cpu_percent = round((loadavg[0] / cpu_count) * 100, 1)
     except OSError:
+        pass
+
+    # Merge claude-flow metrics if available
+    try:
+        bridge = _get_bridge()
+        metrics = bridge.get_metrics()
+        if "gpu_memory_used_mb" in metrics:
+            snap.gpu_memory_used_mb = metrics["gpu_memory_used_mb"]
+        if "gpu_memory_total_mb" in metrics:
+            snap.gpu_memory_total_mb = metrics["gpu_memory_total_mb"]
+    except ClaudeFlowUnavailable:
         pass
 
     return snap

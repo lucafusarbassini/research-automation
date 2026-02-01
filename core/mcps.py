@@ -1,9 +1,14 @@
-"""MCP auto-discovery and loading based on task classification."""
+"""MCP auto-discovery and loading based on task classification.
+
+When claude-flow is available, it is injected as a tier-0 MCP.
+"""
 
 import json
 import subprocess
 from pathlib import Path
 from typing import Set
+
+from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
 MCP_CONFIG = Path(__file__).parent.parent / "templates/config/mcp-nucleus.json"
 
@@ -12,6 +17,31 @@ def load_mcp_config() -> dict:
     """Load MCP configuration."""
     with open(MCP_CONFIG) as f:
         return json.load(f)
+
+
+def get_claude_flow_mcp_config() -> dict:
+    """Return claude-flow as a tier-0 MCP config entry.
+
+    Returns:
+        Dict suitable for injection into the MCP config, or empty dict
+        if claude-flow is not available.
+    """
+    try:
+        bridge = _get_bridge()
+        return {
+            "tier0_claude_flow": {
+                "description": "Claude-flow swarm orchestration, vector memory, 3-tier routing",
+                "mcps": {
+                    "claude-flow": {
+                        "command": "npx",
+                        "args": ["claude-flow@v3alpha", "mcp", "serve"],
+                    }
+                },
+                "trigger_keywords": [],  # Always loaded
+            }
+        }
+    except ClaudeFlowUnavailable:
+        return {}
 
 
 def classify_task(task_description: str) -> Set[str]:

@@ -78,3 +78,28 @@ def test_make_resource_decision_high_ram():
     decision = make_resource_decision(snap)
     assert decision["should_checkpoint"] is True
     assert any("ram" in w.lower() for w in decision["warnings"])
+
+
+# --- Bridge-integrated tests ---
+
+from unittest.mock import MagicMock, patch
+
+
+def test_monitor_resources_merges_bridge_gpu():
+    mock_bridge = MagicMock()
+    mock_bridge.get_metrics.return_value = {
+        "gpu_memory_used_mb": 4096.0,
+        "gpu_memory_total_mb": 8192.0,
+    }
+    with patch("core.resources._get_bridge", return_value=mock_bridge):
+        snap = monitor_resources()
+        assert snap.gpu_memory_used_mb == 4096.0
+        assert snap.gpu_memory_total_mb == 8192.0
+
+
+def test_monitor_resources_bridge_unavailable():
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.resources._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        snap = monitor_resources()
+        assert snap.timestamp > 0
+        assert snap.gpu_memory_used_mb == 0.0

@@ -1,4 +1,8 @@
-"""Session management: tracking, snapshots, and recovery."""
+"""Session management: tracking, snapshots, and recovery.
+
+When claude-flow is available, session start/end also delegates to the bridge.
+Local JSON dual-write is always maintained for the dashboard.
+"""
 
 import json
 import logging
@@ -7,6 +11,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +39,24 @@ class Session:
 
 
 def create_session(name: Optional[str] = None) -> Session:
-    """Create and persist a new session."""
+    """Create and persist a new session.
+
+    Also starts a claude-flow session when available.
+    """
     if name is None:
         name = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     session = Session(name=name)
     _save_session(session)
+
+    try:
+        bridge = _get_bridge()
+        bridge.start_session(name)
+        logger.info("Started claude-flow session: %s", name)
+    except ClaudeFlowUnavailable:
+        pass
+
     logger.info("Created session: %s", name)
     return session
 
@@ -70,9 +87,20 @@ def update_session(session: Session) -> None:
 
 
 def close_session(session: Session) -> None:
-    """Mark session as completed."""
+    """Mark session as completed.
+
+    Also ends the claude-flow session when available.
+    """
     session.status = "completed"
     _save_session(session)
+
+    try:
+        bridge = _get_bridge()
+        bridge.end_session(session.name)
+        logger.info("Ended claude-flow session: %s", session.name)
+    except ClaudeFlowUnavailable:
+        pass
+
     logger.info("Closed session: %s", session.name)
 
 

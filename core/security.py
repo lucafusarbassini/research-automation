@@ -1,9 +1,15 @@
-"""Security utilities: repo root enforcement, secret scanning, immutable file protection."""
+"""Security utilities: repo root enforcement, secret scanning, immutable file protection.
+
+When claude-flow is available, scan_for_secrets merges bridge results with local regex scan.
+enforce_repo_root and protect_immutable_files are kept as-is.
+"""
 
 import logging
 import re
 import subprocess
 from pathlib import Path
+
+from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +88,23 @@ def scan_for_secrets(
                         "pattern": pattern.pattern[:60],
                     })
                     break  # One finding per line
+
+    # Merge claude-flow security scan results if available
+    try:
+        bridge = _get_bridge()
+        cf_result = bridge.scan_security(str(path))
+        cf_findings = cf_result.get("findings", [])
+        seen = {(f["file"], f["line"]) for f in findings}
+        for cf in cf_findings:
+            key = (cf.get("file", ""), cf.get("line", 0))
+            if key not in seen:
+                findings.append({
+                    "file": cf.get("file", ""),
+                    "line": cf.get("line", 0),
+                    "pattern": cf.get("pattern", "claude-flow"),
+                })
+    except ClaudeFlowUnavailable:
+        pass
 
     if findings:
         logger.warning("Found %d potential secret(s)", len(findings))

@@ -59,3 +59,44 @@ def test_protect_immutable_no_matches():
     files = [Path("src/main.py"), Path("tests/test_foo.py")]
     blocked = protect_immutable_files(files)
     assert len(blocked) == 0
+
+
+# --- Bridge-integrated tests ---
+
+from unittest.mock import MagicMock, patch
+
+
+def test_scan_merges_bridge_findings(tmp_path: Path):
+    f = tmp_path / "clean.py"
+    f.write_text('x = 42\n')
+    mock_bridge = MagicMock()
+    mock_bridge.scan_security.return_value = {
+        "findings": [{"file": str(f), "line": 1, "pattern": "custom-pattern"}]
+    }
+    with patch("core.security._get_bridge", return_value=mock_bridge):
+        findings = scan_for_secrets(f)
+        assert len(findings) == 1
+        assert findings[0]["pattern"] == "custom-pattern"
+
+
+def test_scan_deduplicates_bridge_findings(tmp_path: Path):
+    f = tmp_path / "config.py"
+    f.write_text('API_KEY = "sk-abc123456789012345678901"\n')
+    mock_bridge = MagicMock()
+    # Bridge returns same finding as local scan
+    mock_bridge.scan_security.return_value = {
+        "findings": [{"file": str(f), "line": 1, "pattern": "duplicate"}]
+    }
+    with patch("core.security._get_bridge", return_value=mock_bridge):
+        findings = scan_for_secrets(f)
+        # Should have exactly 1 (deduped), not 2
+        assert len(findings) == 1
+
+
+def test_scan_bridge_unavailable(tmp_path: Path):
+    f = tmp_path / "clean.py"
+    f.write_text('x = 42\n')
+    from core.claude_flow import ClaudeFlowUnavailable
+    with patch("core.security._get_bridge", side_effect=ClaudeFlowUnavailable("no")):
+        findings = scan_for_secrets(f)
+        assert len(findings) == 0

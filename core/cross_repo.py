@@ -1,4 +1,8 @@
-"""Cross-repository coordination: linking repos, coordinated commits, permission boundaries."""
+"""Cross-repository coordination: linking repos, coordinated commits, permission boundaries.
+
+When claude-flow is available, coordinated_commit delegates to the bridge's multi_repo_sync.
+Local JSON is always maintained for permission tracking.
+"""
 
 import json
 import logging
@@ -7,6 +11,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +96,9 @@ def coordinated_commit(
 ) -> dict[str, bool]:
     """Commit to multiple linked repos with the same message.
 
+    Tries claude-flow multi_repo_sync first, falls back to local git commands.
+    Permission checks are always enforced locally.
+
     Args:
         message: Commit message.
         repo_names: Names of repos to commit to.
@@ -102,18 +111,36 @@ def coordinated_commit(
     repo_map = {r.name: r for r in repos}
     results = {}
 
+    # Pre-check permissions locally
+    permitted_names = []
     for name in repo_names:
         if name not in repo_map:
             logger.warning("Repository '%s' not found", name)
             results[name] = False
             continue
-
         repo = repo_map[name]
         if "commit" not in repo.permissions and "write" not in repo.permissions:
             logger.warning("No commit permission for '%s'", name)
             results[name] = False
             continue
+        permitted_names.append(name)
 
+    if not permitted_names:
+        return results
+
+    # Try bridge
+    try:
+        bridge = _get_bridge()
+        cf_result = bridge.multi_repo_sync(message, permitted_names)
+        for name in permitted_names:
+            results[name] = cf_result.get(name, False)
+        return results
+    except ClaudeFlowUnavailable:
+        pass
+
+    # Legacy: local git commits
+    for name in permitted_names:
+        repo = repo_map[name]
         repo_path = Path(repo.path)
         if not repo_path.exists():
             logger.warning("Repository path not found: %s", repo.path)
