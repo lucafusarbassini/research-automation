@@ -1,0 +1,544 @@
+{
+  "_comment": "MCP Nucleus - 70+ servers organized by tier. Tier 1 always loads. Others load on demand.",
+  
+  "tier1_essential": {
+    "description": "Always loaded at project initialization",
+    "mcps": {
+      "paper-search-mcp": {
+        "source": "openags/paper-search-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install openags/paper-search-mcp",
+        "purpose": "Search arXiv, PubMed, bioRxiv, medRxiv, Google Scholar, Semantic Scholar",
+        "required_keys": []
+      },
+      "arxiv-mcp-server": {
+        "source": "blazickjp/arxiv-mcp-server",
+        "install": "npx -y @anthropic-ai/mcp-installer install blazickjp/arxiv-mcp-server",
+        "purpose": "Deep arXiv integration with download/storage",
+        "required_keys": []
+      },
+      "scientific-papers-mcp": {
+        "source": "benedict2310/Scientific-Papers-MCP",
+        "install": "npx -y @anthropic-ai/mcp-installer install benedict2310/Scientific-Papers-MCP",
+        "purpose": "arXiv + OpenAlex + PMC + EuropePMC + bioRxiv + CORE",
+        "required_keys": []
+      },
+      "git": {
+        "source": "modelcontextprotocol/servers",
+        "install": "builtin",
+        "purpose": "Git operations",
+        "required_keys": []
+      },
+      "github": {
+        "source": "modelcontextprotocol/servers",
+        "install": "builtin",
+        "purpose": "GitHub PRs, issues, repo management",
+        "required_keys": ["GITHUB_TOKEN"]
+      },
+      "filesystem": {
+        "source": "modelcontextprotocol/servers",
+        "install": "builtin",
+        "purpose": "File operations with access controls",
+        "required_keys": []
+      },
+      "memory": {
+        "source": "modelcontextprotocol/servers",
+        "install": "builtin",
+        "purpose": "Knowledge graph persistence",
+        "required_keys": []
+      },
+      "sequential-thinking": {
+        "source": "modelcontextprotocol/servers",
+        "install": "builtin",
+        "purpose": "Chain-of-thought reasoning",
+        "required_keys": []
+      },
+      "fetch": {
+        "source": "modelcontextprotocol/servers",
+        "install": "builtin",
+        "purpose": "Web content retrieval",
+        "required_keys": []
+      }
+    }
+  },
+
+  "tier2_databases": {
+    "description": "Loaded when database/SQL tasks detected",
+    "trigger_keywords": ["database", "sql", "query", "postgres", "sqlite", "table", "schema"],
+    "mcps": {
+      "postgres": {
+        "source": "modelcontextprotocol/servers-archived",
+        "install": "npx -y @anthropic-ai/mcp-installer install modelcontextprotocol/servers-archived/postgres",
+        "purpose": "PostgreSQL queries",
+        "required_keys": ["POSTGRES_CONNECTION_STRING"]
+      },
+      "sqlite": {
+        "source": "modelcontextprotocol/servers-archived",
+        "install": "npx -y @anthropic-ai/mcp-installer install modelcontextprotocol/servers-archived/sqlite",
+        "purpose": "SQLite operations",
+        "required_keys": []
+      },
+      "legion-mcp": {
+        "source": "TheRaLabs/legion-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install TheRaLabs/legion-mcp",
+        "purpose": "Universal: PostgreSQL, MySQL, SQLite, BigQuery, Oracle, Redshift",
+        "required_keys": []
+      },
+      "duckdb-mcp": {
+        "source": "community/duckdb-mcp",
+        "install": "pip install duckdb-mcp --break-system-packages",
+        "purpose": "In-process analytics",
+        "required_keys": []
+      },
+      "chroma-mcp": {
+        "source": "chroma-core/chroma-mcp",
+        "install": "pip install chromadb-mcp --break-system-packages",
+        "purpose": "Vector DB for RAG/embeddings",
+        "required_keys": []
+      },
+      "snowflake-mcp": {
+        "source": "Snowflake-Labs/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install Snowflake-Labs/mcp",
+        "purpose": "Cortex AI + SQL + object management",
+        "required_keys": ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD"]
+      },
+      "supabase-mcp": {
+        "source": "supabase-community/supabase-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install supabase-community/supabase-mcp",
+        "purpose": "Supabase DB + auth",
+        "required_keys": ["SUPABASE_URL", "SUPABASE_KEY"]
+      }
+    }
+  },
+
+  "tier3_notebooks_ml": {
+    "description": "Loaded for ML/DL and notebook tasks",
+    "trigger_keywords": ["model", "training", "neural", "deep learning", "huggingface", "notebook", "jupyter", "experiment"],
+    "mcps": {
+      "jupyter-mcp-server": {
+        "source": "datalayer/jupyter-mcp-server",
+        "install": "pip install jupyter-mcp-server --break-system-packages",
+        "purpose": "Full Jupyter control, multimodal outputs",
+        "required_keys": []
+      },
+      "jupyter-notebook-mcp": {
+        "source": "jjsantos01/jupyter-notebook-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install jjsantos01/jupyter-notebook-mcp",
+        "purpose": "Jupyter Notebook 6.x control",
+        "required_keys": []
+      },
+      "plotting-mcp": {
+        "source": "StacklokLabs/plotting-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install StacklokLabs/plotting-mcp",
+        "purpose": "CSV to matplotlib/cartopy visualizations",
+        "required_keys": []
+      },
+      "huggingface-mcp": {
+        "source": "huggingface/huggingface-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install huggingface/huggingface-mcp",
+        "purpose": "HF Hub: models, datasets, Spaces",
+        "required_keys": ["HUGGINGFACE_TOKEN"]
+      },
+      "mlflow-mcp": {
+        "source": "mlflow/mlflow-mcp",
+        "install": "pip install mlflow-mcp --break-system-packages",
+        "purpose": "MLflow experiments, model registry",
+        "required_keys": ["MLFLOW_TRACKING_URI"]
+      },
+      "wandb-mcp": {
+        "source": "wandb/wandb-mcp",
+        "install": "pip install wandb-mcp --break-system-packages",
+        "purpose": "Weights & Biases tracking",
+        "required_keys": ["WANDB_API_KEY"]
+      },
+      "langfuse-mcp": {
+        "source": "langfuse/langfuse-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install langfuse/langfuse-mcp",
+        "purpose": "LLM observability",
+        "required_keys": ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"]
+      }
+    }
+  },
+
+  "tier4_math": {
+    "description": "Loaded for math/computation tasks",
+    "trigger_keywords": ["math", "equation", "derivative", "integral", "symbolic", "mathematica", "wolfram"],
+    "mcps": {
+      "wolfram-mcp": {
+        "source": "paraporoco/wolfram-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install paraporoco/wolfram-mcp",
+        "purpose": "Mathematica computations via wolframscript",
+        "required_keys": []
+      },
+      "mcp-server-mathematica": {
+        "source": "texra-ai/mcp-server-mathematica",
+        "install": "npx -y @anthropic-ai/mcp-installer install texra-ai/mcp-server-mathematica",
+        "purpose": "Execute Mathematica, verify derivations",
+        "required_keys": []
+      },
+      "mcp-mma-docs": {
+        "source": "benhaotang/mcp-mma-docs",
+        "install": "npx -y @anthropic-ai/mcp-installer install benhaotang/mcp-mma-docs",
+        "purpose": "Mathematica documentation lookup",
+        "required_keys": []
+      },
+      "sympy-mcp": {
+        "source": "community/sympy-mcp",
+        "install": "pip install sympy-mcp --break-system-packages",
+        "purpose": "Symbolic math in Python",
+        "required_keys": []
+      }
+    }
+  },
+
+  "tier5_paper_latex": {
+    "description": "Loaded for paper writing and LaTeX",
+    "trigger_keywords": ["paper", "latex", "manuscript", "publication", "write", "document", "overleaf", "bibtex"],
+    "mcps": {
+      "latex-mcp-server": {
+        "source": "Yeok-c/latex-mcp-server",
+        "install": "npx -y @anthropic-ai/mcp-installer install Yeok-c/latex-mcp-server",
+        "purpose": "Full LaTeX: compile, BibTeX, cite PDFs",
+        "required_keys": []
+      },
+      "overleaf-mcp": {
+        "source": "mjyoo2/overleaf-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install mjyoo2/overleaf-mcp",
+        "purpose": "Read/analyze Overleaf projects",
+        "required_keys": ["OVERLEAF_EMAIL", "OVERLEAF_PASSWORD"]
+      },
+      "pandoc-mcp": {
+        "source": "community/pandoc-mcp",
+        "install": "pip install pandoc-mcp --break-system-packages",
+        "purpose": "Document format conversion",
+        "required_keys": []
+      }
+    }
+  },
+
+  "tier6_communication": {
+    "description": "Loaded for notifications and communication",
+    "trigger_keywords": ["notify", "email", "slack", "message", "send", "alert", "calendar"],
+    "mcps": {
+      "slack-mcp": {
+        "source": "modelcontextprotocol/servers-archived",
+        "install": "npx -y @anthropic-ai/mcp-installer install modelcontextprotocol/servers-archived/slack",
+        "purpose": "Slack channels, messages",
+        "required_keys": ["SLACK_BOT_TOKEN"]
+      },
+      "gmail-mcp": {
+        "source": "google/gmail-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install google/gmail-mcp",
+        "purpose": "Email send/read",
+        "required_keys": ["GMAIL_CREDENTIALS"]
+      },
+      "sendgrid-mcp": {
+        "source": "community/sendgrid-mcp",
+        "install": "pip install sendgrid-mcp --break-system-packages",
+        "purpose": "Transactional email",
+        "required_keys": ["SENDGRID_API_KEY"]
+      },
+      "discord-mcp": {
+        "source": "community/discord-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/discord-mcp",
+        "purpose": "Discord server management",
+        "required_keys": ["DISCORD_BOT_TOKEN"]
+      },
+      "google-calendar-mcp": {
+        "source": "google/calendar-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install google/calendar-mcp",
+        "purpose": "Events, scheduling",
+        "required_keys": ["GOOGLE_CALENDAR_CREDENTIALS"]
+      }
+    }
+  },
+
+  "tier7_cloud_infra": {
+    "description": "Loaded for cloud/infrastructure tasks",
+    "trigger_keywords": ["deploy", "aws", "cloud", "server", "docker", "kubernetes", "terraform", "s3"],
+    "mcps": {
+      "aws-mcp": {
+        "source": "awslabs/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install awslabs/mcp",
+        "purpose": "Comprehensive AWS API",
+        "required_keys": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
+      },
+      "aws-s3-tables-mcp": {
+        "source": "awslabs/aws-s3-tables-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install awslabs/aws-s3-tables-mcp",
+        "purpose": "S3 table management",
+        "required_keys": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
+      },
+      "terraform-mcp-server": {
+        "source": "hashicorp/terraform-mcp-server",
+        "install": "npx -y @anthropic-ai/mcp-installer install hashicorp/terraform-mcp-server",
+        "purpose": "Terraform Registry + HCP Cloud",
+        "required_keys": []
+      },
+      "docker-mcp": {
+        "source": "community/docker-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/docker-mcp",
+        "purpose": "Container management",
+        "required_keys": []
+      },
+      "kubernetes-mcp": {
+        "source": "community/kubernetes-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/kubernetes-mcp",
+        "purpose": "K8s cluster operations",
+        "required_keys": ["KUBECONFIG"]
+      },
+      "cloudflare-mcp": {
+        "source": "cloudflare/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install cloudflare/mcp",
+        "purpose": "Workers, KV, R2, D1",
+        "required_keys": ["CLOUDFLARE_API_TOKEN"]
+      }
+    }
+  },
+
+  "tier8_productivity": {
+    "description": "Loaded for task/project management",
+    "trigger_keywords": ["task", "todo", "project", "notion", "jira", "manage", "track"],
+    "mcps": {
+      "notion-mcp": {
+        "source": "notion-community/notion-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install notion-community/notion-mcp",
+        "purpose": "Pages, databases, comments",
+        "required_keys": ["NOTION_API_KEY"]
+      },
+      "linear-mcp": {
+        "source": "tacticlaunch/linear-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install tacticlaunch/linear-mcp",
+        "purpose": "Issues, projects, cycles",
+        "required_keys": ["LINEAR_API_KEY"]
+      },
+      "todoist-mcp": {
+        "source": "todoist/todoist-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install todoist/todoist-mcp",
+        "purpose": "Tasks, projects",
+        "required_keys": ["TODOIST_API_TOKEN"]
+      },
+      "jira-mcp": {
+        "source": "atlassian/jira-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install atlassian/jira-mcp",
+        "purpose": "Issues, sprints, boards",
+        "required_keys": ["JIRA_API_TOKEN", "JIRA_URL"]
+      },
+      "asana-mcp": {
+        "source": "community/asana-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/asana-mcp",
+        "purpose": "Projects, tasks",
+        "required_keys": ["ASANA_ACCESS_TOKEN"]
+      },
+      "trello-mcp": {
+        "source": "community/trello-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/trello-mcp",
+        "purpose": "Boards, lists, cards",
+        "required_keys": ["TRELLO_API_KEY", "TRELLO_TOKEN"]
+      }
+    }
+  },
+
+  "tier9_web_automation": {
+    "description": "Loaded for web scraping and automation",
+    "trigger_keywords": ["scrape", "browser", "web", "automation", "puppeteer", "playwright"],
+    "mcps": {
+      "puppeteer": {
+        "source": "modelcontextprotocol/servers-archived",
+        "install": "npx -y @anthropic-ai/mcp-installer install modelcontextprotocol/servers-archived/puppeteer",
+        "purpose": "Browser automation",
+        "required_keys": []
+      },
+      "browserbase-mcp": {
+        "source": "browserbase/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install browserbase/mcp",
+        "purpose": "Cloud browser automation",
+        "required_keys": ["BROWSERBASE_API_KEY"]
+      },
+      "playwright-mcp": {
+        "source": "community/playwright-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/playwright-mcp",
+        "purpose": "Browser testing",
+        "required_keys": []
+      },
+      "brave-search-mcp": {
+        "source": "brave/search-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install brave/search-mcp",
+        "purpose": "Web search",
+        "required_keys": ["BRAVE_API_KEY"]
+      },
+      "brightdata-mcp": {
+        "source": "brightdata/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install brightdata/mcp",
+        "purpose": "Web scraping at scale",
+        "required_keys": ["BRIGHTDATA_API_KEY"]
+      }
+    }
+  },
+
+  "tier10_integration_platforms": {
+    "description": "Loaded for multi-app integrations",
+    "trigger_keywords": ["integrate", "connect", "zapier", "automate", "workflow"],
+    "mcps": {
+      "zapier-mcp": {
+        "source": "zapier/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install zapier/mcp",
+        "purpose": "8000+ app integrations",
+        "required_keys": ["ZAPIER_API_KEY"]
+      },
+      "composio-mcp": {
+        "source": "composio/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install composio/mcp",
+        "purpose": "300+ managed MCPs",
+        "required_keys": ["COMPOSIO_API_KEY"]
+      },
+      "pipedream-mcp": {
+        "source": "pipedream/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install pipedream/mcp",
+        "purpose": "2500+ APIs",
+        "required_keys": ["PIPEDREAM_API_KEY"]
+      }
+    }
+  },
+
+  "tier11_startup_outreach": {
+    "description": "Loaded for website/marketing/outreach tasks",
+    "trigger_keywords": ["website", "slides", "presentation", "marketing", "social", "analytics", "landing"],
+    "mcps": {
+      "vercel-mcp": {
+        "source": "vercel/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install vercel/mcp",
+        "purpose": "Deploy websites",
+        "required_keys": ["VERCEL_TOKEN"]
+      },
+      "netlify-mcp": {
+        "source": "netlify/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install netlify/mcp",
+        "purpose": "Deploy websites",
+        "required_keys": ["NETLIFY_TOKEN"]
+      },
+      "gamma-mcp": {
+        "source": "community/gamma-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/gamma-mcp",
+        "purpose": "AI presentations",
+        "required_keys": ["GAMMA_API_KEY"]
+      },
+      "canva-mcp": {
+        "source": "canva/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install canva/mcp",
+        "purpose": "Design automation",
+        "required_keys": ["CANVA_API_KEY"]
+      },
+      "twitter-mcp": {
+        "source": "community/twitter-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/twitter-mcp",
+        "purpose": "Twitter/X automation",
+        "required_keys": ["TWITTER_API_KEY", "TWITTER_API_SECRET"]
+      },
+      "linkedin-mcp": {
+        "source": "community/linkedin-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/linkedin-mcp",
+        "purpose": "LinkedIn automation",
+        "required_keys": ["LINKEDIN_ACCESS_TOKEN"]
+      },
+      "google-analytics-mcp": {
+        "source": "google/analytics-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install google/analytics-mcp",
+        "purpose": "Analytics data",
+        "required_keys": ["GOOGLE_ANALYTICS_CREDENTIALS"]
+      },
+      "stripe-mcp": {
+        "source": "stripe/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install stripe/mcp",
+        "purpose": "Payments",
+        "required_keys": ["STRIPE_API_KEY"]
+      },
+      "mailchimp-mcp": {
+        "source": "community/mailchimp-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/mailchimp-mcp",
+        "purpose": "Email marketing",
+        "required_keys": ["MAILCHIMP_API_KEY"]
+      },
+      "hubspot-mcp": {
+        "source": "hubspot/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install hubspot/mcp",
+        "purpose": "CRM",
+        "required_keys": ["HUBSPOT_API_KEY"]
+      }
+    }
+  },
+
+  "tier12_specialized_scientific": {
+    "description": "Loaded for domain-specific scientific tasks",
+    "trigger_keywords": ["medical", "genomics", "dicom", "imaging", "healthcare", "biology"],
+    "mcps": {
+      "dicom-mcp": {
+        "source": "ChristianHinge/dicom-mcp",
+        "install": "pip install dicom-mcp --break-system-packages",
+        "purpose": "Medical imaging (PACS)",
+        "required_keys": []
+      },
+      "healthomics-mcp": {
+        "source": "awslabs/healthomics-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install awslabs/healthomics-mcp",
+        "purpose": "Genomics workflows",
+        "required_keys": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
+      },
+      "fhir-mcp": {
+        "source": "awslabs/fhir-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install awslabs/fhir-mcp",
+        "purpose": "Healthcare interoperability",
+        "required_keys": []
+      }
+    }
+  },
+
+  "tier13_observability": {
+    "description": "Loaded for monitoring and debugging",
+    "trigger_keywords": ["monitor", "log", "debug", "trace", "error", "crash", "observability"],
+    "mcps": {
+      "arize-phoenix-mcp": {
+        "source": "arize-ai/phoenix-mcp",
+        "install": "pip install arize-phoenix-mcp --break-system-packages",
+        "purpose": "LLM observability",
+        "required_keys": []
+      },
+      "axiom-mcp": {
+        "source": "axiom/mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install axiom/mcp",
+        "purpose": "Log analysis",
+        "required_keys": ["AXIOM_API_TOKEN"]
+      },
+      "sentry-mcp": {
+        "source": "getsentry/sentry-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install getsentry/sentry-mcp",
+        "purpose": "Error tracking",
+        "required_keys": ["SENTRY_DSN"]
+      }
+    }
+  },
+
+  "tier14_storage": {
+    "description": "Loaded for file storage tasks",
+    "trigger_keywords": ["storage", "drive", "dropbox", "files", "upload", "download", "sync"],
+    "mcps": {
+      "gdrive-mcp": {
+        "source": "modelcontextprotocol/servers-archived",
+        "install": "npx -y @anthropic-ai/mcp-installer install modelcontextprotocol/servers-archived/gdrive",
+        "purpose": "Google Drive files",
+        "required_keys": ["GOOGLE_DRIVE_CREDENTIALS"]
+      },
+      "dropbox-mcp": {
+        "source": "community/dropbox-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/dropbox-mcp",
+        "purpose": "Dropbox files",
+        "required_keys": ["DROPBOX_ACCESS_TOKEN"]
+      },
+      "onedrive-mcp": {
+        "source": "community/onedrive-mcp",
+        "install": "npx -y @anthropic-ai/mcp-installer install community/onedrive-mcp",
+        "purpose": "Microsoft OneDrive",
+        "required_keys": ["ONEDRIVE_ACCESS_TOKEN"]
+      }
+    }
+  }
+}
