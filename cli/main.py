@@ -208,5 +208,63 @@ def list_sessions():
         console.print(f"  {data['name']} - {data['status']} ({data['started'][:10]})")
 
 
+@app.command()
+def paper(
+    action: str = typer.Argument(help="Action: build, update, modernize, check"),
+):
+    """Paper pipeline commands."""
+    from core.paper import check_figure_references, clean_paper, compile_paper
+
+    if action == "build":
+        console.print("[bold]Compiling paper...[/bold]")
+        clean_paper()
+        success = compile_paper()
+        if success:
+            console.print("[green]Paper compiled successfully.[/green]")
+        else:
+            console.print("[red]Paper compilation failed. Check logs.[/red]")
+            raise typer.Exit(1)
+
+    elif action == "check":
+        console.print("[bold]Checking paper...[/bold]")
+        missing = check_figure_references()
+        if missing:
+            console.print("[yellow]Missing figures:[/yellow]")
+            for fig in missing:
+                console.print(f"  - {fig}")
+        else:
+            console.print("[green]All figure references resolved.[/green]")
+
+        from core.paper import list_citations
+        citations = list_citations()
+        console.print(f"\nCitations: {len(citations)}")
+
+    elif action == "update":
+        console.print("[bold]Updating paper references...[/bold]")
+        from core.paper import list_citations
+        citations = list_citations()
+        console.print(f"Current citations: {len(citations)}")
+        console.print("Use core.paper.add_citation() to add references.")
+
+    elif action == "modernize":
+        console.print("[bold]Style analysis...[/bold]")
+        from core.style_transfer import analyze_paper_style
+        paper_tex = Path("paper/main.tex")
+        if paper_tex.exists():
+            profile = analyze_paper_style(paper_tex.read_text())
+            console.print(f"  Avg sentence length: {profile.avg_sentence_length} words")
+            console.print(f"  Passive voice ratio: {profile.passive_voice_ratio}")
+            console.print(f"  Hedging ratio: {profile.hedging_ratio}")
+            console.print(f"  Vocabulary richness: {profile.vocabulary_richness}")
+            console.print(f"  Tense: {profile.tense}")
+        else:
+            console.print("[red]paper/main.tex not found[/red]")
+
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: build, update, modernize, check")
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()
