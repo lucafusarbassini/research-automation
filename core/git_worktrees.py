@@ -246,7 +246,14 @@ class _WorktreeManager:
         return False
 
     def prune(self) -> None:
-        prune_worktrees()
+        """Prune stale worktree references using git worktree prune."""
+        subprocess.run(
+            ["git", "worktree", "prune"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        logger.info("Pruned stale worktrees")
 
 
 worktree_manager = _WorktreeManager()

@@ -19,7 +19,7 @@ from core.onboarding import (
     write_settings,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 
 def version_callback(value: bool):
@@ -523,8 +523,10 @@ def publish(
         console.print("[red]core.social_media not available. Install social media dependencies first.[/red]")
         raise typer.Exit(1)
 
+    title = typer.prompt("Post title", default="") if platform.lower() == "medium" else ""
+    body = typer.prompt("Post body")
     console.print(f"[bold]Publishing to {platform}...[/bold]")
-    result = publish_to_platform(platform)
+    result = publish_to_platform(platform, title=title, body=body)
     if result.get("success"):
         url = result.get("url", "")
         console.print(f"[green]Published successfully.[/green]")
@@ -656,6 +658,62 @@ def worktree(
     else:
         console.print(f"[red]Unknown action: {action}[/red]")
         console.print("Available: add, list, remove, prune")
+        raise typer.Exit(1)
+
+
+@app.command()
+def queue(
+    action: str = typer.Argument(..., help="submit | status | drain | cancel-all"),
+    prompt: str = typer.Option("", "--prompt", "-p", help="Prompt text to submit"),
+    chain: bool = typer.Option(False, "--chain", help="Chain prompts sequentially"),
+    workers: int = typer.Option(3, "--workers", "-w", help="Max parallel workers"),
+):
+    """Queue prompts for dynamic multi-agent dispatch."""
+    from core.prompt_queue import PromptQueue
+
+    # Use a persistent queue location
+    memory_dir = Path("state/prompt_memory")
+
+    if action == "submit":
+        if not prompt:
+            console.print("[red]Provide --prompt/-p text to submit.[/red]")
+            raise typer.Exit(1)
+        q = PromptQueue(max_workers=workers, memory_dir=memory_dir)
+        pid = q.submit(prompt)
+        console.print(f"[green]Queued prompt {pid}: {prompt[:60]}[/green]")
+        q.shutdown(wait=False)
+
+    elif action == "status":
+        q = PromptQueue(max_workers=workers, memory_dir=memory_dir)
+        q.load_state()
+        st = q.status()
+        console.print(f"[bold]Queue Status[/bold]")
+        console.print(f"  Queued:    {st['queued']}")
+        console.print(f"  Running:   {st['running']}")
+        console.print(f"  Completed: {st['completed']}")
+        console.print(f"  Memory:    {st['memory_entries']} entries")
+        q.shutdown(wait=False)
+
+    elif action == "drain":
+        q = PromptQueue(max_workers=workers, memory_dir=memory_dir)
+        q.load_state()
+        console.print("[bold]Draining queue (waiting for all prompts)...[/bold]")
+        results = q.drain()
+        for r in results:
+            icon = "✓" if r.status == "success" else "✗"
+            console.print(f"  {icon} [{r.prompt_id}] {r.text[:50]} → {r.status}")
+        q.shutdown()
+
+    elif action == "cancel-all":
+        q = PromptQueue(max_workers=workers, memory_dir=memory_dir)
+        q.load_state()
+        n = q.cancel_all()
+        console.print(f"[yellow]Cancelled {n} queued prompts.[/yellow]")
+        q.shutdown()
+
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: submit, status, drain, cancel-all")
         raise typer.Exit(1)
 
 

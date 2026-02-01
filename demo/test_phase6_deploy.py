@@ -350,21 +350,27 @@ class TestPublishToPlatformDispatch:
     """publish_to_platform dispatches to the correct publisher or errors."""
 
     def test_unsupported_platform(self):
-        result = publish_to_platform("tiktok", api_token="fake")
+        result = publish_to_platform("tiktok", body="test content", api_token="fake")
         assert result["success"] is False
         assert "Unsupported" in result["error"]
+
+    def test_empty_body_rejected(self):
+        """publish_to_platform rejects empty body."""
+        result = publish_to_platform("medium", api_token="fake")
+        assert result["success"] is False
+        assert "empty" in result["error"].lower()
 
     def test_medium_dispatch_without_network(self):
         """Calling publish_to_platform('medium') without a real token fails gracefully."""
         with patch("core.social_media.publish_medium") as mock_pub:
             mock_pub.return_value = {"success": False, "error": "no token"}
-            result = publish_to_platform("medium", api_token="")
+            result = publish_to_platform("medium", title="Test", body="Content", api_token="")
         assert result["success"] is False
 
     def test_linkedin_dispatch_without_network(self):
         with patch("core.social_media.publish_linkedin") as mock_pub:
             mock_pub.return_value = {"success": False, "error": "no token"}
-            result = publish_to_platform("linkedin", api_token="")
+            result = publish_to_platform("linkedin", body="Content", api_token="")
         assert result["success"] is False
 
 

@@ -95,7 +95,7 @@ fi
 print_banner() {
     echo -e "${BOLD}"
     echo "  ╔══════════════════════════════════════════╗"
-    echo "  ║   research-automation  v0.1.0            ║"
+    echo "  ║   research-automation  v0.2.0            ║"
     echo "  ║   Python $(python3 --version 2>&1 | cut -d' ' -f2)  |  Node $(node --version)         ║"
     echo "  ╚══════════════════════════════════════════╝"
     echo -e "${NC}"

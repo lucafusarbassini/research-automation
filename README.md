@@ -6,10 +6,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YOUR_USERNAME/research-automation/actions/workflows/tests.yml"><img src="https://github.com/YOUR_USERNAME/research-automation/actions/workflows/tests.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/lucafusarbassini/research-automation/actions/workflows/tests.yml"><img src="https://github.com/lucafusarbassini/research-automation/actions/workflows/tests.yml/badge.svg" alt="CI"></a>
   <a href="https://pypi.org/project/research-automation/"><img src="https://img.shields.io/pypi/v/research-automation.svg" alt="PyPI version"></a>
   <a href="https://pypi.org/project/research-automation/"><img src="https://img.shields.io/pypi/pyversions/research-automation.svg" alt="Python versions"></a>
-  <a href="https://github.com/YOUR_USERNAME/research-automation/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  <a href="https://github.com/lucafusarbassini/research-automation/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <a href="https://research-automation.readthedocs.io/"><img src="https://img.shields.io/badge/docs-readthedocs-brightgreen.svg" alt="Docs"></a>
 </p>
 
@@ -162,7 +162,7 @@ docker run -it -v $(pwd):/workspace research-automation
 ### From source
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/research-automation.git
+git clone https://github.com/lucafusarbassini/research-automation.git
 cd research-automation
 pip install -e ".[dev]"
 ```
@@ -293,7 +293,7 @@ You --> research start --> Master Agent --> Sub-agents (researcher, coder, ...)
 Contributions are welcome. To get started:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/research-automation.git
+git clone https://github.com/lucafusarbassini/research-automation.git
 cd research-automation
 pip install -e ".[dev]"
 python -m pytest tests/ -v
@@ -302,6 +302,18 @@ python -m pytest tests/ -v
 Please ensure all tests pass and code follows the project style (Black, isort, mypy) before submitting a pull request.
 
 See the [Contributing Guide](CONTRIBUTING.md) for full details.
+
+## Acknowledgments
+
+This project was inspired by and builds upon the work of several open-source projects and communities:
+
+- [claude-flow](https://github.com/ruvnet/claude-flow) by ruvnet -- Multi-agent orchestration patterns, HNSW vector memory, and swarm coordination. The project's agent bridge (`core/claude_flow.py`) integrates directly with claude-flow when available.
+- [MCP Servers](https://github.com/modelcontextprotocol/servers) by the Model Context Protocol team -- Official MCP server implementations (filesystem, git, memory, fetch, GitHub, Puppeteer, and others) used as the foundation for the 70+ MCP integrations configured in this project.
+- [awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers) by punkpeye -- Comprehensive catalog of MCP servers that guided the selection and tiering of integrations in the MCP nucleus configuration.
+- [arxiv-mcp-server](https://github.com/blazickjp/arxiv-mcp-server) by blazickjp -- ArXiv paper search MCP server used for literature discovery in the researcher agent pipeline.
+- [Claude Code Tutorial](https://lamanno-epfl.github.io/tutorial_claude_code/) by the La Manno Lab (EPFL) -- Research workflow patterns and paper-writing guidance that informed the project's academic automation design.
+- [claude-code-tips](https://github.com/ykdojo/claude-code-tips) by ykdojo -- Practical Claude Code best practices that shaped the agent instruction protocols and progressive prompting strategy.
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) by Anthropic -- The core AI coding agent that powers all sub-agent execution in this system.
 
 ## License
 

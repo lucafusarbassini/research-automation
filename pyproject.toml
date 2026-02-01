@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "research-automation"
@@ -42,10 +42,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/fusar/research-automation"
-Documentation = "https://github.com/fusar/research-automation#readme"
-Repository = "https://github.com/fusar/research-automation"
-Issues = "https://github.com/fusar/research-automation/issues"
+Homepage = "https://github.com/lucafusarbassini/research-automation"
+Documentation = "https://github.com/lucafusarbassini/research-automation#readme"
+Repository = "https://github.com/lucafusarbassini/research-automation"
+Issues = "https://github.com/lucafusarbassini/research-automation/issues"
 
 [project.optional-dependencies]
 ml = [
@@ -76,7 +76,7 @@ all = [
 research = "cli.main:app"
 
 [tool.setuptools.packages.find]
-include = ["cli*", "modules*", "utils*"]
+include = ["cli*", "core*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -89,7 +89,7 @@ target-version = ["py311"]
 [tool.isort]
 profile = "black"
 line_length = 88
-known_first_party = ["cli", "modules", "utils"]
+known_first_party = ["cli", "core"]
 
 [tool.mypy]
 python_version = "3.11"

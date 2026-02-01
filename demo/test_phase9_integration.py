@@ -24,7 +24,7 @@ class TestCliVersion:
         result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
         assert "research-automation" in result.output
-        assert "0.1.0" in result.output
+        assert "0.2.0" in result.output
 
 
 class TestCliInit:

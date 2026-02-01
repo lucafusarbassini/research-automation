@@ -283,22 +283,51 @@ def publish_linkedin(draft: PostDraft, api_token: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def publish_to_platform(platform: str, api_token: str = "") -> dict:
+def publish_to_platform(
+    platform: str,
+    *,
+    title: str = "",
+    body: str = "",
+    tags: list[str] | None = None,
+    link: str = "",
+    api_token: str = "",
+) -> dict:
     """Dispatch publishing to the appropriate platform function.
 
     Args:
         platform: One of ``"medium"``, ``"linkedin"``.
+        title: Post title (required for Medium).
+        body: Post body content.
+        tags: Optional tags (Medium only, max 5).
+        link: Optional link to append (LinkedIn).
         api_token: API token for authentication.
 
     Returns:
         Dict with ``success`` bool and ``url``/``error`` keys.
     """
     platform_lower = platform.lower()
-    draft = PostDraft(platform=platform_lower, body="", title="")
+
+    if not body:
+        return {"success": False, "error": "Post body cannot be empty. Provide body text."}
 
     if platform_lower == "medium":
+        if not title:
+            return {"success": False, "error": "Medium posts require a title."}
+        draft = PostDraft(
+            platform="medium",
+            title=title,
+            body=body,
+            tags=(tags or [])[:MEDIUM_MAX_TAGS],
+            ready=True,
+        )
         return publish_medium(draft, api_token)
     elif platform_lower == "linkedin":
+        draft = PostDraft(
+            platform="linkedin",
+            body=body,
+            link=link,
+            ready=True,
+        )
         return publish_linkedin(draft, api_token)
     else:
         return {"success": False, "error": f"Unsupported platform: {platform}"}
