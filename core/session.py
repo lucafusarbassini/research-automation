@@ -90,6 +90,7 @@ def snapshot_state(label: str) -> Path:
     snapshot_dir.parent.mkdir(parents=True, exist_ok=True)
 
     # Copy state (excluding snapshots themselves)
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
     for item in STATE_DIR.iterdir():
         if item.name == "snapshots":
             continue
