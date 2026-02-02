@@ -148,6 +148,66 @@ def suggest_purchase(
     return suggestion
 
 
+def get_default_maintenance_routines() -> list[dict]:
+    """Return the default daily maintenance routines for a ricet project."""
+    return [
+        {
+            "name": "test-gen",
+            "description": "Auto-generate tests for new/changed source files",
+            "schedule": "daily",
+            "command": "ricet test-gen",
+        },
+        {
+            "name": "docs-update",
+            "description": "Auto-update project documentation from source",
+            "schedule": "daily",
+            "command": "ricet docs",
+        },
+        {
+            "name": "fidelity-check",
+            "description": "Check GOAL.md alignment and flag drift",
+            "schedule": "daily",
+            "command": "ricet fidelity",
+        },
+        {
+            "name": "verify-pass",
+            "description": "Run verification on recent outputs",
+            "schedule": "daily",
+            "command": "ricet verify",
+        },
+        {
+            "name": "claude-md-review",
+            "description": "Review and simplify CLAUDE.md if it has grown too large",
+            "schedule": "daily",
+            "command": "ricet review-claude-md",
+        },
+    ]
+
+
+def run_maintenance(project_path: Path, *, run_cmd=None) -> dict:
+    """Run all daily maintenance tasks for a project.
+
+    This is the 'midnight pass' that keeps the project healthy.
+    Returns dict mapping routine name to success boolean.
+    """
+    import subprocess
+
+    _run = run_cmd or (
+        lambda cmd: subprocess.run(
+            cmd, shell=True, capture_output=True, text=True, cwd=str(project_path)
+        )
+    )
+
+    results = {}
+    for routine in get_default_maintenance_routines():
+        try:
+            proc = _run(routine["command"])
+            results[routine["name"]] = getattr(proc, "returncode", 0) == 0
+        except Exception:
+            results[routine["name"]] = False
+    return results
+
+
 def audit_log(
     message: str,
     *,

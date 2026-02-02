@@ -65,6 +65,21 @@ See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough
 - **Auto-Commit & Push** -- Every state-modifying command automatically commits and pushes, controlled by environment variables.
 - **Collaborative Research** -- Multiple researchers on the same repo with auto-sync, user attribution, and merge-friendly append-only files.
 - **Claude-Powered Intelligence** -- Seven core modules use Claude CLI for intelligent routing, debugging, and suggestions with keyword fallback.
+- **Literature Search** -- `ricet cite` and `ricet discover` search Semantic Scholar and arXiv, format BibTeX, and append to your bibliography.
+- **Style Transfer** -- `ricet paper adapt-style` rewrites your paper to match a reference paper's writing style with plagiarism checks.
+- **Auto Test Generation** -- `ricet test-gen` scans for uncovered source files and generates pytest stubs using Claude.
+- **Package Management** -- `ricet package init/build/publish` turns research code into reusable Python packages.
+- **Daily Maintenance** -- `ricet maintain` runs test generation, docs update, fidelity check, and verification in one pass. Auto-runs after overnight sessions.
+- **Goal Fidelity** -- `ricet fidelity` scores alignment between the codebase and GOAL.md, flagging drift areas.
+- **Cross-Project Learning** -- `ricet sync-learnings` shares encyclopedia entries across ricet projects.
+- **MCP Discovery** -- `ricet mcp-search` searches 1300+ MCP servers and installs on demand.
+- **Dual-Repo Structure** -- `ricet two-repo` manages experiments/ vs clean/ separation with promotion gates.
+- **URL Browsing** -- `ricet browse` fetches and extracts text from URLs for literature review.
+- **Infrastructure** -- `ricet infra` handles Docker builds, CI/CD, secrets, and dependency checks.
+- **Runbook Execution** -- `ricet runbook` parses and executes code blocks from markdown runbooks.
+- **Docker Overnight** -- `ricet overnight --docker` runs autonomous sessions inside a Docker sandbox.
+- **Resource-Aware Overnight** -- Monitors CPU/RAM/disk between iterations, auto-pauses on low resources.
+- **Falsifier Auto-Trigger** -- Falsifier agent validates results after every overnight iteration automatically.
 
 Explore all features in the [Features](features.md) page.
 

@@ -421,6 +421,40 @@ def update_module_index(
 # ---------------------------------------------------------------------------
 
 
+def review_claude_md(project_path: Path, *, run_cmd=None) -> str | None:
+    """Review and simplify the project's CLAUDE.md using Claude.
+
+    Reads CLAUDE.md, asks Claude to trim redundancies and keep it
+    under 200 lines while preserving essential agent instructions.
+    Returns the simplified text, or None if Claude unavailable.
+    """
+    from core.claude_helper import call_claude
+
+    claude_md = project_path / ".claude" / "CLAUDE.md"
+    if not claude_md.exists():
+        claude_md = project_path / "CLAUDE.md"
+    if not claude_md.exists():
+        return None
+
+    text = claude_md.read_text()
+    if len(text.splitlines()) <= 200:
+        return None  # Already concise
+
+    prompt = (
+        "You are reviewing a CLAUDE.md agent configuration file. "
+        "It has grown too large. Simplify it to under 200 lines while "
+        "preserving all essential agent instructions, tool configurations, "
+        "and workflow rules. Remove redundancies and verbose examples. "
+        "Reply with ONLY the simplified CLAUDE.md content.\n\n"
+        f"Current CLAUDE.md ({len(text.splitlines())} lines):\n{text}"
+    )
+
+    result = call_claude(prompt, run_cmd=run_cmd)
+    if result and result.strip():
+        return result.strip()
+    return None
+
+
 def auto_update_docs(
     *,
     project_root: Path | None = None,

@@ -519,6 +519,72 @@ def generate_clarifying_questions(missing: list[str]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def audit_feature_completeness(project_path: Path, *, run_cmd=None) -> list[dict]:
+    """Audit project modules for half-baked implementations.
+
+    Scans Python files for: stub functions, TODO/FIXME comments,
+    NotImplementedError, pass-only functions, and functions that
+    just log warnings.
+
+    Returns list of dicts: {file, function, issue}
+    """
+    issues = []
+    for py_file in sorted(project_path.glob("**/*.py")):
+        if "test" in py_file.name or "__pycache__" in str(py_file):
+            continue
+        try:
+            text = py_file.read_text()
+        except Exception:
+            continue
+        lines = text.splitlines()
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            # Check for TODO/FIXME
+            if "TODO" in stripped or "FIXME" in stripped:
+                issues.append(
+                    {
+                        "file": str(py_file.relative_to(project_path)),
+                        "line": i + 1,
+                        "issue": stripped,
+                    }
+                )
+            # Check for NotImplementedError
+            if "NotImplementedError" in stripped:
+                issues.append(
+                    {
+                        "file": str(py_file.relative_to(project_path)),
+                        "line": i + 1,
+                        "issue": "NotImplementedError raised",
+                    }
+                )
+            # Check for stub functions (def followed by just pass or docstring+pass)
+            if stripped.startswith("def ") and i + 2 < len(lines):
+                next_meaningful = ""
+                for j in range(i + 1, min(i + 4, len(lines))):
+                    s = lines[j].strip()
+                    if (
+                        s
+                        and not s.startswith('"""')
+                        and not s.startswith("'''")
+                        and s != '"""'
+                        and s != "'''"
+                    ):
+                        next_meaningful = s
+                        break
+                if next_meaningful == "pass":
+                    func_name = stripped.split("(")[0].replace("def ", "")
+                    issues.append(
+                        {
+                            "file": str(py_file.relative_to(project_path)),
+                            "line": i + 1,
+                            "issue": f"Stub function: {func_name}",
+                        }
+                    )
+
+    return issues
+
+
 def _check_referenced_files(
     goal_text: str,
     project_path: Path,

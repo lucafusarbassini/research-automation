@@ -276,6 +276,16 @@ GITHUB_TOKEN=ghp_...
 | `ricet infra <action>` | Infrastructure checks, Docker builds, CI/CD, secrets |
 | `ricet runbook <file>` | Parse and execute code blocks from a markdown runbook |
 | `ricet paper adapt-style` | Rewrite your paper in a reference paper's style |
+| `ricet cite <query>` | Search papers and append BibTeX to references.bib |
+| `ricet discover <topic>` | Broad literature discovery across databases |
+| `ricet test-gen` | Auto-generate tests for new/changed source files |
+| `ricet package <action>` | Package management: `init`, `build`, `publish` |
+| `ricet maintain` | Run daily maintenance pass (tests, docs, fidelity, verify) |
+| `ricet fidelity` | Check GOAL.md alignment and flag drift |
+| `ricet sync-learnings` | Share learnings across ricet projects |
+| `ricet auto <action>` | Manage autonomous routines and topic monitoring |
+| `ricet repro <action>` | Reproducibility: `log`, `list`, `show`, `hash` |
+| `ricet verify` | Run verification on recent outputs |
 | `ricet list-sessions` | List all past and active sessions |
 | `ricet --version` | Print version |
 

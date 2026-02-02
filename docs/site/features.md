@@ -613,3 +613,210 @@ add_routine(routine)
 ### Confirmation Gates
 
 Routines that involve spending money or sending external communications require explicit user confirmation, even in autonomous mode.
+
+---
+
+## Literature Search & Citation
+
+Discover and cite papers directly from the CLI:
+
+```bash
+# Search for papers by topic
+ricet cite "attention mechanisms in transformers"
+
+# Discover related work across multiple databases
+ricet discover "graph neural networks for drug discovery"
+```
+
+`ricet cite` searches Semantic Scholar and arXiv, formats results as BibTeX entries, and appends them to `paper/references.bib`. `ricet discover` performs a broader literature scan, returning ranked results with abstracts and citation counts.
+
+---
+
+## Style Transfer
+
+Analyze a reference paper's writing style and apply it to your own manuscript:
+
+```bash
+ricet paper adapt-style --reference path/to/reference.pdf
+```
+
+The style transfer module extracts stylistic patterns (sentence structure, formality, section conventions) from the reference and rewrites your paper sections to match, with plagiarism checks to ensure originality.
+
+---
+
+## Automated Test Generation
+
+Automatically generate tests for new or modified source files:
+
+```bash
+ricet test-gen
+```
+
+Scans the project for source files that lack corresponding test coverage and generates pytest-compatible test stubs. Uses Claude to analyze function signatures, docstrings, and usage patterns for meaningful test cases.
+
+---
+
+## Package Management
+
+Create, build, and publish Python packages from your research code:
+
+```bash
+ricet package init     # Scaffold pyproject.toml, setup.cfg, package structure
+ricet package build    # Build sdist and wheel
+ricet package publish  # Publish to PyPI (or TestPyPI with --test)
+```
+
+Useful for turning experiment code into reusable libraries that other projects can depend on.
+
+---
+
+## Daily Maintenance
+
+Run all standard health checks in a single command:
+
+```bash
+ricet maintain
+```
+
+Executes four daily routines:
+
+| Routine | Description |
+|---------|-------------|
+| `test-gen` | Auto-generate tests for new/changed source files |
+| `docs-update` | Auto-update project documentation from source |
+| `fidelity-check` | Check GOAL.md alignment and flag drift |
+| `verify-pass` | Run verification on recent outputs |
+
+Maintenance runs automatically at the end of every `ricet overnight` session, ensuring the project stays healthy between human check-ins.
+
+---
+
+## Goal Fidelity
+
+Check whether the project is still aligned with its stated research goal:
+
+```bash
+ricet fidelity
+```
+
+Compares the current state of the codebase and outputs against `knowledge/GOAL.md`. Returns a fidelity score (0-100) and flags specific drift areas with recommendations. Integrated into overnight mode as a pre-flight check.
+
+---
+
+## Cross-Project Learning
+
+Share learnings between ricet projects:
+
+```bash
+ricet sync-learnings
+```
+
+Reads the current project's encyclopedia and publishes key patterns, decisions, and what-works/what-doesn't entries to a shared knowledge volume. Other ricet projects can pull these learnings to bootstrap their own knowledge base.
+
+---
+
+## MCP Server Discovery
+
+Search a catalog of 1300+ Model Context Protocol servers and install them on demand:
+
+```bash
+ricet mcp-search "database migration"
+```
+
+Results include server name, description, install command, and compatibility info. Select a result to install it directly into your project's MCP configuration.
+
+---
+
+## Dual-Repository Structure
+
+Manage a clean separation between experimental and production code:
+
+```bash
+ricet two-repo init       # Set up experiments/ and clean/ directories
+ricet two-repo promote    # Promote validated code from experiments/ to clean/
+ricet two-repo status     # Show what's in each side
+```
+
+The `experiments/` directory is for rapid iteration; `clean/` holds reviewed, tested code. Promotion requires passing verification checks.
+
+---
+
+## URL Browsing
+
+Fetch and extract text from any URL for use in literature review:
+
+```bash
+ricet browse https://example.com/paper-landing-page
+```
+
+Uses headless browser automation when available (Puppeteer MCP), falling back to HTTP fetch. Extracts readable text content and stores it in the project knowledge base.
+
+---
+
+## Infrastructure Management
+
+Run infrastructure checks, Docker builds, CI/CD setup, and secrets management:
+
+```bash
+ricet infra check     # Verify Docker, CI, dependencies
+ricet infra build     # Build project Docker image
+ricet infra secrets   # Manage project secrets
+ricet infra ci        # Generate/update CI workflow files
+```
+
+---
+
+## Runbook Execution
+
+Parse and execute code blocks from a markdown runbook:
+
+```bash
+ricet runbook docs/setup-runbook.md
+```
+
+Extracts fenced code blocks from the markdown file and executes them sequentially, reporting pass/fail for each step. Useful for onboarding, environment setup, and reproducible deployment procedures.
+
+---
+
+## Autonomous Overnight Enhancements
+
+### Docker Sandbox
+
+Run overnight sessions inside a Docker container for full isolation:
+
+```bash
+ricet overnight --iterations 30 --docker
+```
+
+Automatically builds the `ricet:latest` image if it does not exist, mounts the project directory and Claude credentials, then runs the overnight loop inside the container.
+
+### Falsifier Auto-Trigger
+
+After every overnight iteration, the falsifier agent automatically validates results. It checks for data leakage, statistical validity, confounders, and reproducibility issues. No manual intervention needed.
+
+### Resource-Aware Scheduling
+
+Overnight mode monitors CPU, RAM, and disk usage between iterations. If resources drop below safe thresholds, the run pauses and checkpoints. High memory triggers an automatic checkpoint commit. Old checkpoints are cleaned up to free disk space.
+
+---
+
+## Automated Research Workflow
+
+Run the full research automation pipeline:
+
+```bash
+ricet auto add-routine --name nightly-check --command "ricet verify" --schedule daily
+ricet auto list-routines
+ricet auto monitor --topic "large language models"
+```
+
+### Reproducibility Tracking
+
+```bash
+ricet repro log --command "python train.py" --run-id exp-001
+ricet repro list
+ricet repro show --run-id exp-001
+ricet repro hash --path data/dataset.csv
+```
+
+Every experiment run is logged with parameters, git hash, metrics, and SHA-256 artifact checksums.

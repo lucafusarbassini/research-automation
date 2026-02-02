@@ -334,14 +334,116 @@ def check_goal_fidelity(project_path: Path, *, run_cmd=None) -> dict:
     }
 
 
-def verify_text(text: str, project_path: str = "") -> dict:
+def verify_claims_with_claude(text: str, *, run_cmd=None) -> list[dict]:
+    """Use Claude to fact-check claims in text.
+
+    More thorough than keyword heuristics -- Claude evaluates each
+    claim's plausibility, identifies unsupported assertions, and
+    flags potential errors.
+    """
+    from core.claude_helper import call_claude_json
+
+    prompt = (
+        "You are a scientific fact-checker. Analyze the following text and "
+        "identify factual claims. For each claim, assess:\n"
+        "- The claim text\n"
+        "- Confidence (high/medium/low) that it's accurate\n"
+        "- Reasoning for your assessment\n"
+        "- Whether it needs a citation\n\n"
+        'Reply as JSON array: [{"claim": "...", "confidence": "high/medium/low", '
+        '"reasoning": "...", "needs_citation": true/false}]\n\n'
+        f"Text:\n{text[:4000]}"
+    )
+
+    result = call_claude_json(prompt, run_cmd=run_cmd)
+    if result and isinstance(result, list):
+        return result
+    return []
+
+
+def fresh_agent_audit(project_path: Path, *, run_cmd=None) -> dict:
+    """Spawn a fresh Claude agent with NO context to audit the project.
+
+    The agent reads only the project files (no conversation history)
+    and reports weaknesses, gaps, and concerns.
+    """
+    from core.claude_helper import call_claude_json
+
+    # Gather a snapshot of the project structure and key files
+    files_summary = []
+    for py_file in sorted(project_path.glob("**/*.py"))[:30]:
+        if "__pycache__" in str(py_file):
+            continue
+        rel = py_file.relative_to(project_path)
+        try:
+            first_lines = py_file.read_text()[:500]
+        except Exception:
+            first_lines = "(unreadable)"
+        files_summary.append(f"### {rel}\n{first_lines}")
+
+    snapshot = "\n\n".join(files_summary)
+
+    prompt = (
+        "You are a fresh code auditor with NO prior context about this project. "
+        "Review the following project snapshot and identify:\n"
+        "1. Half-baked or incomplete features\n"
+        "2. Dead code or unused modules\n"
+        "3. Security concerns\n"
+        "4. Missing tests or documentation\n"
+        "5. Overall quality assessment (1-10)\n\n"
+        'Reply as JSON: {"score": 1-10, "issues": [{"category": "...", '
+        '"description": "...", "severity": "high/medium/low"}], '
+        '"strengths": ["..."]}\n\n'
+        f"--- PROJECT SNAPSHOT ---\n{snapshot[:12000]}"
+    )
+
+    result = call_claude_json(prompt, run_cmd=run_cmd)
+    if result and isinstance(result, dict):
+        return result
+    return {
+        "score": 0,
+        "issues": [
+            {
+                "category": "audit",
+                "description": "Could not complete audit (Claude unavailable)",
+                "severity": "high",
+            }
+        ],
+        "strengths": [],
+    }
+
+
+def verify_text(text: str, project_path: str = "", *, run_cmd=None) -> dict:
     """Run all verifiers on *text* and return a summary dict.
 
     Returns:
         Dict with ``verdict`` (str), ``claims`` (list[dict]), and
         ``file_issues`` / ``citation_issues`` for hard failures only.
     """
-    claims = verify_claims(text)
+    # Try Claude-powered verification first
+    claude_claims = verify_claims_with_claude(text, run_cmd=run_cmd)
+    if claude_claims:
+        # Map confidence strings to numeric values for consistent output
+        _conf_map = {"high": 0.9, "medium": 0.6, "low": 0.3}
+        claim_summaries = [
+            {
+                "claim": c.get("claim", ""),
+                "confidence": _conf_map.get(c.get("confidence", "low"), 0.3),
+                "status": c.get("confidence", "low"),
+                "reasoning": c.get("reasoning", ""),
+                "needs_citation": c.get("needs_citation", False),
+                "method": "claude-verification",
+            }
+            for c in claude_claims
+        ]
+    else:
+        # Fallback to keyword heuristics
+        claims = verify_claims(text)
+        claim_summaries = [
+            {"claim": c.claim, "confidence": c.confidence, "status": "needs_review"}
+            for c in claims
+        ]
+
     file_results: list[VerificationResult] = []
     citation_results: list[VerificationResult] = []
 
@@ -350,17 +452,11 @@ def verify_text(text: str, project_path: str = "") -> dict:
     citation_results = verify_citations(text)
 
     # File refs and citations can be definitively verified/failed.
-    # Claims are only "extracted" — they need external verification.
     hard_failures = [r for r in file_results + citation_results if not r.verified]
-
-    claim_summaries = [
-        {"claim": c.claim, "confidence": c.confidence, "status": "needs_review"}
-        for c in claims
-    ]
 
     if hard_failures:
         verdict = "issues_found"
-    elif claims:
+    elif claim_summaries:
         verdict = "claims_extracted"
     else:
         verdict = "no_claims"

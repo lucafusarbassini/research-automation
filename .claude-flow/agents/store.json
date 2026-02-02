@@ -629,6 +629,20 @@
       "createdAt": "2026-02-02T09:43:50.452Z",
       "model": "haiku",
       "modelRoutedBy": "router"
+    },
+    "agent-1770026059510-1rvwy3": {
+      "agentId": "agent-1770026059510-1rvwy3",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "echo hello world"
+      },
+      "createdAt": "2026-02-02T09:54:19.513Z",
+      "model": "haiku",
+      "modelRoutedBy": "router"
     }
   },
   "version": "3.0.0"

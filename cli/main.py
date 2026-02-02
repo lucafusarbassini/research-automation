@@ -2,10 +2,13 @@
 """ricet CLI - Scientific research automation powered by Claude Code."""
 
 import json
+import logging
 import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 import typer
 from rich.console import Console
@@ -295,8 +298,18 @@ def init(
 
     auto_commit(f"ricet init: created project {project_name}", cwd=project_path)
 
+    # --- Register in global project registry ---
+    try:
+        from core.multi_project import ProjectRegistry
+
+        registry = ProjectRegistry()
+        registry.register_project(project_name, str(project_path.resolve()))
+        console.print("  [green]Registered in global project registry[/green]")
+    except Exception as exc:
+        logger.debug("Could not register project: %s", exc)
+
     # --- Done ---
-    console.print(f"\n[bold green]Project created at {project_path}[/bold green]")
+    console.print(f"\n[bold green]Project ready![/bold green]")
     console.print("")
 
     # Print folder map
@@ -304,14 +317,19 @@ def init(
         console.print(f"  {line}")
     console.print("")
 
+    docker_available = shutil.which("docker") is not None
+
     console.print("[bold]Next steps:[/bold]")
-    console.print(f"  1. cd {project_path}")
-    console.print(
-        "  2. Edit [bold]knowledge/GOAL.md[/bold] with your detailed project description"
-    )
-    console.print("     (at least 200 characters of real content)")
-    console.print("  3. Add reference papers to [bold]reference/papers/[/bold]")
-    console.print("  4. ricet start")
+    console.print(f"  cd {project_name}")
+    console.print("  ricet start          # Launch interactive research session")
+    console.print("  ricet overnight      # Run autonomous overnight mode")
+    console.print("  ricet status         # Check project status")
+    console.print("  ricet --help         # See all commands")
+    if docker_available:
+        console.print("  ricet overnight -d   # Run overnight in Docker sandbox")
+        console.print(
+            "\n  [dim]Docker detected — overnight sandbox available via --docker[/dim]"
+        )
 
 
 def _configure_github_repo_from_goal(
@@ -797,6 +815,16 @@ def overnight(
                 break
         auto_commit("ricet overnight: completed swarm run")
         console.print("[bold]Overnight mode finished[/bold]")
+
+        # Run daily maintenance pass at the end of overnight
+        from core.autonomous import run_maintenance
+
+        console.print("\n[bold]Running maintenance pass...[/bold]")
+        maint_results = run_maintenance(Path.cwd())
+        for mname, mok in maint_results.items():
+            tag = "[green]OK[/green]" if mok else "[red]FAIL[/red]"
+            console.print(f"  {mname}: {tag}")
+        auto_commit("ricet overnight: post-run maintenance")
         return
     except ClaudeFlowUnavailable:
         pass
@@ -919,6 +947,16 @@ def overnight(
 
     auto_commit("ricet overnight: completed run")
     console.print("[bold]Overnight mode finished[/bold]")
+
+    # Run daily maintenance pass at the end of overnight
+    from core.autonomous import run_maintenance
+
+    console.print("\n[bold]Running maintenance pass...[/bold]")
+    maint_results = run_maintenance(Path.cwd())
+    for mname, mok in maint_results.items():
+        tag = "[green]OK[/green]" if mok else "[red]FAIL[/red]"
+        console.print(f"  {mname}: {tag}")
+    auto_commit("ricet overnight: post-run maintenance")
 
 
 @app.command()
@@ -1179,6 +1217,33 @@ def auto(
         console.print(f"[red]Unknown action: {action}[/red]")
         console.print("Available: add-routine, list-routines, monitor")
         raise typer.Exit(1)
+
+
+@app.command()
+def maintain():
+    """Run daily maintenance pass (tests, docs, fidelity, verification)."""
+    from core.autonomous import run_maintenance
+
+    project_path = Path.cwd()
+    console.print("[bold]Running daily maintenance pass...[/bold]")
+    results = run_maintenance(project_path)
+
+    all_ok = True
+    for name, success in results.items():
+        if success:
+            console.print(f"  [green]{name}: passed[/green]")
+        else:
+            console.print(f"  [red]{name}: failed[/red]")
+            all_ok = False
+
+    if all_ok:
+        console.print("[bold green]All maintenance tasks passed.[/bold green]")
+    else:
+        console.print(
+            "[bold yellow]Some maintenance tasks failed. Review output above.[/bold yellow]"
+        )
+
+    auto_commit("ricet maintain: daily maintenance pass")
 
 
 @app.command()
@@ -1540,14 +1605,30 @@ def verify(
             console.print(f"  [red]- {issue}[/red]")
     elif verdict == "claims_extracted":
         claims = report.get("claims", [])
-        console.print(f"\n[bold]Extracted {len(claims)} claim(s) for review:[/bold]")
-        for c in claims:
-            conf = f"{c['confidence']:.0%}"
-            console.print(f"  [{conf}] {c['claim']}")
-        console.print(
-            "\n[dim]These claims were extracted heuristically. "
-            "External verification not yet connected.[/dim]"
-        )
+        method = claims[0].get("method", "") if claims else ""
+        if method == "claude-verification":
+            console.print(f"\n[bold]Claude verified {len(claims)} claim(s):[/bold]")
+            for c in claims:
+                conf_label = c.get("status", "low")
+                color = {"high": "green", "medium": "yellow", "low": "red"}.get(
+                    conf_label, "dim"
+                )
+                console.print(f"  [{color}][{conf_label}][/{color}] {c['claim']}")
+                if c.get("reasoning"):
+                    console.print(f"        [dim]{c['reasoning']}[/dim]")
+                if c.get("needs_citation"):
+                    console.print("        [yellow]^ needs citation[/yellow]")
+        else:
+            console.print(
+                f"\n[bold]Extracted {len(claims)} claim(s) for review:[/bold]"
+            )
+            for c in claims:
+                conf = f"{c['confidence']:.0%}"
+                console.print(f"  [{conf}] {c['claim']}")
+            console.print(
+                "\n[dim]These claims were extracted heuristically. "
+                "External verification not yet connected.[/dim]"
+            )
     else:
         console.print("\n[green]No verifiable claims detected in the input.[/green]")
 
@@ -2469,6 +2550,96 @@ def _package_publish() -> None:
         console.print("[red]Publish failed:[/red]")
         console.print(result.stderr[-500:] if result.stderr else result.stdout[-500:])
         raise typer.Exit(1)
+
+
+@app.command()
+def audit():
+    """Audit project code for half-baked features and stubs."""
+    from core.doability import audit_feature_completeness
+
+    project_path = Path.cwd()
+    console.print("[bold]Auditing project for half-baked features...[/bold]")
+    issues = audit_feature_completeness(project_path)
+
+    if issues:
+        console.print(f"\n[bold yellow]Found {len(issues)} issue(s):[/bold yellow]")
+        for issue in issues:
+            console.print(
+                f"  [dim]{issue['file']}:{issue['line']}[/dim] {issue['issue']}"
+            )
+    else:
+        console.print("[green]No half-baked features detected.[/green]")
+
+
+@app.command(name="fresh-audit")
+def fresh_audit():
+    """Run a fresh-eyes audit of the project using Claude with no context."""
+    from core.verification import fresh_agent_audit
+
+    project_path = Path.cwd()
+    console.print("[bold]Running fresh-agent audit (no prior context)...[/bold]")
+    result = fresh_agent_audit(project_path)
+
+    score = result.get("score", 0)
+    if score >= 7:
+        console.print(f"\n[bold green]Quality Score: {score}/10[/bold green]")
+    elif score >= 4:
+        console.print(f"\n[bold yellow]Quality Score: {score}/10[/bold yellow]")
+    else:
+        console.print(f"\n[bold red]Quality Score: {score}/10[/bold red]")
+
+    strengths = result.get("strengths", [])
+    if strengths:
+        console.print("\n[bold]Strengths:[/bold]")
+        for s in strengths:
+            console.print(f"  [green]+ {s}[/green]")
+
+    issues = result.get("issues", [])
+    if issues:
+        console.print("\n[bold]Issues:[/bold]")
+        for issue in issues:
+            severity = issue.get("severity", "medium")
+            category = issue.get("category", "general")
+            desc = issue.get("description", "")
+            color = {"high": "red", "medium": "yellow", "low": "dim"}.get(
+                severity, "white"
+            )
+            console.print(f"  [{color}][{severity}] {category}: {desc}[/{color}]")
+
+
+@app.command(name="review-claude-md")
+def review_claude_md_cmd():
+    """Review and simplify the project's CLAUDE.md."""
+    from core.auto_docs import review_claude_md
+
+    project_path = Path.cwd()
+    console.print("[bold]Reviewing CLAUDE.md...[/bold]")
+    simplified = review_claude_md(project_path)
+
+    if simplified is None:
+        console.print(
+            "[dim]CLAUDE.md not found or already under 200 lines. Nothing to do.[/dim]"
+        )
+        return
+
+    console.print(f"[green]Simplified to {len(simplified.splitlines())} lines.[/green]")
+    console.print("\n[bold]Preview (first 20 lines):[/bold]")
+    for line in simplified.splitlines()[:20]:
+        console.print(f"  {line}")
+
+    save = typer.prompt("\nSave simplified CLAUDE.md? (yes/no)", default="no")
+    if save.lower() in ("yes", "y"):
+        claude_md = project_path / ".claude" / "CLAUDE.md"
+        if not claude_md.exists():
+            claude_md = project_path / "CLAUDE.md"
+        if claude_md.exists():
+            claude_md.write_text(simplified)
+            console.print(f"[green]Saved to {claude_md}[/green]")
+            auto_commit("ricet review-claude-md: simplified CLAUDE.md")
+        else:
+            console.print("[red]Could not find CLAUDE.md to save.[/red]")
+    else:
+        console.print("[dim]Not saved.[/dim]")
 
 
 if __name__ == "__main__":
