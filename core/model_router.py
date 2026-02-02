@@ -93,7 +93,7 @@ DEFAULT_MODELS = {
         strengths=["code", "speed", "general"],
     ),
     "claude-haiku": ModelConfig(
-        name="claude-haiku-3-5-20241022",
+        name="claude-3-5-haiku-20241022",
         provider="anthropic",
         max_tokens=4096,
         cost_per_1k_input=0.001,

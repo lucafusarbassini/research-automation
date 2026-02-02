@@ -277,6 +277,53 @@ def save_figure(
     return output_path
 
 
+def _extract_json_array(text: str) -> list | None:
+    """Extract a JSON array from text that may contain prose preamble.
+
+    Handles code fences, prose before/after JSON, and nested arrays.
+    """
+    import json as _json
+
+    # 1. Try code fences first
+    if "```" in text:
+        parts = text.split("```")
+        for part in parts:
+            cleaned = part.strip().removeprefix("json").strip()
+            if cleaned.startswith("["):
+                try:
+                    return _json.loads(cleaned)
+                except (ValueError, _json.JSONDecodeError):
+                    continue
+
+    # 2. Try the whole text as JSON
+    stripped = text.strip()
+    if stripped.startswith("["):
+        try:
+            return _json.loads(stripped)
+        except (ValueError, _json.JSONDecodeError):
+            pass
+
+    # 3. Find the first '[' and try to parse from there
+    idx = text.find("[")
+    if idx >= 0:
+        # Find the matching closing bracket
+        bracket_depth = 0
+        for i in range(idx, len(text)):
+            if text[i] == "[":
+                bracket_depth += 1
+            elif text[i] == "]":
+                bracket_depth -= 1
+                if bracket_depth == 0:
+                    candidate = text[idx : i + 1]
+                    try:
+                        return _json.loads(candidate)
+                    except (ValueError, _json.JSONDecodeError):
+                        pass
+                    break
+
+    return None
+
+
 def generate_citation_key(author: str, year: str) -> str:
     """Generate a BibTeX citation key like 'Smith2024'."""
     # Take first author's last name, clean it, append year
@@ -315,21 +362,7 @@ def search_paperboat(query: str, *, run_cmd=None) -> list[dict]:
     raw = call_with_web_fallback(prompt, run_cmd=run_cmd)
     if raw is None:
         return []
-    # Parse JSON from raw response
-    import json as _json
-
-    text = raw
-    if "```" in text:
-        parts = text.split("```")
-        for part in parts:
-            cleaned = part.strip().removeprefix("json").strip()
-            if cleaned.startswith("["):
-                text = cleaned
-                break
-    try:
-        result = _json.loads(text)
-    except (ValueError, _json.JSONDecodeError):
-        return []
+    result = _extract_json_array(raw)
     if isinstance(result, list):
         return [p for p in result if isinstance(p, dict) and p.get("title")]
     return []
@@ -375,22 +408,8 @@ def search_and_cite(
 
     raw = call_with_web_fallback(prompt, run_cmd=run_cmd)
     if raw is None:
-        results = None
-    else:
-        import json as _json
-
-        text = raw
-        if "```" in text:
-            parts = text.split("```")
-            for part in parts:
-                cleaned = part.strip().removeprefix("json").strip()
-                if cleaned.startswith("["):
-                    text = cleaned
-                    break
-        try:
-            results = _json.loads(text)
-        except (ValueError, _json.JSONDecodeError):
-            results = None
+        return []
+    results = _extract_json_array(raw)
     if not results or not isinstance(results, list):
         return []
 

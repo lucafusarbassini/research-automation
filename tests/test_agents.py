@@ -124,7 +124,7 @@ def test_execute_agent_task_legacy_includes_model_flag():
     valid_models = {
         "claude-opus-4-5-20251101",
         "claude-sonnet-4-20250514",
-        "claude-haiku-3-5-20241022",
+        "claude-3-5-haiku-20241022",
     }
     assert model_name in valid_models, f"Unexpected model: {model_name}"
 

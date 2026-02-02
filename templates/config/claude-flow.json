@@ -11,7 +11,7 @@
     "tiers": [
       {
         "name": "booster",
-        "model": "claude-haiku-3-5-20241022",
+        "model": "claude-3-5-haiku-20241022",
         "max_tokens": 4096,
         "use_for": ["simple", "classification", "formatting"]
       },

@@ -1,7 +1,7 @@
 """Shared helper for calling the Claude CLI from Python.
 
 Provides ``call_claude`` and ``call_claude_json`` which invoke
-``claude -p <prompt> --output-format json`` and parse the result.
+``claude -p <prompt>`` and return the result text.
 All callers should treat a ``None`` return as "Claude unavailable" and
 fall back to their existing keyword-based logic.
 """
@@ -13,6 +13,9 @@ import subprocess
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Model to use for lightweight CLI calls (literature search, TODO generation, etc.)
+CLAUDE_CLI_MODEL = "claude-3-5-haiku-20241022"
 
 
 def _claude_cli_available() -> bool:
@@ -29,13 +32,44 @@ def _claude_cli_available() -> bool:
     return True
 
 
+def _extract_result_text(stdout: str) -> str | None:
+    """Extract the actual response from Claude CLI JSON envelope.
+
+    When ``--output-format json`` is used, stdout is a JSON object with
+    a ``result`` key containing the actual response text.  When
+    ``--output-format text`` is used, stdout is the plain response.
+    This helper handles both cases.
+    """
+    text = stdout.strip()
+    if not text:
+        return None
+    # Try to parse as JSON envelope
+    if text.startswith("{"):
+        try:
+            envelope = json.loads(text)
+            if isinstance(envelope, dict):
+                if envelope.get("is_error"):
+                    logger.debug(
+                        "Claude CLI returned error: %s", envelope.get("result", "")
+                    )
+                    return None
+                inner = envelope.get("result", "")
+                if inner:
+                    return inner.strip()
+                return None
+        except (json.JSONDecodeError, ValueError):
+            pass
+    # Not a JSON envelope — return as-is
+    return text if text else None
+
+
 def call_claude(
     prompt: str,
     *,
     timeout: int = 30,
     run_cmd=None,
 ) -> str | None:
-    """Call Claude CLI with *prompt* and return the raw stdout.
+    """Call Claude CLI with *prompt* and return the response text.
 
     Args:
         prompt: The prompt text.
@@ -44,7 +78,7 @@ def call_claude(
                  override for testing.
 
     Returns:
-        Stripped stdout on success, ``None`` on any failure.
+        Response text on success, ``None`` on any failure.
     """
     if run_cmd is None:
         if not _claude_cli_available():
@@ -65,13 +99,18 @@ def call_claude(
                 "-p",
                 prompt,
                 "--output-format",
-                "json",
+                "text",
                 "--model",
-                "claude-haiku-3-5-20241022",
+                CLAUDE_CLI_MODEL,
             ]
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
+        # Try extracting from JSON envelope (in case --output-format json was used)
+        if result.stdout.strip():
+            extracted = _extract_result_text(result.stdout)
+            if extracted:
+                return extracted
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
         logger.debug("Claude CLI unavailable: %s", exc)
     return None

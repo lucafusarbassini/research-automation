@@ -1734,7 +1734,41 @@ def paper(
             raise typer.Exit(1)
 
         source_text = paper_tex.read_text()
-        reference_text = reference.read_text()
+
+        # Handle PDF references: extract text with pdftotext or fallback
+        if reference.suffix.lower() == ".pdf":
+            import shutil
+            import subprocess as _sp
+
+            if shutil.which("pdftotext"):
+                try:
+                    proc = _sp.run(
+                        ["pdftotext", "-layout", str(reference), "-"],
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+                    if proc.returncode == 0 and proc.stdout.strip():
+                        reference_text = proc.stdout
+                    else:
+                        console.print(
+                            "[red]pdftotext failed. Install poppler-utils: "
+                            "sudo apt install poppler-utils[/red]"
+                        )
+                        raise typer.Exit(1)
+                except _sp.TimeoutExpired:
+                    console.print("[red]PDF extraction timed out[/red]")
+                    raise typer.Exit(1)
+            else:
+                console.print(
+                    "[red]PDF reference requires pdftotext. Install with:[/red]\n"
+                    "  sudo apt install poppler-utils  # Debian/Ubuntu\n"
+                    "  brew install poppler            # macOS"
+                )
+                raise typer.Exit(1)
+        else:
+            reference_text = reference.read_text()
+
         result = rewrite_in_reference_style(source_text, reference_text)
 
         console.print("\n[bold]Source style:[/bold]")

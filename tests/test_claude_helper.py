@@ -65,9 +65,9 @@ class TestCallClaude:
             "-p",
             "my prompt",
             "--output-format",
-            "json",
+            "text",
             "--model",
-            "claude-haiku-3-5-20241022",
+            "claude-3-5-haiku-20241022",
         ]
 
 
