@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ricet"
-version = "0.2.0"
+version = "0.3.0"
 description = "Scientific research automation powered by Claude Code"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [
-    {name = "fusar"},
+    {name = "Luca Fusar Bassini"},
 ]
 keywords = [
     "research",
