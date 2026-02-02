@@ -149,8 +149,25 @@ class MobileServer:
         }
 
     def _handle_get_sessions(self, body: Optional[dict]) -> dict:
-        # Lightweight stub — real implementation would query session.py
-        return {"ok": True, "sessions": []}
+        """Return known sessions from the sessions directory."""
+        from pathlib import Path
+
+        sessions_dir = Path("state") / "sessions"
+        sessions: list[dict] = []
+        if sessions_dir.is_dir():
+            for f in sorted(sessions_dir.glob("*.json")):
+                try:
+                    data = json.loads(f.read_text())
+                    sessions.append(
+                        {
+                            "name": data.get("name", f.stem),
+                            "status": data.get("status", "unknown"),
+                            "created": data.get("created", ""),
+                        }
+                    )
+                except Exception:
+                    sessions.append({"name": f.stem, "status": "unknown"})
+        return {"ok": True, "sessions": sessions}
 
     def _handle_post_voice(self, body: Optional[dict]) -> dict:
         text = (body or {}).get("text", "")

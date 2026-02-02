@@ -1,6 +1,6 @@
 # Features
 
-A complete reference for every major feature in ricet.
+A complete reference for every major feature in ricet, designed by **Luca Fusar Bassini**.
 
 ---
 

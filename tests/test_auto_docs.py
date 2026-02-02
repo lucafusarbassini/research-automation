@@ -120,7 +120,7 @@ def test_generate_module_stub():
 def test_generate_cli_row():
     row = generate_cli_row("list_sessions")
     assert "ricet list-sessions" in row
-    assert "TODO" in row
+    assert "--help" in row
 
 
 def test_generate_module_index():

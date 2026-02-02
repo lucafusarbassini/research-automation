@@ -37,32 +37,143 @@ def load_prompt_templates(prompts_path: Path) -> dict[str, dict]:
     return templates
 
 
-def transcribe_audio(audio_path: Path) -> str:
-    """Transcribe an audio file using Whisper (requires whisper installed).
+def record_audio(
+    output_path: Path,
+    *,
+    duration: int = 30,
+    sample_rate: int = 16000,
+    run_cmd=None,
+) -> bool:
+    """Record audio from microphone using system tools.
 
-    Args:
-        audio_path: Path to audio file.
+    Tries in order: arecord (Linux ALSA), sox/rec, ffmpeg.
+    Returns True if recording succeeded.
+    """
+    import shutil
+    import subprocess
 
-    Returns:
-        Transcribed text.
+    _run = run_cmd or (
+        lambda cmd: subprocess.run(cmd, capture_output=True, timeout=duration + 5)
+    )
 
-    Raises:
-        ImportError: If whisper is not installed.
-        FileNotFoundError: If audio file doesn't exist.
+    # Try arecord (Linux ALSA)
+    if shutil.which("arecord"):
+        try:
+            _run(
+                [
+                    "arecord",
+                    "-d",
+                    str(duration),
+                    "-f",
+                    "S16_LE",
+                    "-r",
+                    str(sample_rate),
+                    "-c",
+                    "1",
+                    str(output_path),
+                ]
+            )
+            return output_path.exists()
+        except Exception:
+            pass
+
+    # Try sox/rec
+    if shutil.which("rec"):
+        try:
+            _run(
+                [
+                    "rec",
+                    str(output_path),
+                    "rate",
+                    str(sample_rate),
+                    "channels",
+                    "1",
+                    "trim",
+                    "0",
+                    str(duration),
+                ]
+            )
+            return output_path.exists()
+        except Exception:
+            pass
+
+    # Try ffmpeg
+    if shutil.which("ffmpeg"):
+        try:
+            _run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-f",
+                    "pulse",
+                    "-i",
+                    "default",
+                    "-t",
+                    str(duration),
+                    "-ar",
+                    str(sample_rate),
+                    "-ac",
+                    "1",
+                    str(output_path),
+                ]
+            )
+            return output_path.exists()
+        except Exception:
+            pass
+
+    logger.warning("No audio recording tool found (install arecord, sox, or ffmpeg)")
+    return False
+
+
+def transcribe_audio(audio_path: Path, *, run_cmd=None) -> str:
+    """Transcribe audio file to text using whisper CLI or whisper Python library.
+
+    Tries whisper CLI first, then Python library, then returns empty string.
     """
     if not audio_path.exists():
         raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
+    import shutil
+    import subprocess
+
+    # Try whisper CLI
+    if shutil.which("whisper"):
+        try:
+            subprocess.run(
+                [
+                    "whisper",
+                    str(audio_path),
+                    "--model",
+                    "base",
+                    "--output_format",
+                    "txt",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            txt_file = audio_path.with_suffix(".txt")
+            if txt_file.exists():
+                text = txt_file.read_text().strip()
+                logger.info("Transcribed %d characters via whisper CLI", len(text))
+                return text
+        except Exception:
+            pass
+
+    # Try whisper Python library
     try:
         import whisper
-    except ImportError:
-        raise ImportError("whisper not installed. Run: pip install openai-whisper")
 
-    model = whisper.load_model("base")
-    result = model.transcribe(str(audio_path))
-    text = result.get("text", "")
-    logger.info("Transcribed %d characters from %s", len(text), audio_path.name)
-    return text
+        model = whisper.load_model("base")
+        result = model.transcribe(str(audio_path))
+        text = result.get("text", "")
+        logger.info("Transcribed %d characters from %s", len(text), audio_path.name)
+        return text
+    except ImportError:
+        pass
+
+    logger.warning("Whisper not available for transcription")
+    return ""
 
 
 def detect_language(text: str) -> str:
@@ -179,3 +290,39 @@ def structure_prompt(
         return structured
 
     return user_input
+
+
+def voice_prompt(*, duration: int = 30, run_cmd=None) -> str:
+    """Record voice, transcribe, detect language, translate, structure as prompt.
+
+    Full pipeline: record -> transcribe -> detect language -> translate -> structure.
+    Returns the structured prompt ready for agent use.
+    """
+    import tempfile
+
+    audio_path = Path(tempfile.mktemp(suffix=".wav"))
+
+    if not record_audio(audio_path, duration=duration, run_cmd=run_cmd):
+        return ""
+
+    text = transcribe_audio(audio_path, run_cmd=run_cmd)
+    if not text:
+        return ""
+
+    # Clean up audio file
+    try:
+        audio_path.unlink()
+    except Exception:
+        pass
+
+    # Detect and translate
+    lang = detect_language(text)
+    if lang != "en":
+        text = translate_to_english(text, source_lang=lang, run_cmd=run_cmd)
+
+    # Structure the prompt
+    prompts_path = Path("knowledge") / "PROMPTS.md"
+    templates = load_prompt_templates(prompts_path)
+    structured = structure_prompt(text, templates=templates)
+
+    return structured

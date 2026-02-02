@@ -326,3 +326,137 @@ def suggest_and_install_mcp(
     except (subprocess.CalledProcessError, Exception) as exc:
         _print(f"  Install failed: {exc}")
         return False
+
+
+# ---------------------------------------------------------------------------
+# MCP scaffold generation
+# ---------------------------------------------------------------------------
+
+
+def create_mcp_scaffold(
+    name: str,
+    description: str,
+    tools: list[str],
+    output_dir: Path | None = None,
+    *,
+    run_cmd=None,
+) -> Path | None:
+    """Generate a new MCP server scaffold using Claude.
+
+    Creates a minimal MCP server with the specified tools.
+
+    Args:
+        name: Server name (e.g., "my-data-mcp")
+        description: What the MCP does
+        tools: List of tool names to implement (e.g., ["search", "fetch", "parse"])
+        output_dir: Where to create the scaffold (default: current dir)
+
+    Returns path to created directory, or None on failure.
+    """
+    from core.claude_helper import call_claude
+
+    if output_dir is None:
+        output_dir = Path.cwd()
+
+    mcp_dir = output_dir / name
+    mcp_dir.mkdir(parents=True, exist_ok=True)
+
+    tools_str = ", ".join(tools)
+    prompt = (
+        f"Generate a minimal MCP (Model Context Protocol) server in TypeScript.\n"
+        f"Server name: {name}\n"
+        f"Description: {description}\n"
+        f"Tools to implement: {tools_str}\n\n"
+        "Generate the following files:\n"
+        "1. package.json with @modelcontextprotocol/sdk dependency\n"
+        "2. src/index.ts with the MCP server implementation\n"
+        "3. tsconfig.json\n\n"
+        "Output ONLY the file contents separated by '=== FILENAME ===' markers.\n"
+        "Example:\n"
+        "=== package.json ===\n{...}\n"
+        "=== src/index.ts ===\n...\n"
+        "=== tsconfig.json ===\n...\n"
+    )
+
+    result = call_claude(prompt, run_cmd=run_cmd)
+    if not result:
+        return None
+
+    # Parse the output into files
+    current_file = None
+    current_content: list[str] = []
+
+    for line in result.splitlines():
+        if line.startswith("=== ") and line.endswith(" ==="):
+            if current_file and current_content:
+                file_path = mcp_dir / current_file
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                file_path.write_text("\n".join(current_content))
+            current_file = line[4:-4].strip()
+            current_content = []
+        else:
+            current_content.append(line)
+
+    # Write last file
+    if current_file and current_content:
+        file_path = mcp_dir / current_file
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text("\n".join(current_content))
+
+    return mcp_dir
+
+
+# ---------------------------------------------------------------------------
+# Zapier MCP integration
+# ---------------------------------------------------------------------------
+
+
+def setup_zapier_mcp(*, api_key: str = "", run_cmd=None) -> bool:
+    """Configure the Zapier MCP for workflow automation.
+
+    Zapier MCP allows ricet to trigger Zapier zaps (e.g., send to Slack,
+    update spreadsheets, trigger webhooks) via the MCP protocol.
+
+    Args:
+        api_key: Zapier NLA API key. Falls back to ZAPIER_NLA_API_KEY env var.
+        run_cmd: Optional callable for testing.
+
+    Returns:
+        True if the Zapier MCP was successfully configured.
+    """
+    import os
+
+    if not api_key:
+        api_key = os.environ.get("ZAPIER_NLA_API_KEY", "")
+
+    if not api_key:
+        return False
+
+    # Add Zapier to the project's MCP config
+    zapier_config = {
+        "zapier-mcp": {
+            "command": "npx",
+            "args": ["-y", "zapier-mcp-server"],
+            "env": {"ZAPIER_NLA_API_KEY": api_key},
+            "purpose": "Zapier workflow automation (triggers, webhooks, integrations)",
+        }
+    }
+
+    # Write to project's .claude/settings.json or mcp config
+    settings_path = Path.cwd() / ".claude" / "settings.json"
+    if settings_path.exists():
+        settings = json.loads(settings_path.read_text())
+        if "mcpServers" not in settings:
+            settings["mcpServers"] = {}
+        settings["mcpServers"].update(zapier_config)
+        settings_path.write_text(json.dumps(settings, indent=2))
+        return True
+
+    # Fallback: create .claude/settings.json if .claude dir exists
+    claude_dir = Path.cwd() / ".claude"
+    if claude_dir.is_dir():
+        settings = {"mcpServers": zapier_config}
+        settings_path.write_text(json.dumps(settings, indent=2))
+        return True
+
+    return False

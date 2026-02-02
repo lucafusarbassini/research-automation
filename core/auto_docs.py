@@ -269,7 +269,7 @@ def generate_module_stub(qualified_name: str, items: list[dict]) -> str:
 def generate_cli_row(cmd_name: str) -> str:
     """Generate a README table row for a CLI command."""
     kebab = cmd_name.replace("_", "-")
-    return f"| `ricet {kebab}` | *TODO: add description* |"
+    return f"| `ricet {kebab}` | See `ricet {kebab} --help` |"
 
 
 def generate_module_index(all_modules: dict[str, list[dict]]) -> str:

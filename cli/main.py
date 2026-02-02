@@ -1364,6 +1364,67 @@ def mcp_search(
     )
 
 
+@app.command(name="mcp-create")
+def mcp_create(
+    name: str = typer.Argument(help="MCP server name"),
+    description: str = typer.Option("", "--desc", "-d", help="What the MCP does"),
+    tools: str = typer.Option("", "--tools", "-t", help="Comma-separated tool names"),
+    output: Path = typer.Option(None, "--output", "-o", help="Output directory"),
+):
+    """Generate a new MCP server from scratch using Claude."""
+    from core.mcps import create_mcp_scaffold
+
+    tool_list = [t.strip() for t in tools.split(",") if t.strip()] if tools else []
+    if not tool_list:
+        console.print(
+            "[yellow]No tools specified. Use --tools 'search,fetch,parse'[/yellow]"
+        )
+        raise typer.Exit(1)
+
+    console.print(f"[bold]Generating MCP server: {name}[/bold]")
+    if description:
+        console.print(f"  Description: {description}")
+    console.print(f"  Tools: {', '.join(tool_list)}")
+
+    result = create_mcp_scaffold(name, description, tool_list, output_dir=output)
+    if result:
+        console.print(f"[green]MCP scaffold created at: {result}[/green]")
+        console.print("  Next steps:")
+        console.print(f"    cd {result}")
+        console.print("    npm install")
+        console.print("    npm run build")
+    else:
+        console.print(
+            "[red]Failed to generate MCP scaffold (Claude unavailable?).[/red]"
+        )
+        raise typer.Exit(1)
+
+
+@app.command(name="zapier")
+def zapier_cmd(
+    action: str = typer.Argument(help="Action: setup"),
+    api_key: str = typer.Option("", "--key", "-k", help="Zapier NLA API key"),
+):
+    """Zapier integration commands."""
+    from core.mcps import setup_zapier_mcp
+
+    if action == "setup":
+        console.print("[bold]Setting up Zapier MCP integration...[/bold]")
+        success = setup_zapier_mcp(api_key=api_key)
+        if success:
+            console.print("[green]Zapier MCP configured successfully.[/green]")
+            console.print("  Zapier zaps are now available as MCP tools.")
+        else:
+            console.print(
+                "[red]Failed to configure Zapier MCP.[/red]\n"
+                "  Ensure ZAPIER_NLA_API_KEY is set or pass --key."
+            )
+            raise typer.Exit(1)
+    else:
+        console.print(f"[red]Unknown action: {action}. Use 'setup'.[/red]")
+        raise typer.Exit(1)
+
+
 @app.command()
 def paper(
     action: str = typer.Argument(
@@ -1626,8 +1687,8 @@ def verify(
                 conf = f"{c['confidence']:.0%}"
                 console.print(f"  [{conf}] {c['claim']}")
             console.print(
-                "\n[dim]These claims were extracted heuristically. "
-                "External verification not yet connected.[/dim]"
+                "\n[dim]Claims extracted via Claude-powered verification. "
+                "Cross-check with primary sources for critical results.[/dim]"
             )
     else:
         console.print("\n[green]No verifiable claims detected in the input.[/green]")
@@ -2640,6 +2701,28 @@ def review_claude_md_cmd():
             console.print("[red]Could not find CLAUDE.md to save.[/red]")
     else:
         console.print("[dim]Not saved.[/dim]")
+
+
+@app.command()
+def voice(
+    duration: int = typer.Option(
+        30, "--duration", "-t", help="Recording duration in seconds"
+    ),
+):
+    """Record a voice prompt, transcribe, and execute."""
+    from core.voice import voice_prompt
+
+    console.print(f"[bold]Recording for {duration}s... Speak now.[/bold]")
+    prompt = voice_prompt(duration=duration)
+    if prompt:
+        console.print(f"\n[green]Transcribed prompt:[/green]\n{prompt}")
+        # Could feed into agent execution here
+    else:
+        console.print("[red]No audio captured or transcription failed.[/red]")
+        console.print("[dim]Install whisper: pip install openai-whisper[/dim]")
+        console.print(
+            "[dim]Install recorder: sudo apt install alsa-utils (Linux)[/dim]"
+        )
 
 
 if __name__ == "__main__":

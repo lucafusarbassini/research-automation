@@ -214,6 +214,8 @@ def search_paperboat(query: str, *, run_cmd=None) -> list[dict]:
 
     PaperBoat scans thousands of journals daily. This function uses
     Claude to query PaperBoat's public interface and extract results.
+    Falls back to Gemini (which has native web access) when Claude
+    cannot reach the web.
 
     Args:
         query: Research topic to search.
@@ -222,7 +224,7 @@ def search_paperboat(query: str, *, run_cmd=None) -> list[dict]:
     Returns:
         List of paper dicts with title, authors, year, abstract, url.
     """
-    from core.claude_helper import call_claude_json
+    from core.claude_helper import call_with_web_fallback
 
     prompt = (
         "Search PaperBoat (https://paperboatch.com/) for recent academic papers "
@@ -234,8 +236,25 @@ def search_paperboat(query: str, *, run_cmd=None) -> list[dict]:
         "If you cannot access PaperBoat, use your knowledge of recent papers instead. "
         "Reply with JSON array only."
     )
-    result = call_claude_json(prompt, run_cmd=run_cmd)
-    if result and isinstance(result, list):
+    raw = call_with_web_fallback(prompt, run_cmd=run_cmd)
+    if raw is None:
+        return []
+    # Parse JSON from raw response
+    import json as _json
+
+    text = raw
+    if "```" in text:
+        parts = text.split("```")
+        for part in parts:
+            cleaned = part.strip().removeprefix("json").strip()
+            if cleaned.startswith("["):
+                text = cleaned
+                break
+    try:
+        result = _json.loads(text)
+    except (ValueError, _json.JSONDecodeError):
+        return []
+    if isinstance(result, list):
         return [p for p in result if isinstance(p, dict) and p.get("title")]
     return []
 
@@ -250,7 +269,8 @@ def search_and_cite(
     """Search literature via Claude and append results to .bib file.
 
     Uses Claude to search PubMed/arXiv (via available MCPs or web knowledge),
-    extract metadata, and format as BibTeX entries.
+    extract metadata, and format as BibTeX entries.  Falls back to Gemini
+    (which has native web access) when Claude cannot reach the web.
 
     Args:
         query: Search query (e.g., "transformer protein folding 2024").
@@ -261,7 +281,7 @@ def search_and_cite(
     Returns:
         List of dicts with keys: key, title, authors, year, doi, bibtex.
     """
-    from core.claude_helper import call_claude_json
+    from core.claude_helper import call_with_web_fallback
 
     if bib_file is None:
         bib_file = Path("paper/references.bib")
@@ -277,7 +297,24 @@ def search_and_cite(
         "Reply with the JSON array only, no markdown fences."
     )
 
-    results = call_claude_json(prompt, run_cmd=run_cmd)
+    raw = call_with_web_fallback(prompt, run_cmd=run_cmd)
+    if raw is None:
+        results = None
+    else:
+        import json as _json
+
+        text = raw
+        if "```" in text:
+            parts = text.split("```")
+            for part in parts:
+                cleaned = part.strip().removeprefix("json").strip()
+                if cleaned.startswith("["):
+                    text = cleaned
+                    break
+        try:
+            results = _json.loads(text)
+        except (ValueError, _json.JSONDecodeError):
+            results = None
     if not results or not isinstance(results, list):
         return []
 

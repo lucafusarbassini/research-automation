@@ -15,22 +15,25 @@ def test_generate_citation_key():
 
 
 def test_search_and_cite_with_claude(tmp_path):
+    import json
+
     from core.paper import search_and_cite
 
     bib = tmp_path / "references.bib"
     bib.write_text("")
 
-    with patch("core.claude_helper.call_claude_json") as mock:
-        mock.return_value = [
-            {
-                "title": "Attention Is All You Need",
-                "authors": "Vaswani, A.",
-                "year": "2017",
-                "journal": "NeurIPS",
-                "doi": "10.x/y",
-                "entry_type": "article",
-            }
-        ]
+    mock_response = json.dumps([
+        {
+            "title": "Attention Is All You Need",
+            "authors": "Vaswani, A.",
+            "year": "2017",
+            "journal": "NeurIPS",
+            "doi": "10.x/y",
+            "entry_type": "article",
+        }
+    ])
+    with patch("core.claude_helper.call_with_web_fallback") as mock:
+        mock.return_value = mock_response
         results = search_and_cite("transformers", bib_file=bib, max_results=3)
 
     assert len(results) == 1

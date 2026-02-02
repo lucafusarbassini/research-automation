@@ -759,6 +759,13 @@ CREDENTIAL_REGISTRY: list[tuple[str, str, str, str]] = [
         "https://www.notion.so/my-integrations → New integration → copy secret",
         "cloud",
     ),
+    # --- Automation / Integrations ---
+    (
+        "ZAPIER_NLA_API_KEY",
+        "Zapier NLA API key (workflow automation: Slack, sheets, webhooks)",
+        "https://nla.zapier.com/credentials/ → Create API key",
+        "cloud",
+    ),
     # --- Communication (conditional) ---
     (
         "SLACK_BOT_TOKEN",

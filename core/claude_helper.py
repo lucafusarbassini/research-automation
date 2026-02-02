@@ -77,6 +77,61 @@ def call_claude(
     return None
 
 
+def call_gemini(prompt: str, *, run_cmd=None) -> str | None:
+    """Call Google Gemini as fallback for web-access tasks.
+
+    Uses the GOOGLE_API_KEY from environment. Returns None if unavailable.
+    """
+    api_key = os.environ.get("GOOGLE_API_KEY", "")
+    if not api_key:
+        return None
+
+    try:
+        payload = json.dumps(
+            {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"maxOutputTokens": 2048},
+            }
+        )
+
+        result = subprocess.run(
+            [
+                "curl",
+                "-s",
+                "-X",
+                "POST",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}",
+                "-H",
+                "Content-Type: application/json",
+                "-d",
+                payload,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            candidates = data.get("candidates", [])
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if parts:
+                    return parts[0].get("text", "")
+    except Exception:
+        logger.debug("Gemini API call failed", exc_info=True)
+    return None
+
+
+def call_with_web_fallback(prompt: str, *, run_cmd=None) -> str | None:
+    """Try Claude first, fall back to Gemini for web-access tasks."""
+    result = call_claude(prompt, run_cmd=run_cmd)
+    if result:
+        return result
+    # Try Gemini as fallback (has native web access)
+    return call_gemini(prompt, run_cmd=run_cmd)
+
+
 def call_claude_json(
     prompt: str,
     **kwargs: Any,

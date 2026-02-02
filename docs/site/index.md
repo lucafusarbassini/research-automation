@@ -2,6 +2,10 @@
 
 **Automate scientific research using Claude Code with multi-agent orchestration, overnight autonomous execution, and comprehensive tooling.**
 
+Created by **Luca Fusar Bassini** -- turning the scientific method into software.
+
+---
+
 ricet is a CLI tool and framework that manages the full lifecycle of scientific research projects. It pairs Claude Code with a structured agent system, persistent knowledge, reproducibility enforcement, and a complete paper pipeline -- so you can focus on the science while automation handles the scaffolding.
 
 ---
@@ -113,6 +117,12 @@ ricet is under active development. The core modules, CLI, Docker setup, template
 | claude-flow integration | Implemented (optional) |
 | GitHub workflows | Implemented |
 | Documentation site | You are here |
+
+---
+
+## About
+
+ricet is designed and maintained by **Luca Fusar Bassini**, a researcher who got tired of doing the same tedious setup for every project and decided to automate the entire scientific workflow instead. What started as a few helper scripts became a full multi-agent research framework.
 
 ---
 
