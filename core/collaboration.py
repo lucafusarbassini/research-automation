@@ -56,14 +56,41 @@ def sync_before_start(
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return True
 
+    # Check for tracking branch
+    try:
+        r = run_cmd(
+            ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+            cwd=cwd,
+        )
+        if r.returncode != 0:
+            return True  # No upstream tracking branch, nothing to pull
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return True
+
+    # Stash any uncommitted changes before pulling
+    stashed = False
+    try:
+        r = run_cmd(["git", "status", "--porcelain"], cwd=cwd)
+        if r.returncode == 0 and r.stdout.strip():
+            run_cmd(["git", "stash", "--include-untracked"], cwd=cwd)
+            stashed = True
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
     # Pull with rebase
     try:
         r = run_cmd(["git", "pull", "--rebase"], cwd=cwd)
         if r.returncode != 0:
             logger.warning("git pull --rebase failed: %s", r.stderr.strip())
+            if stashed:
+                run_cmd(["git", "stash", "pop"], cwd=cwd)
             return False
+        if stashed:
+            run_cmd(["git", "stash", "pop"], cwd=cwd)
         return True
     except (FileNotFoundError, subprocess.TimeoutExpired):
+        if stashed:
+            run_cmd(["git", "stash", "pop"], cwd=cwd)
         return False
 
 

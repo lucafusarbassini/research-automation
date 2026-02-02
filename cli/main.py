@@ -164,9 +164,14 @@ def init(
     console.print("\n[bold cyan]Step 3b: API credentials[/bold cyan]")
     console.print("  [dim]Press Enter to skip any credential you don't have yet.[/dim]")
 
+    def _cred_prompt(prompt, default=""):
+        """Credential prompt that accepts empty Enter as skip."""
+        raw = input(f"{prompt}: ")
+        return raw if raw else default
+
     credentials = collect_credentials(
         answers,
-        prompt_fn=_prompt,
+        prompt_fn=_cred_prompt,
         print_fn=lambda msg: console.print(f"[dim]{msg}[/dim]"),
     )
     if credentials:
