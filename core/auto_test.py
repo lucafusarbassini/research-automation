@@ -51,7 +51,7 @@ def generate_tests_for_file(
         f"{source_text[:8000]}"
     )
 
-    result = call_claude(prompt, run_cmd=run_cmd)
+    result = call_claude(prompt, run_cmd=run_cmd, timeout=90)
     if result and result.strip():
         # Strip markdown fences if Claude wraps output
         text = result.strip()
