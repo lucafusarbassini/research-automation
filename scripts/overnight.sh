@@ -49,3 +49,25 @@ done
 echo "" | tee -a "$LOG_FILE"
 echo "Overnight mode finished at $(date -Iseconds)" | tee -a "$LOG_FILE"
 echo "Total iterations: $i" | tee -a "$LOG_FILE"
+
+# ---------------------------------------------------------------------------
+# Send notification summary via Python notification system
+# ---------------------------------------------------------------------------
+ERRORS=$(grep -c "ERROR" "$LOG_FILE" 2>/dev/null || echo 0)
+SUCCESSES=$(grep -c "SUCCESS" "$LOG_FILE" 2>/dev/null || echo 0)
+
+SUMMARY="Overnight run complete. Iterations: $i/$MAX_ITERATIONS, Successes: $SUCCESSES, Errors: $ERRORS. Log: $LOG_FILE"
+
+# Also append summary to PROGRESS.md
+if [ -f "state/PROGRESS.md" ]; then
+    echo "" >> state/PROGRESS.md
+    echo "## Overnight Run $(date +%Y-%m-%d)" >> state/PROGRESS.md
+    echo "" >> state/PROGRESS.md
+    echo "$SUMMARY" >> state/PROGRESS.md
+fi
+
+# Send via Python notification system (Slack, email, desktop)
+python3 -c "
+from core.notifications import notify
+notify('$SUMMARY', title='ricet overnight', level='success' if $ERRORS == 0 else 'warning')
+" 2>/dev/null || echo "Notification delivery failed (channels may not be configured)" | tee -a "$LOG_FILE"

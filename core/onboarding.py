@@ -908,11 +908,103 @@ GOAL_PACKAGE_MAP: list[tuple[list[str], list[str]]] = [
 ]
 
 
-def infer_packages_from_goal(goal_content: str) -> list[str]:
+def infer_packages_from_goal(
+    goal_content: str,
+    *,
+    use_claude: bool = True,
+    run_cmd=None,
+) -> list[str]:
     """Infer Python packages needed based on GOAL.md content.
 
-    Scans the goal text for domain keywords and returns a deduplicated
-    list of pip package names that should be installed.
+    When Claude CLI is available, asks Claude to analyze the goal and
+    return an optimal package list (handles niche domains like spatial
+    metabolomics, quantum chemistry, etc.). Falls back to keyword
+    matching when Claude is unavailable.
+
+    Args:
+        goal_content: Text content of GOAL.md.
+        use_claude: Whether to attempt Claude-based inference.
+        run_cmd: Optional callable for testing.
+
+    Returns:
+        List of pip package names (deduplicated, sorted).
+    """
+    if use_claude and len(goal_content.strip()) > 50:
+        result = _infer_packages_via_claude(goal_content, run_cmd=run_cmd)
+        if result:
+            return result
+
+    # Fallback: keyword matching
+    return _infer_packages_via_keywords(goal_content)
+
+
+def _infer_packages_via_claude(
+    goal_content: str,
+    *,
+    run_cmd=None,
+) -> list[str]:
+    """Ask Claude to analyze GOAL.md and return needed pip packages.
+
+    Args:
+        goal_content: Text content of GOAL.md.
+        run_cmd: Optional callable for testing.
+
+    Returns:
+        List of pip package names, or empty list if Claude unavailable.
+    """
+    import json as _json
+
+    if run_cmd is None:
+
+        def run_cmd(cmd: list[str]) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+
+    prompt = (
+        "You are a Python dependency advisor. Read this research project description "
+        "and return ONLY a JSON array of pip package names that would be needed. "
+        "Include domain-specific packages (e.g. squidpy for spatial transcriptomics, "
+        "rdkit for chemistry, astropy for astronomy). Be precise - only packages "
+        "available on PyPI. No explanations, just the JSON array.\n\n"
+        f"Project description:\n{goal_content[:3000]}"
+    )
+
+    try:
+        result = run_cmd(["claude", "-p", prompt, "--output-format", "json"])
+        if result.returncode != 0:
+            logger.debug("Claude package inference failed (exit %d)", result.returncode)
+            return []
+
+        output = result.stdout.strip()
+        # Try to parse JSON array from output
+        # Claude may wrap it in markdown code blocks
+        if "```" in output:
+            # Extract content between code fences
+            parts = output.split("```")
+            for part in parts:
+                cleaned = part.strip().removeprefix("json").strip()
+                if cleaned.startswith("["):
+                    output = cleaned
+                    break
+
+        packages = _json.loads(output)
+        if isinstance(packages, list):
+            # Filter to strings only, deduplicate
+            return sorted(set(p for p in packages if isinstance(p, str) and p))
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        logger.debug("Claude not available for package inference: %s", exc)
+    except (_json.JSONDecodeError, ValueError) as exc:
+        logger.debug("Could not parse Claude package response: %s", exc)
+
+    return []
+
+
+def _infer_packages_via_keywords(goal_content: str) -> list[str]:
+    """Fallback keyword-based package inference.
 
     Args:
         goal_content: Text content of GOAL.md.
