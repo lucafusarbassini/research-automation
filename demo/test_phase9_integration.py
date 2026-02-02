@@ -32,28 +32,42 @@ class TestCliInit:
 
     def test_cli_init(self, tmp_path):
         with (
+            patch("cli.main.check_and_install_packages", return_value=[]),
+            patch("cli.main.detect_system_for_init") as mock_detect,
+            patch("cli.main.auto_install_claude_flow", return_value=True),
             patch("cli.main.collect_answers") as mock_collect,
+            patch("cli.main.collect_credentials", return_value={}),
             patch("cli.main.setup_workspace"),
             patch("cli.main.write_settings"),
             patch("cli.main.write_goal_file"),
+            patch("cli.main.write_env_file"),
+            patch("cli.main.write_env_example"),
+            patch("cli.main.print_folder_map", return_value=["test"]),
+            patch("cli.main.create_github_repo", return_value=""),
             patch("cli.main.shutil.copytree"),
             patch("cli.main.subprocess.run"),
             patch("cli.main._inject_claude_flow_mcp"),
             patch("cli.main.TEMPLATE_DIR", tmp_path / "templates"),
-            patch("cli.main.SETUP_SCRIPT", tmp_path / "nonexistent_script"),
         ):
-
+            mock_detect.return_value = {
+                "os": "Linux",
+                "python": "3.11",
+                "cpu": "x86_64",
+                "ram_gb": 16.0,
+                "gpu": "",
+                "compute_type": "local-cpu",
+                "conda": False,
+                "docker": False,
+            }
             mock_collect.return_value = MagicMock()
 
-            # The init command creates project_path = path / project_name
-            # We need to make sure it does not already exist
             project_path = tmp_path / "test-proj"
 
-            result = runner.invoke(app, ["init", "test-proj", "--path", str(tmp_path)])
+            result = runner.invoke(
+                app,
+                ["init", "test-proj", "--path", str(tmp_path), "--skip-repo"],
+            )
 
-            # The command should have been called (may fail due to mocked copytree
-            # not creating the dir, but it should not crash on our mocks)
-            # We just check it was invoked and collect_answers was called
             mock_collect.assert_called_once()
 
 

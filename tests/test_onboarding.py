@@ -5,39 +5,69 @@ from pathlib import Path
 import yaml
 
 from core.onboarding import (
+    FOLDER_READMES,
     WORKSPACE_DIRS,
     OnboardingAnswers,
     auto_install_claude,
+    auto_install_claude_flow,
+    check_and_install_packages,
     collect_answers,
+    collect_credentials,
+    create_github_repo,
+    detect_system_for_init,
     load_settings,
+    print_folder_map,
     setup_claude_web_access,
     setup_workspace,
+    validate_goal_content,
     validate_prerequisites,
     verify_uploaded_files,
+    write_env_example,
+    write_env_file,
     write_goal_file,
     write_settings,
 )
+
+# Shared system_info for tests
+_SYSTEM_INFO_CPU = {
+    "os": "Linux",
+    "python": "3.11",
+    "cpu": "x86_64",
+    "ram_gb": 16.0,
+    "gpu": "",
+    "compute_type": "local-cpu",
+    "conda": False,
+    "docker": False,
+}
+
+_SYSTEM_INFO_GPU = {
+    "os": "Linux",
+    "python": "3.11",
+    "cpu": "x86_64",
+    "ram_gb": 32.0,
+    "gpu": "RTX 4090",
+    "compute_type": "local-gpu",
+    "conda": True,
+    "docker": True,
+}
 
 
 def test_collect_answers_defaults():
     responses = iter(
         [
-            "predict proteins",
-            "ml-research",
-            "skip",
-            "skip",
-            "flexible",
-            "local-cpu",
             "none",
             "skip",
             "no",
             "no",
         ]
     )
-    answers = collect_answers("test-proj", prompt_fn=lambda p, d="": next(responses))
+    answers = collect_answers(
+        "test-proj",
+        prompt_fn=lambda p, d="": next(responses),
+        system_info=_SYSTEM_INFO_CPU,
+    )
     assert answers.project_name == "test-proj"
-    assert answers.goal == "predict proteins"
-    assert answers.project_type == "ml-research"
+    assert answers.compute_type == "local-cpu"
     assert answers.journal_target == ""
     assert answers.needs_website is False
     assert answers.needs_mobile is False
@@ -46,20 +76,17 @@ def test_collect_answers_defaults():
 def test_collect_answers_with_gpu():
     responses = iter(
         [
-            "goal",
-            "ml-research",
-            "skip",
-            "skip",
-            "flexible",
-            "local-gpu",
-            "RTX 4090",
             "none",
             "skip",
             "no",
             "no",
         ]
     )
-    answers = collect_answers("proj", prompt_fn=lambda p, d="": next(responses))
+    answers = collect_answers(
+        "proj",
+        prompt_fn=lambda p, d="": next(responses),
+        system_info=_SYSTEM_INFO_GPU,
+    )
     assert answers.compute_type == "local-gpu"
     assert answers.gpu_name == "RTX 4090"
 
@@ -67,12 +94,6 @@ def test_collect_answers_with_gpu():
 def test_collect_answers_with_email():
     responses = iter(
         [
-            "goal",
-            "general",
-            "skip",
-            "skip",
-            "flexible",
-            "local-cpu",
             "email",
             "a@b.com",
             "skip",
@@ -80,28 +101,13 @@ def test_collect_answers_with_email():
             "no",
         ]
     )
-    answers = collect_answers("proj", prompt_fn=lambda p, d="": next(responses))
+    answers = collect_answers(
+        "proj",
+        prompt_fn=lambda p, d="": next(responses),
+        system_info=_SYSTEM_INFO_CPU,
+    )
     assert answers.notification_method == "email"
     assert answers.notification_email == "a@b.com"
-
-
-def test_collect_answers_invalid_project_type():
-    responses = iter(
-        [
-            "goal",
-            "invalid-type",
-            "skip",
-            "skip",
-            "flexible",
-            "local-cpu",
-            "none",
-            "skip",
-            "no",
-            "no",
-        ]
-    )
-    answers = collect_answers("proj", prompt_fn=lambda p, d="": next(responses))
-    assert answers.project_type == "ml-research"  # Falls back to default
 
 
 def test_setup_workspace(tmp_path: Path):
@@ -115,32 +121,35 @@ def test_write_settings(tmp_path: Path):
     answers = OnboardingAnswers(
         project_name="my-proj",
         goal="test goal",
-        project_type="data-analysis",
         compute_type="local-gpu",
         gpu_name="RTX 3090",
         notification_method="email",
         notification_email="test@example.com",
+        needs_website=True,
+        needs_mobile=False,
     )
     path = write_settings(tmp_path, answers)
     assert path.exists()
 
     settings = yaml.safe_load(path.read_text())
     assert settings["project"]["name"] == "my-proj"
-    assert settings["project"]["type"] == "data-analysis"
+    assert "type" not in settings["project"]
     assert settings["compute"]["gpu"] == "RTX 3090"
     assert settings["notifications"]["enabled"] is True
     assert settings["notifications"]["email"] == "test@example.com"
+    assert settings["features"]["website"] is True
+    assert settings["features"]["mobile"] is False
 
 
 def test_write_settings_no_notifications(tmp_path: Path):
-    answers = OnboardingAnswers(project_name="proj", notification_method="none")
+    answers = OnboardingAnswers(project_name="proj")
     path = write_settings(tmp_path, answers)
     settings = yaml.safe_load(path.read_text())
     assert settings["notifications"]["enabled"] is False
 
 
 def test_load_settings(tmp_path: Path):
-    answers = OnboardingAnswers(project_name="proj", project_type="general")
+    answers = OnboardingAnswers(project_name="proj")
     write_settings(tmp_path, answers)
     settings = load_settings(tmp_path)
     assert settings["project"]["name"] == "proj"
@@ -247,30 +256,98 @@ def test_collect_answers_new_fields():
     """Verify journal_target, needs_website, needs_mobile are collected."""
     responses = iter(
         [
-            "goal",
-            "paper-writing",
-            "skip",
-            "acc > 90%",
-            "2025-12",
-            "local-cpu",
             "none",
             "Nature",
             "yes",
             "yes",
         ]
     )
-    answers = collect_answers("proj", prompt_fn=lambda p, d="": next(responses))
+    answers = collect_answers(
+        "proj",
+        prompt_fn=lambda p, d="": next(responses),
+        system_info=_SYSTEM_INFO_CPU,
+    )
     assert answers.journal_target == "Nature"
     assert answers.needs_website is True
     assert answers.needs_mobile is True
 
 
+def test_auto_install_claude_flow_already_present():
+    """If npx claude-flow --version succeeds, return True without installing."""
+
+    class FakeResult:
+        returncode = 0
+
+    installed = auto_install_claude_flow(run_cmd=lambda cmd, check=False: FakeResult())
+    assert installed is True
+
+
+def test_auto_install_claude_flow_install_succeeds():
+    """If claude-flow is missing but npm install works, return True."""
+    call_log = []
+
+    class SuccessResult:
+        returncode = 0
+
+    def fake_run(cmd: str, check: bool = False):
+        call_log.append(cmd)
+        if "claude-flow --version" in cmd:
+            raise FileNotFoundError("not found")
+        return SuccessResult()
+
+    assert auto_install_claude_flow(run_cmd=fake_run) is True
+    assert any("npm install" in c for c in call_log)
+
+
+def test_detect_system_for_init():
+    """detect_system_for_init returns a dict with expected keys."""
+    from unittest.mock import patch
+
+    from core.environment import SystemInfo
+
+    mock_info = SystemInfo(
+        os="Linux",
+        os_version="6.8",
+        python_version="3.11",
+        cpu="x86_64",
+        gpu="RTX 4090",
+        ram_gb=32.0,
+        conda_available=True,
+        docker_available=True,
+    )
+    with patch("core.environment.discover_system", return_value=mock_info):
+        result = detect_system_for_init()
+
+    assert result["gpu"] == "RTX 4090"
+    assert result["compute_type"] == "local-gpu"
+    assert result["docker"] is True
+
+
+def test_create_github_repo_no_gh():
+    """If gh CLI is not available, returns empty string."""
+
+    def fake_run(cmd: list[str]):
+        raise FileNotFoundError("gh not found")
+
+    result = create_github_repo("test-proj", run_cmd=fake_run)
+    assert result == ""
+
+
+def test_create_github_repo_not_authenticated():
+    """If gh auth status fails, returns empty string."""
+    import subprocess
+
+    def fake_run(cmd: list[str]):
+        return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="")
+
+    result = create_github_repo("test-proj", run_cmd=fake_run)
+    assert result == ""
+
+
 def test_verify_uploaded_files_empty_workspace(tmp_path: Path):
     """Empty workspace triggers warnings."""
     setup_workspace(tmp_path)
-    answers = OnboardingAnswers(
-        project_type="paper-writing", github_repo="https://github.com/x/y"
-    )
+    answers = OnboardingAnswers(github_repo="https://github.com/x/y")
     warnings = verify_uploaded_files(tmp_path, answers)
     # Should warn about empty reference/ and uploads/ and missing code
     assert len(warnings) >= 2
@@ -279,16 +356,135 @@ def test_verify_uploaded_files_empty_workspace(tmp_path: Path):
 
 def test_verify_uploaded_files_no_uploads_dir(tmp_path: Path):
     """Missing uploads/ directory should produce a warning."""
-    answers = OnboardingAnswers(project_type="general")
+    answers = OnboardingAnswers()
     warnings = verify_uploaded_files(tmp_path, answers)
     assert any("uploads/" in w for w in warnings)
 
 
 def test_verify_uploaded_files_all_present(tmp_path: Path):
-    """When files are present, no warnings for general project."""
+    """When files are present, no warnings."""
     setup_workspace(tmp_path)
-    # Put a real file in uploads/
+    # Put a real file in uploads/ and reference/
     (tmp_path / "uploads" / "data.csv").write_text("a,b\n1,2\n")
-    answers = OnboardingAnswers(project_type="general")
+    (tmp_path / "reference" / "papers" / "paper.pdf").write_bytes(b"%PDF-1.4 test")
+    answers = OnboardingAnswers()
     warnings = verify_uploaded_files(tmp_path, answers)
     assert warnings == []
+
+
+# ---------------------------------------------------------------------------
+# New tests for folder structure, credentials, GOAL validation, packages
+# ---------------------------------------------------------------------------
+
+
+def test_setup_workspace_creates_subdirs(tmp_path: Path):
+    """setup_workspace creates guided subdirectories with README files."""
+    setup_workspace(tmp_path)
+    for subdir in FOLDER_READMES:
+        d = tmp_path / subdir
+        assert d.is_dir(), f"Expected {subdir} to exist"
+        assert (d / "README.md").exists(), f"Expected README.md in {subdir}"
+
+
+def test_print_folder_map(tmp_path: Path):
+    """print_folder_map returns non-empty list of lines."""
+    lines = print_folder_map(tmp_path)
+    assert len(lines) > 0
+    assert any("reference/papers" in line for line in lines)
+    assert any("uploads/data" in line for line in lines)
+    assert any("GOAL.md" in line for line in lines)
+
+
+def test_validate_goal_content_sufficient():
+    content = (
+        "# Goal\n\n"
+        "We investigate the effect of learning rate schedules on transformer "
+        "convergence speed and final loss across model scales. Specifically, "
+        "we compare constant learning rate, cosine annealing, linear warmup "
+        "plus cosine decay, and the WSD schedule. This is a detailed "
+        "description that should pass the 200-character minimum.\n"
+    )
+    assert validate_goal_content(content) is True
+
+
+def test_validate_goal_content_template_only():
+    content = (
+        "# Project Goal\n\n"
+        "<!-- User provides during init -->\n\n"
+        "## Success Criteria\n\n"
+        "- [ ] Criterion 1\n"
+        "- [ ] Criterion 2\n\n"
+        "## Timeline\n\n"
+        "<!-- e.g., 3 months -->\n"
+    )
+    assert validate_goal_content(content) is False
+
+
+def test_validate_goal_content_empty():
+    assert validate_goal_content("") is False
+    assert validate_goal_content("# Goal\n\n") is False
+
+
+def test_collect_credentials_skip_all():
+    """When all prompts return empty, credentials dict is empty."""
+    answers = OnboardingAnswers(notification_method="none")
+    creds = collect_credentials(answers, prompt_fn=lambda p, d="": "")
+    assert creds == {}
+
+
+def test_collect_credentials_some_filled():
+    """Non-empty responses get stored."""
+    responses = {
+        "ANTHROPIC_API_KEY": "sk-ant-test",
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_test",
+    }
+
+    def _prompt(prompt, default=""):
+        for var, val in responses.items():
+            if var in prompt:
+                return val
+        return ""
+
+    answers = OnboardingAnswers(notification_method="none")
+    creds = collect_credentials(answers, prompt_fn=_prompt)
+    assert creds["ANTHROPIC_API_KEY"] == "sk-ant-test"
+    assert creds["GITHUB_PERSONAL_ACCESS_TOKEN"] == "ghp_test"
+    assert len(creds) == 2
+
+
+def test_collect_credentials_slack():
+    """Slack credentials collected when notification_method is slack."""
+
+    def _prompt(prompt, default=""):
+        if "SLACK_BOT_TOKEN" in prompt:
+            return "xoxb-test"
+        return ""
+
+    answers = OnboardingAnswers(notification_method="slack")
+    creds = collect_credentials(answers, prompt_fn=_prompt)
+    assert creds.get("SLACK_BOT_TOKEN") == "xoxb-test"
+
+
+def test_write_env_file(tmp_path: Path):
+    creds = {"ANTHROPIC_API_KEY": "sk-ant-test", "WANDB_API_KEY": "wandb-key"}
+    path = write_env_file(tmp_path, creds)
+    assert path.exists()
+    content = path.read_text()
+    assert "ANTHROPIC_API_KEY=sk-ant-test" in content
+    assert "WANDB_API_KEY=wandb-key" in content
+
+
+def test_write_env_example(tmp_path: Path):
+    path = write_env_example(tmp_path)
+    assert path.exists()
+    content = path.read_text()
+    assert "ANTHROPIC_API_KEY=" in content
+    assert "SLACK_BOT_TOKEN=" in content
+    assert "SMTP_HOST=" in content
+
+
+def test_check_and_install_packages_all_present():
+    """When all packages are importable, returns empty list."""
+    failed = check_and_install_packages(install=False)
+    # typer, rich, yaml are already installed in test env
+    assert isinstance(failed, list)

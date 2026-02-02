@@ -64,7 +64,6 @@ def demo_project_path(tmp_path):
     settings = {
         "project": {
             "name": "demo-project",
-            "type": "ml-research",
             "created": "2026-01-01T00:00:00",
         },
         "compute": {
@@ -102,15 +101,10 @@ def mock_prompt_fn():
     """Return a prompt_fn callable that provides canned onboarding answers.
 
     The mapping covers every prompt asked by core.onboarding.collect_answers.
+    After the UX streamlining, collect_answers only asks about:
+    notifications, journal target, website, and mobile.
     """
     canned = {
-        "What is the main goal of this project?": "Train a ResNet on CIFAR-10 to 95% accuracy",
-        "Project type": "ml-research",
-        "GitHub repository URL": "https://github.com/demo/repo",
-        "Success criteria": "accuracy >= 95%, training time < 1h",
-        "Target completion date": "2026-06-01",
-        "Compute resources": "local-gpu",
-        "GPU name": "RTX 4090",
         "Notification method": "none",
         "Target journal or conference": "NeurIPS",
         "Do you need a web dashboard?": "no",
@@ -124,3 +118,18 @@ def mock_prompt_fn():
         return default
 
     return _prompt_fn
+
+
+@pytest.fixture
+def mock_system_info():
+    """Return a pre-built system_info dict for testing collect_answers."""
+    return {
+        "os": "Linux 6.8.0",
+        "python": "3.11.5",
+        "cpu": "x86_64",
+        "ram_gb": 32.0,
+        "gpu": "NVIDIA RTX 4090",
+        "compute_type": "local-gpu",
+        "conda": True,
+        "docker": True,
+    }

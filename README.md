@@ -13,31 +13,7 @@
   <a href="https://lucafusarbassini.github.io/research-automation/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-brightgreen.svg" alt="Docs"></a>
 </p>
 
-<details>
-<summary><strong>Quick demo</strong> (click to expand)</summary>
-
-```console
-$ ricet init my-project
-  Creating project scaffold in ./my-project ...
-  Running environment checks ...
-  Python 3.12.3  Node 20.18.0  Docker 27.2.1  LaTeX ✓
-  Project ready. Run 'ricet start' to begin.
-
-$ cd my-project && ricet start
-  Starting session "my-project-001" ...
-  Master agent ready. What would you like to research?
-
-> Analyse the effect of learning rate on transformer convergence
-
-  Dispatching to RESEARCHER agent ...
-  Dispatching to CODER agent ...
-  Running experiment in Docker sandbox ...
-  Dispatching to REVIEWER agent for validation ...
-  Writing results to paper/main.tex ...
-  Session complete. Artifacts in output/
-```
-
-</details>
+**[Full walkthrough demo](docs/demo.md)** -- realistic end-to-end workflow from init to publication.
 
 ---
 
@@ -195,7 +171,6 @@ After running `ricet init`, your project contains `config/settings.yml`:
 ```yaml
 project:
   name: "my-experiment"
-  type: "ml-research"
 
 compute:
   type: "local-gpu"       # local-cpu | local-gpu | cloud | cluster

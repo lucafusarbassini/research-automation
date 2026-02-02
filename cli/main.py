@@ -12,9 +12,18 @@ from rich.console import Console
 
 from core.onboarding import (
     OnboardingAnswers,
+    auto_install_claude_flow,
+    check_and_install_packages,
     collect_answers,
+    collect_credentials,
+    create_github_repo,
+    detect_system_for_init,
     load_settings,
+    print_folder_map,
     setup_workspace,
+    validate_goal_content,
+    write_env_example,
+    write_env_file,
     write_goal_file,
     write_settings,
 )
@@ -59,6 +68,7 @@ SETUP_SCRIPT = Path(__file__).parent.parent / "scripts" / "setup_claude_flow.sh"
 def init(
     project_name: str,
     path: Path = typer.Option(Path.cwd(), help="Where to create project"),
+    skip_repo: bool = typer.Option(False, help="Skip GitHub repo creation"),
 ):
     """Initialize a new research project with full onboarding."""
     project_path = path / project_name
@@ -68,47 +78,107 @@ def init(
         raise typer.Exit(1)
 
     console.print(f"[bold]Creating project: {project_name}[/bold]")
-    console.print("\n[bold cyan]Project Setup[/bold cyan]")
 
-    # Full onboarding questionnaire
+    # --- Step 0: Check Python packages ---
+    console.print("\n[bold cyan]Step 0: Checking Python packages...[/bold cyan]")
+    failed_pkgs = check_and_install_packages()
+    if failed_pkgs:
+        console.print(
+            f"[red]Could not install: {', '.join(failed_pkgs)}. "
+            f"Run: pip install {' '.join(failed_pkgs)}[/red]"
+        )
+    else:
+        console.print("  [green]All required packages available[/green]")
+
+    # --- Step 1: Auto-detect system ---
+    console.print("\n[bold cyan]Step 1: Detecting system...[/bold cyan]")
+    system_info = detect_system_for_init()
+
+    console.print(f"  OS:      {system_info['os']}")
+    console.print(f"  Python:  {system_info['python']}")
+    console.print(f"  CPU:     {system_info['cpu']}")
+    console.print(f"  RAM:     {system_info['ram_gb']} GB")
+    if system_info["gpu"]:
+        console.print(f"  GPU:     [green]{system_info['gpu']}[/green]")
+        console.print(f"  Compute: [green]local-gpu (auto-detected)[/green]")
+    else:
+        console.print("  GPU:     [dim]None detected[/dim]")
+        console.print("  Compute: local-cpu")
+    if system_info["docker"]:
+        console.print("  Docker:  [green]Available[/green]")
+    if system_info["conda"]:
+        console.print("  Conda:   [green]Available[/green]")
+
+    # --- Step 2: Install claude-flow ---
+    console.print("\n[bold cyan]Step 2: Setting up claude-flow...[/bold cyan]")
+    cf_ok = auto_install_claude_flow()
+    if cf_ok:
+        console.print("  [green]claude-flow is ready[/green]")
+    else:
+        console.print(
+            "  [yellow]claude-flow not available (optional, install Node.js + npm)[/yellow]"
+        )
+
+    # --- Step 3: Streamlined questionnaire ---
+    console.print("\n[bold cyan]Step 3: Project configuration[/bold cyan]")
+
     def _prompt(prompt, default=""):
         return (
             typer.prompt(prompt, default=default) if default else typer.prompt(prompt)
         )
 
-    answers = collect_answers(project_name, prompt_fn=_prompt)
+    answers = collect_answers(project_name, prompt_fn=_prompt, system_info=system_info)
+
+    # --- Step 3b: Collect API credentials ---
+    console.print("\n[bold cyan]Step 3b: API credentials[/bold cyan]")
+    console.print("  [dim]Press Enter to skip any credential you don't have yet.[/dim]")
+
+    credentials = collect_credentials(answers, prompt_fn=_prompt)
+    if credentials:
+        console.print(f"  [green]{len(credentials)} credential(s) collected[/green]")
+    else:
+        console.print(
+            "  [dim]No credentials entered (can be added later in secrets/.env)[/dim]"
+        )
+
+    # --- Step 4: Create project structure ---
+    console.print("\n[bold cyan]Step 4: Creating project...[/bold cyan]")
 
     # Copy templates
-    shutil.copytree(TEMPLATE_DIR, project_path)
+    if TEMPLATE_DIR.exists():
+        shutil.copytree(TEMPLATE_DIR, project_path)
+    else:
+        project_path.mkdir(parents=True)
 
     # Setup workspace folders
     setup_workspace(project_path)
 
-    # Write settings and goal
+    # Write settings, goal, and credentials
     write_settings(project_path, answers)
     write_goal_file(project_path, answers)
+    write_env_file(project_path, credentials)
+    write_env_example(project_path)
 
     # Create state directories
     (project_path / "state" / "sessions").mkdir(parents=True, exist_ok=True)
     (project_path / "state" / "TODO.md").write_text(
-        "# TODO\n\n- [ ] Review GOAL.md and refine success criteria\n"
+        "# TODO\n\n- [ ] Edit GOAL.md with detailed project description\n"
         "- [ ] Set up environment\n- [ ] Begin first task\n"
     )
     (project_path / "state" / "PROGRESS.md").write_text("# Progress\n\n")
 
-    # Setup claude-flow
-    if SETUP_SCRIPT.exists():
-        console.print("\n[bold]Setting up claude-flow...[/bold]")
-        result = subprocess.run(
-            ["bash", str(SETUP_SCRIPT)],
-            cwd=project_path,
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            console.print("[green]claude-flow ready[/green]")
-        else:
-            console.print("[yellow]claude-flow setup skipped (optional)[/yellow]")
+    # Write GOAL.md prompt for user
+    goal_file = project_path / "knowledge" / "GOAL.md"
+    if goal_file.exists():
+        goal_content = goal_file.read_text()
+        if "<!-- User provides during init -->" in goal_content:
+            goal_content = goal_content.replace(
+                "<!-- User provides during init -->",
+                "<!-- WRITE YOUR PROJECT DESCRIPTION HERE -->\n"
+                "<!-- Be detailed: at least one full page. Describe your research\n"
+                "     question, methodology, expected outcomes, and constraints. -->\n",
+            )
+            goal_file.write_text(goal_content)
 
     # Write claude-flow config
     cf_config_src = TEMPLATE_DIR / "config" / "claude-flow.json"
@@ -120,15 +190,65 @@ def init(
     # Add claude-flow MCP to settings if available
     _inject_claude_flow_mcp(project_path)
 
-    # Initialize git
-    subprocess.run(["git", "init"], cwd=project_path)
-    subprocess.run(["git", "add", "-A"], cwd=project_path)
-    subprocess.run(["git", "commit", "-m", "Initial project setup"], cwd=project_path)
+    # --- Step 5: GitHub repo creation ---
+    repo_url = ""
+    if not skip_repo:
+        console.print("\n[bold cyan]Step 5: GitHub repository[/bold cyan]")
+        create_repo = _prompt("Create a GitHub repo for this project? (yes/no)", "yes")
+        if create_repo.lower() in ("yes", "y"):
+            private = _prompt("Private repo? (yes/no)", "yes")
+            is_private = private.lower() in ("yes", "y")
+            console.print(f"  Creating {'private' if is_private else 'public'} repo...")
+            repo_url = create_github_repo(project_name, private=is_private)
+            if repo_url:
+                answers.github_repo = repo_url
+                console.print(f"  [green]Repo created: {repo_url}[/green]")
+                # Update settings with repo URL
+                write_settings(project_path, answers)
+            else:
+                console.print(
+                    "  [yellow]Could not create repo. "
+                    "Install gh CLI and run: gh auth login[/yellow]"
+                )
 
-    console.print(f"\n[green]Project created at {project_path}[/green]")
-    console.print("\nNext steps:")
-    console.print(f"  cd {project_path}")
-    console.print("  ricet start")
+    # --- Step 6: Initialize git ---
+    console.print("\n[bold cyan]Step 6: Initializing git...[/bold cyan]")
+    subprocess.run(["git", "init"], cwd=project_path, capture_output=True)
+    subprocess.run(["git", "add", "-A"], cwd=project_path, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "Initial project setup"],
+        cwd=project_path,
+        capture_output=True,
+    )
+
+    # If repo was created, add remote and push
+    if repo_url:
+        subprocess.run(
+            ["git", "remote", "add", "origin", repo_url],
+            cwd=project_path,
+            capture_output=True,
+        )
+        console.print(
+            "  [dim]Remote 'origin' added. Push with: git push -u origin main[/dim]"
+        )
+
+    # --- Done ---
+    console.print(f"\n[bold green]Project created at {project_path}[/bold green]")
+    console.print("")
+
+    # Print folder map
+    for line in print_folder_map(project_path):
+        console.print(f"  {line}")
+    console.print("")
+
+    console.print("[bold]Next steps:[/bold]")
+    console.print(f"  1. cd {project_path}")
+    console.print(
+        "  2. Edit [bold]knowledge/GOAL.md[/bold] with your detailed project description"
+    )
+    console.print("     (at least 200 characters of real content)")
+    console.print("  3. Add reference papers to [bold]reference/papers/[/bold]")
+    console.print("  4. ricet start")
 
 
 def _inject_claude_flow_mcp(project_path: Path) -> None:
@@ -208,10 +328,50 @@ def config(
 def start(
     session_name: str = typer.Option(None, help="Name for this session"),
 ):
-    """Start an interactive research session."""
+    """Start an interactive research session.
+
+    Loads project settings, starts enabled services (mobile, dashboard),
+    saves a claude-flow session checkpoint, then launches Claude Code.
+    """
+    import os
     import uuid as _uuid
 
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
+
+    # --- GOAL.md enforcement ---
+    goal_file = Path("knowledge/GOAL.md")
+    if not goal_file.exists():
+        console.print("[red]knowledge/GOAL.md not found. Run 'ricet init' first.[/red]")
+        raise typer.Exit(1)
+
+    goal_content = goal_file.read_text()
+    if not validate_goal_content(goal_content):
+        console.print(
+            "[yellow]knowledge/GOAL.md does not have enough content.[/yellow]"
+        )
+        console.print(
+            "Please describe your research in knowledge/GOAL.md "
+            "(at least 200 characters of real content)."
+        )
+        # Try to open editor
+        editor = os.environ.get("EDITOR", os.environ.get("VISUAL", ""))
+        if editor:
+            console.print(f"[dim]Opening {editor}...[/dim]")
+            subprocess.run([editor, str(goal_file)])
+            # Re-check after editor
+            goal_content = goal_file.read_text()
+            if not validate_goal_content(goal_content):
+                console.print(
+                    "[red]GOAL.md still insufficient. "
+                    "Please edit it and run 'ricet start' again.[/red]"
+                )
+                raise typer.Exit(1)
+        else:
+            console.print(
+                "[red]Set $EDITOR or edit knowledge/GOAL.md manually, "
+                "then run 'ricet start' again.[/red]"
+            )
+            raise typer.Exit(1)
 
     if session_name is None:
         session_name = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -231,6 +391,27 @@ def start(
         "token_estimate": 0,
     }
     session_file.write_text(json.dumps(session_data, indent=2))
+
+    # Load project settings
+    settings = load_settings(Path.cwd())
+    features = settings.get("features", {})
+
+    # Start mobile server if enabled
+    if features.get("mobile"):
+        try:
+            from core.mobile import mobile_server
+
+            mobile_server.start()
+            url = mobile_server.get_url()
+            console.print(f"[green]Mobile server: {url}[/green]")
+        except Exception as exc:
+            console.print(f"[yellow]Mobile server not started: {exc}[/yellow]")
+
+    # Show dashboard URL if website enabled
+    if features.get("website"):
+        console.print(
+            "[dim]Web dashboard enabled. Run 'ricet website preview' in another terminal.[/dim]"
+        )
 
     # Save claude-flow session state
     try:

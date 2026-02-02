@@ -13,19 +13,20 @@ import pytest
 class TestCollectAnswers:
     """Test core.onboarding.collect_answers with an injected prompt_fn."""
 
-    def test_collect_answers_with_mock_prompt(self, mock_prompt_fn):
+    def test_collect_answers_with_mock_prompt(self, mock_prompt_fn, mock_system_info):
         from core.onboarding import OnboardingAnswers, collect_answers
 
-        answers = collect_answers("demo-project", prompt_fn=mock_prompt_fn)
+        answers = collect_answers(
+            "demo-project",
+            prompt_fn=mock_prompt_fn,
+            system_info=mock_system_info,
+        )
 
         assert isinstance(answers, OnboardingAnswers)
         assert answers.project_name == "demo-project"
-        assert "ResNet" in answers.goal or "CIFAR" in answers.goal
-        assert answers.project_type == "ml-research"
-        assert answers.github_repo != "skip"
-        assert len(answers.success_criteria) >= 1
+        # GPU and compute auto-detected from system_info
         assert answers.compute_type == "local-gpu"
-        assert answers.gpu_name == "RTX 4090"
+        assert answers.gpu_name == "NVIDIA RTX 4090"
         assert answers.notification_method == "none"
         assert answers.journal_target == "NeurIPS"
         assert answers.needs_mobile is True

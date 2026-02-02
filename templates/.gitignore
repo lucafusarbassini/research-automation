@@ -35,7 +35,11 @@ venv/
 *.arrow
 data/raw/
 data/processed/
-uploads/
+uploads/**
+!uploads/
+!uploads/*/
+!uploads/**/README.md
+!uploads/**/.gitkeep
 
 # LaTeX build artifacts
 paper/*.aux
