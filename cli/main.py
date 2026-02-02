@@ -14,6 +14,7 @@ import typer
 from rich.console import Console
 
 from core.auto_commit import auto_commit
+from core.latex_scaffold import scaffold_from_config
 from core.onboarding import (
     OnboardingAnswers,
     auto_install_claude_flow,
@@ -30,6 +31,7 @@ from core.onboarding import (
     install_inferred_packages,
     load_settings,
     print_folder_map,
+    setup_docker_for_overnight,
     setup_workspace,
     validate_goal_content,
     write_env_example,
@@ -314,6 +316,29 @@ def init(
 
     (project_path / "state" / "PROGRESS.md").write_text("# Progress\n\n")
 
+    # --- Adaptive LaTeX scaffold generation ---
+    console.print("\n[bold cyan]Generating adaptive LaTeX scaffold...[/bold cyan]")
+    latex_files = scaffold_from_config(
+        project_path,
+        paper_type=answers.paper_type,
+        project_type=answers.project_type,
+        goal_text=_goal_text,
+        overwrite=True,  # Replace static template copies with adaptive versions
+    )
+    if latex_files:
+        from core.latex_scaffold import detect_domain
+
+        _domain = detect_domain(_goal_text, answers.project_type)
+        console.print(
+            f"  [green]Paper type: {answers.paper_type}, " f"domain: {_domain}[/green]"
+        )
+        console.print(
+            f"  [green]Generated {len(latex_files)} LaTeX file(s): "
+            f"{', '.join(latex_files.keys())}[/green]"
+        )
+    else:
+        console.print("  [dim]LaTeX scaffold: paper/ already populated[/dim]")
+
     # Write GOAL.md prompt for user
     goal_file = project_path / "knowledge" / "GOAL.md"
     if goal_file.exists():
@@ -393,6 +418,30 @@ def init(
     except Exception as exc:
         logger.debug("Could not register project: %s", exc)
 
+    # --- Step 7: Docker setup for overnight mode ---
+    console.print(
+        "\n[bold cyan]Step 7: Setting up Docker for overnight mode...[/bold cyan]"
+    )
+    docker_result = setup_docker_for_overnight(
+        project_path,
+        print_fn=lambda msg: console.print(f"[dim]{msg}[/dim]"),
+    )
+    if docker_result.get("test_passed"):
+        console.print(
+            "  [green]Docker is ready - overnight mode fully configured[/green]"
+        )
+    elif docker_result.get("skipped"):
+        console.print(
+            "  [yellow]Docker not available - overnight mode will require "
+            "Docker to be installed before use.[/yellow]"
+        )
+        console.print("  [dim]Install Docker, then run: ricet overnight[/dim]")
+    else:
+        console.print(
+            "  [yellow]Docker setup incomplete - some features may not work. "
+            "You can retry by rebuilding the image.[/yellow]"
+        )
+
     # --- Done ---
     console.print(f"\n[bold green]Project ready![/bold green]")
     console.print("")
@@ -402,18 +451,21 @@ def init(
         console.print(f"  {line}")
     console.print("")
 
-    docker_available = shutil.which("docker") is not None
-
     console.print("[bold]Next steps:[/bold]")
     console.print(f"  cd {project_name}")
     console.print("  ricet start          # Launch interactive research session")
-    console.print("  ricet overnight      # Run autonomous overnight mode")
+    console.print("  ricet overnight      # Run autonomous overnight mode (Docker)")
     console.print("  ricet status         # Check project status")
     console.print("  ricet --help         # See all commands")
-    if docker_available:
-        console.print("  ricet overnight -d   # Run overnight in Docker sandbox")
+    if docker_result.get("test_passed"):
         console.print(
-            "\n  [dim]Docker detected — overnight sandbox available via --docker[/dim]"
+            "\n  [green]Docker is ready - overnight runs will be safely "
+            "isolated in a container.[/green]"
+        )
+    else:
+        console.print(
+            "\n  [yellow]Install Docker to enable safe overnight mode: "
+            "https://docs.docker.com/get-docker/[/yellow]"
         )
 
 
@@ -750,26 +802,96 @@ def start(
     # Launch Claude Code with a valid UUID session
     subprocess.run(["claude", "--session-id", session_uuid])
 
+    # --- End-of-session review report ---
+    from core.session import close_session, generate_review_report
+
+    console.print("\n[bold]Generating session review report...[/bold]")
+    try:
+        report_path = generate_review_report(session)
+        console.print(f"[green]Review report saved: {report_path}[/green]")
+    except Exception as exc:
+        console.print(f"[yellow]Could not generate review report: {exc}[/yellow]")
+
+    close_session(session)
+    auto_commit(f"ricet start: end session {session_name}")
+
 
 @app.command()
 def overnight(
     task_file: Path = typer.Option(Path("state/TODO.md"), help="Task file to execute"),
     iterations: int = typer.Option(20, help="Max iterations"),
-    docker: bool = typer.Option(
-        False, "--docker", "-d", help="Run inside Docker sandbox"
+    no_docker: bool = typer.Option(
+        False,
+        "--no-docker",
+        help=(
+            "ADVANCED USERS ONLY: Skip Docker isolation. "
+            "Overnight mode runs with elevated permissions and can execute "
+            "arbitrary commands on your system. Without Docker, there is NO "
+            "sandbox protecting your files, network, or system configuration. "
+            "Only use this if you fully understand the risks."
+        ),
     ),
 ):
-    """Run overnight autonomous mode.
+    """Run overnight autonomous mode (requires Docker for safety).
 
-    Uses claude-flow swarm orchestration when available, falls back to raw claude -p loop.
+    Overnight mode runs unattended with --dangerously-skip-permissions, which
+    means Claude can execute any command without confirmation. Docker provides
+    a safety sandbox so that these commands cannot damage your host system.
+
+    Docker is REQUIRED by default. If you are an advanced user who understands
+    the risks, you may pass --no-docker to bypass this requirement.
     """
-    if docker:
-        if not shutil.which("docker"):
+    from core.devops import (
+        build_ricet_image,
+        ensure_docker_ready,
+    )
+
+    # Detect whether we are already running inside the ricet container
+    _inside_container = (
+        Path("/.dockerenv").exists() or Path("/run/.containerenv").exists()
+    )
+
+    if not no_docker and not _inside_container:
+        # Docker is required - validate the full stack
+        docker_status = ensure_docker_ready()
+
+        if not docker_status["docker_installed"]:
             console.print(
-                "[red]Docker not found. Install Docker or run without --docker.[/red]"
+                "[bold red]Docker is required for overnight mode.[/bold red]\n"
+            )
+            console.print(
+                "Overnight mode runs with elevated permissions "
+                "(--dangerously-skip-permissions) which allows Claude to execute "
+                "arbitrary commands. Docker provides a safe, isolated sandbox so "
+                "that your host system is protected.\n"
+            )
+            console.print("[bold]How to install Docker:[/bold]")
+            console.print(docker_status["install_instructions"])
+            console.print(
+                "\n[dim]Advanced users: pass --no-docker to bypass this "
+                "requirement (NOT recommended).[/dim]"
             )
             raise typer.Exit(1)
 
+        if not docker_status["daemon_running"]:
+            console.print("[bold red]Docker daemon is not running.[/bold red]")
+            console.print(docker_status["error"])
+            raise typer.Exit(1)
+
+        if not docker_status["image_available"]:
+            console.print(
+                "[yellow]Docker image 'ricet:latest' not found. "
+                "Building it now...[/yellow]"
+            )
+            if not build_ricet_image():
+                console.print(
+                    "[red]Failed to build Docker image. "
+                    "Check the output above.[/red]"
+                )
+                raise typer.Exit(1)
+            console.print("[green]Docker image built successfully.[/green]")
+
+        # All checks passed - launch inside Docker
         console.print("[bold]Launching overnight run in Docker sandbox...[/bold]")
         project_dir = str(Path.cwd().resolve())
         claude_dir = str(Path.home() / ".claude")
@@ -785,6 +907,8 @@ def overnight(
             f"{claude_dir}:/home/ricet/.claude:ro",
             "-w",
             "/workspace",
+            "--memory=8g",
+            "--cpus=8",
             "ricet:latest",
             "ricet",
             "overnight",
@@ -792,20 +916,25 @@ def overnight(
             str(iterations),
         ]
 
-        # Build image if not exists
-        check = subprocess.run(
-            ["docker", "image", "inspect", "ricet:latest"],
-            capture_output=True,
-        )
-        if check.returncode != 0:
-            console.print("[yellow]Building ricet Docker image...[/yellow]")
-            docker_dir = Path(__file__).parent.parent / "docker"
-            subprocess.run(
-                ["docker", "build", "-t", "ricet:latest", str(docker_dir)], check=True
-            )
-
         result = subprocess.run(docker_cmd)
         raise typer.Exit(result.returncode)
+
+    if no_docker and not _inside_container:
+        console.print(
+            "[bold yellow]WARNING: Running overnight mode WITHOUT Docker "
+            "isolation.[/bold yellow]\n"
+            "[yellow]Claude will have unrestricted access to your host system.\n"
+            "This includes the ability to read/write/delete ANY file, install "
+            "software, and make network requests without sandboxing.[/yellow]\n"
+        )
+        confirm = typer.confirm(
+            "Are you sure you want to proceed without Docker?", default=False
+        )
+        if not confirm:
+            console.print(
+                "Aborted. Run without --no-docker to use Docker (recommended)."
+            )
+            raise typer.Exit(0)
 
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
     from core.resources import (
@@ -912,6 +1041,16 @@ def overnight(
             tag = "[green]OK[/green]" if mok else "[red]FAIL[/red]"
             console.print(f"  {mname}: {tag}")
         auto_commit("ricet overnight: post-run maintenance")
+
+        # --- End-of-overnight review report ---
+        from core.session import generate_review_report
+
+        console.print("\n[bold]Generating session review report...[/bold]")
+        try:
+            report_path = generate_review_report()
+            console.print(f"[green]Review report saved: {report_path}[/green]")
+        except Exception as exc:
+            console.print(f"[yellow]Could not generate review report: {exc}[/yellow]")
         return
     except ClaudeFlowUnavailable:
         pass
@@ -1044,6 +1183,16 @@ def overnight(
         tag = "[green]OK[/green]" if mok else "[red]FAIL[/red]"
         console.print(f"  {mname}: {tag}")
     auto_commit("ricet overnight: post-run maintenance")
+
+    # --- End-of-overnight review report ---
+    from core.session import generate_review_report
+
+    console.print("\n[bold]Generating session review report...[/bold]")
+    try:
+        report_path = generate_review_report()
+        console.print(f"[green]Review report saved: {report_path}[/green]")
+    except Exception as exc:
+        console.print(f"[yellow]Could not generate review report: {exc}[/yellow]")
 
 
 @app.command()
@@ -1576,7 +1725,7 @@ def mcp_search(
     """Search the MCP catalog for a server matching your need.
 
     Claude reads the full MCP catalog (1 300+ servers) and suggests the
-    best match, its install command, and any API keys required.
+    best match, its install command, and any credentials required.
     """
     from core.mcps import suggest_and_install_mcp
 
@@ -2016,14 +2165,16 @@ def debug(
     console.print(f"[bold]Starting auto-debug for:[/bold] {command}")
     result = auto_debug_loop(command)
     auto_commit(f"ricet debug: auto-debug {command[:40]}")
-    if result.get("fixed"):
+    if result.get("success"):
         console.print("[green]Issue resolved after auto-debug.[/green]")
-        if result.get("patch"):
-            console.print(f"[bold]Patch:[/bold]\n{result['patch']}")
+        if result.get("fix_applied"):
+            console.print(f"[bold]Fix applied:[/bold]\n{result.get('fix_applied')}")
     else:
         console.print("[yellow]Auto-debug could not fully resolve the issue.[/yellow]")
-        if result.get("log"):
-            console.print(f"[bold]Debug log:[/bold]\n{result['log']}")
+        if result.get("original_error"):
+            console.print(f"[bold]Error:[/bold]\n{result.get('original_error')}")
+        if result.get("fix_applied"):
+            console.print(f"[bold]Attempted fix:[/bold]\n{result.get('fix_applied')}")
 
 
 @app.command()
