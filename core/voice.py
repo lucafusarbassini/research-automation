@@ -104,24 +104,33 @@ def detect_language(text: str) -> str:
     return "en"
 
 
-def translate_to_english(text: str, source_lang: str = "auto") -> str:
-    """Placeholder for translation. Returns text as-is if English.
+def translate_to_english(text: str, source_lang: str = "", *, run_cmd=None) -> str:
+    """Translate non-English text to English using Claude Haiku.
 
-    In production, this would call a translation API.
-
-    Args:
-        text: Input text.
-        source_lang: Source language code.
-
-    Returns:
-        English text.
+    If text is already English or Claude is unavailable, returns original text.
     """
-    if source_lang == "en" or source_lang == "auto":
-        lang = detect_language(text)
-        if lang == "en":
-            return text
-    # Placeholder: return original text with a note
-    logger.warning("Translation not implemented. Returning original text.")
+    if not text.strip():
+        return text
+
+    # Detect language if not provided
+    if not source_lang:
+        source_lang = detect_language(text)
+
+    if source_lang == "en":
+        return text
+
+    from core.claude_helper import call_claude
+
+    prompt = (
+        f"Translate the following {source_lang} text to English. "
+        "Preserve technical terms and formatting. Reply with ONLY the translation.\n\n"
+        f"{text}"
+    )
+    result = call_claude(prompt, run_cmd=run_cmd)
+    if result and result.strip():
+        return result.strip()
+
+    logger.warning("Translation unavailable, returning original text.")
     return text
 
 

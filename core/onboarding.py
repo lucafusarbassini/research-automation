@@ -230,6 +230,62 @@ def detect_system_for_init() -> dict:
     return result
 
 
+def _auto_install_gh(*, run_cmd=None) -> bool:
+    """Attempt to install the GitHub CLI (gh) if it is not already available.
+
+    Strategy: try conda first (works cross-platform), then brew, then warn.
+
+    Args:
+        run_cmd: Optional callable(cmd, check) -> subprocess.CompletedProcess
+                 override for testing.
+
+    Returns:
+        True if gh is available after this call, False otherwise.
+    """
+    if run_cmd is None:
+
+        def run_cmd(cmd: str, check: bool = False) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                cmd.split(),
+                capture_output=True,
+                timeout=300,
+                check=check,
+            )
+
+    # Already installed?
+    if shutil.which("gh"):
+        return True
+
+    # Try conda/mamba install
+    for tool in ("mamba", "conda"):
+        if shutil.which(tool):
+            logger.info("Attempting to install gh via %s...", tool)
+            try:
+                result = run_cmd(f"{tool} install -c conda-forge gh -y")
+                if result.returncode == 0 and shutil.which("gh"):
+                    logger.info("gh installed successfully via %s", tool)
+                    return True
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+    # Try brew
+    if shutil.which("brew"):
+        logger.info("Attempting to install gh via brew...")
+        try:
+            result = run_cmd("brew install gh")
+            if result.returncode == 0 and shutil.which("gh"):
+                logger.info("gh installed successfully via brew")
+                return True
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+
+    logger.warning(
+        "Could not auto-install gh. Install manually: "
+        "https://cli.github.com/ or 'conda install -c conda-forge gh'"
+    )
+    return False
+
+
 def create_github_repo(
     project_name: str,
     *,
@@ -256,12 +312,30 @@ def create_github_repo(
                 timeout=30,
             )
 
-    # Check if gh is available and authenticated
+    # Auto-install gh if missing
+    if not shutil.which("gh"):
+        if _auto_install_gh():
+            logger.info("gh CLI now available after auto-install")
+        else:
+            logger.warning("gh CLI not available. Skipping repo creation.")
+            return ""
+
+    # Check if gh is authenticated; if not, try interactive login
     try:
         auth_check = run_cmd(["gh", "auth", "status"])
         if auth_check.returncode != 0:
-            logger.warning("gh CLI not authenticated. Skipping repo creation.")
-            return ""
+            logger.info("gh CLI not authenticated. Attempting gh auth login...")
+            try:
+                login_result = subprocess.run(
+                    ["gh", "auth", "login"],
+                    timeout=120,
+                )
+                if login_result.returncode != 0:
+                    logger.warning("gh auth login failed. Skipping repo creation.")
+                    return ""
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                logger.warning("gh auth login timed out. Skipping repo creation.")
+                return ""
     except (FileNotFoundError, subprocess.TimeoutExpired):
         logger.warning("gh CLI not available. Skipping repo creation.")
         return ""

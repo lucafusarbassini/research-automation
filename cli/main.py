@@ -694,6 +694,15 @@ def overnight(
         console.print("[cyan]Using claude-flow swarm orchestration[/cyan]")
         swarm_tasks = [{"type": "coder", "task": tasks}]
         for i in range(iterations):
+            # Re-read constraints to check for drift
+            constraints_file = Path("knowledge/CONSTRAINTS.md")
+            if constraints_file.exists():
+                constraints_text = constraints_file.read_text().strip()
+                if constraints_text:
+                    # Prepend constraints to the task for this iteration
+                    enriched_tasks = f"CONSTRAINTS (must respect):\n{constraints_text[:1000]}\n\n{tasks}"
+                    swarm_tasks = [{"type": "coder", "task": enriched_tasks}]
+
             # Resource-aware scheduling
             snap = monitor_resources()
             decision = make_resource_decision(snap)
@@ -770,6 +779,13 @@ def overnight(
 
     # Use plan_execute_iterate for complex multi-subtask work
     if len(subtasks) > 3:
+        # Re-read constraints to check for drift
+        constraints_file = Path("knowledge/CONSTRAINTS.md")
+        if constraints_file.exists():
+            constraints_text = constraints_file.read_text().strip()
+            if constraints_text:
+                enriched_tasks = f"CONSTRAINTS (must respect):\n{constraints_text[:1000]}\n\n{enriched_tasks}"
+
         console.print(
             "[cyan]Using plan-execute-iterate strategy for complex task[/cyan]"
         )
@@ -785,6 +801,14 @@ def overnight(
             console.print(f"  [{pr.agent.value}] {status_label} {pr.task[:80]}")
     else:
         for i in range(iterations):
+            # Re-read constraints to check for drift
+            constraints_file = Path("knowledge/CONSTRAINTS.md")
+            if constraints_file.exists():
+                constraints_text = constraints_file.read_text().strip()
+                if constraints_text:
+                    # Prepend constraints to the task for this iteration
+                    enriched_tasks = f"CONSTRAINTS (must respect):\n{constraints_text[:1000]}\n\n{tasks}"
+
             # Resource-aware scheduling
             snap = monitor_resources()
             decision = make_resource_decision(snap)
