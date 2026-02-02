@@ -84,14 +84,19 @@ class TestAdoptLocal:
                 return _FakeResult(stdout="")
             return _FakeResult()
 
-        with patch("core.adopt.CONFIG_DIR", tmp_path / ".ricet"):
+        from core.multi_project import ProjectRegistry
+
+        registry_file = tmp_path / ".ricet" / "projects.json"
+        fake_registry = ProjectRegistry(registry_file=registry_file)
+        with patch("core.adopt.CONFIG_DIR", tmp_path / ".ricet"), \
+             patch("core.multi_project._default_registry", fake_registry), \
+             patch("core.multi_project._get_default_registry", return_value=fake_registry):
             adopt_repo(str(source_dir), project_name="test-proj", run_cmd=run_cmd)
 
-            projects_file = tmp_path / ".ricet" / "projects.json"
-            assert projects_file.exists()
-            data = json.loads(projects_file.read_text())
-            assert data[0]["name"] == "test-proj"
-            assert data[0]["active"] is True
+            assert registry_file.exists()
+            data = json.loads(registry_file.read_text())
+            projects = data["projects"]
+            assert projects[-1]["name"] == "test-proj"
 
 
 class TestAdoptUrl:

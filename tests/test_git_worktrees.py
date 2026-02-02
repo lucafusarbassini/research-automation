@@ -32,8 +32,9 @@ def test_create_worktree_default_path(mock_run, tmp_path):
         result = create_worktree("feature/new-parser")
 
     assert "feature-new-parser" in str(result)
-    mock_run.assert_called_once()
-    cmd = mock_run.call_args[0][0]
+    assert mock_run.call_count == 2  # rev-parse check + worktree add
+    # Second call is the actual worktree add
+    cmd = mock_run.call_args_list[1][0][0]
     assert cmd[:3] == ["git", "worktree", "add"]
     assert "feature/new-parser" in cmd
 
