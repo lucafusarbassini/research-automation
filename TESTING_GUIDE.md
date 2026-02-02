@@ -211,7 +211,7 @@ ricet paper modernize
 ### 9e. Style transfer (requires a reference PDF)
 
 ```bash
-ricet paper adapt-style --reference /tmp/reference.txt
+ricet paper adapt-style --reference /home/fusar/claude/research-automation/templates/paper/journals/nature/s41586-023-06812-z.pdf
 ```
 
 **Check:** Analyzes the reference style and reports style metrics. Attempts to rewrite paper sections in that style.
@@ -259,7 +259,7 @@ ricet browse "https://en.wikipedia.org/wiki/Attention_(machine_learning)"
 ### 11a. Browse with screenshot
 
 ```bash
-ricet browse "https://example.com" --screenshot /tmp/example-screenshot.png
+ricet browse "https://paperboatch.com/" --screenshot /tmp/example-screenshot.png
 ```
 
 **Check:** Saves a screenshot (requires Puppeteer MCP).
@@ -576,15 +576,15 @@ cd /tmp/ricet-test/demo-project
 # First add some knowledge to another project
 mkdir -p /tmp/ricet-test/other-project/knowledge
 cat > /tmp/ricet-test/other-project/knowledge/ENCYCLOPEDIA.md << 'EOF'
+# Project Encyclopedia
+
 ## Tricks
 
-### 2025-01-15T10:00:00
-Using mixed precision training reduces memory by 40% with minimal accuracy loss.
+- [2025-01-15 10:00] Using mixed precision training reduces memory by 40% with minimal accuracy loss.
 
 ## What Works
 
-### 2025-01-15T11:00:00
-Cosine annealing schedule works better than step decay for fine-tuning.
+- [2025-01-15 11:00] Cosine annealing schedule works better than step decay for fine-tuning.
 EOF
 
 ricet sync-learnings /tmp/ricet-test/other-project
@@ -997,7 +997,7 @@ unset AUTO_PUSH
 ### 41a. Full test suite
 
 ```bash
-cd /path/to/research-automation
+cd /home/fusar/claude/research-automation
 python -m pytest tests/ -v
 ```
 
@@ -1063,7 +1063,7 @@ python -m pytest tests/ -v --cov=core --cov=cli --cov-report=term-missing
 ## 42. Docker Overnight (requires Docker)
 
 ```bash
-cd /path/to/research-automation
+cd /home/fusar/claude/research-automation
 
 # Build the Docker image
 docker build -t ricet docker/
