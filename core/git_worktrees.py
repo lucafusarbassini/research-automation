@@ -37,12 +37,18 @@ def create_worktree(branch: str, path: Optional[Path] = None) -> Path:
 
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    subprocess.run(
-        ["git", "worktree", "add", str(path), branch],
-        check=True,
+    # Check if the branch already exists
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", branch],
         capture_output=True,
         text=True,
     )
+    if result.returncode == 0:
+        cmd = ["git", "worktree", "add", str(path), branch]
+    else:
+        cmd = ["git", "worktree", "add", "-b", branch, str(path)]
+
+    subprocess.run(cmd, check=True, capture_output=True, text=True)
 
     logger.info("Created worktree for branch %s at %s", branch, path)
     return path
