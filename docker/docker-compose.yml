@@ -42,6 +42,8 @@ services:
       - ~/.gitconfig:/root/.gitconfig:ro
       # Mount Claude auth so browser login works inside the container
       - ${CLAUDE_AUTH_DIR:-~/.claude}:/root/.claude:ro
+      # Mount Claude auth for non-root user (ricet) used by --docker flag
+      - ${CLAUDE_AUTH_DIR:-~/.claude}:/home/ricet/.claude:ro
 
     # Keep the container running even if ttyd restarts
     restart: unless-stopped

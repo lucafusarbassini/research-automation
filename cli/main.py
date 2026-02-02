@@ -650,11 +650,58 @@ def start(
 def overnight(
     task_file: Path = typer.Option(Path("state/TODO.md"), help="Task file to execute"),
     iterations: int = typer.Option(20, help="Max iterations"),
+    docker: bool = typer.Option(
+        False, "--docker", "-d", help="Run inside Docker sandbox"
+    ),
 ):
     """Run overnight autonomous mode.
 
     Uses claude-flow swarm orchestration when available, falls back to raw claude -p loop.
     """
+    if docker:
+        if not shutil.which("docker"):
+            console.print(
+                "[red]Docker not found. Install Docker or run without --docker.[/red]"
+            )
+            raise typer.Exit(1)
+
+        console.print("[bold]Launching overnight run in Docker sandbox...[/bold]")
+        project_dir = str(Path.cwd().resolve())
+        claude_dir = str(Path.home() / ".claude")
+
+        docker_cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "-it",
+            "-v",
+            f"{project_dir}:/workspace",
+            "-v",
+            f"{claude_dir}:/home/ricet/.claude:ro",
+            "-w",
+            "/workspace",
+            "ricet:latest",
+            "ricet",
+            "overnight",
+            "--iterations",
+            str(iterations),
+        ]
+
+        # Build image if not exists
+        check = subprocess.run(
+            ["docker", "image", "inspect", "ricet:latest"],
+            capture_output=True,
+        )
+        if check.returncode != 0:
+            console.print("[yellow]Building ricet Docker image...[/yellow]")
+            docker_dir = Path(__file__).parent.parent / "docker"
+            subprocess.run(
+                ["docker", "build", "-t", "ricet:latest", str(docker_dir)], check=True
+            )
+
+        result = subprocess.run(docker_cmd)
+        raise typer.Exit(result.returncode)
+
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
     from core.resources import (
         cleanup_old_checkpoints,
@@ -2211,6 +2258,217 @@ def fidelity():
         console.print("\n[bold]Recommendations:[/bold]")
         for i, rec in enumerate(recs, 1):
             console.print(f"  {i}. {rec}")
+
+
+@app.command(name="test-gen")
+def test_gen(
+    file: str = typer.Option(
+        "", "--file", "-f", help="Specific file to generate tests for"
+    ),
+):
+    """Auto-generate pytest tests for project code."""
+    from core.auto_test import generate_tests_for_file, generate_tests_for_project
+
+    if file:
+        source = Path(file)
+        if not source.exists():
+            console.print(f"[red]File not found: {source}[/red]")
+            raise typer.Exit(1)
+        console.print(f"[bold]Generating tests for: {source}[/bold]")
+        test_path = generate_tests_for_file(source)
+        if test_path:
+            console.print(f"[green]Tests written to: {test_path}[/green]")
+            auto_commit(f"ricet test-gen: generated tests for {source.name}")
+        else:
+            console.print(
+                "[yellow]Could not generate tests (Claude may be unavailable).[/yellow]"
+            )
+    else:
+        project_path = Path.cwd()
+        console.print(f"[bold]Generating tests for project: {project_path.name}[/bold]")
+        generated = generate_tests_for_project(project_path)
+        if generated:
+            console.print(f"[green]Generated {len(generated)} test file(s):[/green]")
+            for tp in generated:
+                console.print(f"  {tp}")
+            auto_commit(f"ricet test-gen: generated {len(generated)} test files")
+        else:
+            console.print(
+                "[yellow]No test files generated. Check that .py files exist in src/ or project root.[/yellow]"
+            )
+
+
+@app.command()
+def package(
+    action: str = typer.Argument(help="Action: init, build, publish"),
+):
+    """Prepare and publish your project as a pip package."""
+    if action == "init":
+        _package_init()
+    elif action == "build":
+        _package_build()
+    elif action == "publish":
+        _package_publish()
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: init, build, publish")
+        raise typer.Exit(1)
+
+
+def _package_init() -> None:
+    """Generate a minimal pyproject.toml for the user's project."""
+    from core.claude_helper import call_claude
+
+    project_path = Path.cwd()
+    pyproject = project_path / "pyproject.toml"
+    if pyproject.exists():
+        console.print(
+            "[yellow]pyproject.toml already exists. Overwrite? (yes/no)[/yellow]"
+        )
+        confirm = typer.prompt("Overwrite?", default="no")
+        if confirm.lower() not in ("yes", "y"):
+            console.print("[dim]Aborted.[/dim]")
+            return
+
+    # Gather info
+    project_name = typer.prompt("Package name", default=project_path.name)
+    author = typer.prompt("Author name", default="")
+
+    # Try to read GOAL.md for description
+    description = ""
+    goal_file = project_path / "knowledge" / "GOAL.md"
+    if goal_file.exists():
+        goal_text = goal_file.read_text()
+        # Ask Claude to summarize into a one-liner
+        summary = call_claude(
+            "Summarize this research project description into a single "
+            "sentence suitable for a Python package description (max 100 chars). "
+            "Reply with just the sentence, no quotes.\n\n"
+            f"{goal_text[:2000]}"
+        )
+        if summary:
+            description = summary.strip().strip('"').strip("'")[:100]
+
+    if not description:
+        description = typer.prompt(
+            "One-line description", default=f"{project_name} package"
+        )
+
+    content = f"""[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "{project_name}"
+version = "0.1.0"
+description = "{description}"
+requires-python = ">=3.11"
+"""
+    if author:
+        content += f"""authors = [
+    {{name = "{author}"}},
+]
+"""
+
+    content += """
+[project.scripts]
+# Uncomment and edit to add a CLI entry point:
+# my-tool = "src.main:main"
+"""
+
+    pyproject.write_text(content)
+    console.print(f"[green]pyproject.toml created at {pyproject}[/green]")
+    auto_commit(f"ricet package init: created pyproject.toml for {project_name}")
+
+
+def _package_build() -> None:
+    """Build the package using python -m build."""
+    from core.onboarding import ensure_package as _ensure_pkg
+
+    project_path = Path.cwd()
+    pyproject = project_path / "pyproject.toml"
+    if not pyproject.exists():
+        console.print(
+            "[red]No pyproject.toml found. Run 'ricet package init' first.[/red]"
+        )
+        raise typer.Exit(1)
+
+    # Ensure build tool is available
+    _ensure_pkg("build")
+
+    console.print("[bold]Building package...[/bold]")
+    result = subprocess.run(
+        ["python", "-m", "build"],
+        cwd=str(project_path),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        console.print("[green]Package built successfully.[/green]")
+        dist_dir = project_path / "dist"
+        if dist_dir.exists():
+            for f in sorted(dist_dir.iterdir()):
+                console.print(f"  {f.name}")
+        auto_commit("ricet package build: built distribution")
+    else:
+        console.print("[red]Build failed:[/red]")
+        console.print(result.stderr[-500:] if result.stderr else result.stdout[-500:])
+        raise typer.Exit(1)
+
+
+def _package_publish() -> None:
+    """Publish the package to PyPI using twine."""
+    import os
+
+    from core.onboarding import ensure_package as _ensure_pkg
+
+    project_path = Path.cwd()
+    dist_dir = project_path / "dist"
+
+    if not dist_dir.exists() or not list(dist_dir.iterdir()):
+        console.print(
+            "[red]No dist/ directory found. Run 'ricet package build' first.[/red]"
+        )
+        raise typer.Exit(1)
+
+    # Check for PYPI_TOKEN
+    token = os.environ.get("PYPI_TOKEN", "")
+    if not token:
+        # Try loading from secrets/.env
+        env_file = project_path / "secrets" / ".env"
+        if env_file.exists():
+            for line in env_file.read_text().splitlines():
+                if line.startswith("PYPI_TOKEN="):
+                    token = line.split("=", 1)[1].strip()
+                    break
+
+    if not token:
+        console.print(
+            "[red]PYPI_TOKEN not found. Set it in secrets/.env or as an environment variable.[/red]"
+        )
+        console.print(
+            "[dim]Get a token at: https://pypi.org/manage/account/token/[/dim]"
+        )
+        raise typer.Exit(1)
+
+    # Ensure twine is available
+    _ensure_pkg("twine")
+
+    console.print("[bold]Publishing to PyPI...[/bold]")
+    result = subprocess.run(
+        ["python", "-m", "twine", "upload", "dist/*"],
+        cwd=str(project_path),
+        capture_output=True,
+        text=True,
+        env={**os.environ, "TWINE_USERNAME": "__token__", "TWINE_PASSWORD": token},
+    )
+    if result.returncode == 0:
+        console.print("[green]Package published to PyPI successfully.[/green]")
+        auto_commit("ricet package publish: published to PyPI")
+    else:
+        console.print("[red]Publish failed:[/red]")
+        console.print(result.stderr[-500:] if result.stderr else result.stdout[-500:])
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

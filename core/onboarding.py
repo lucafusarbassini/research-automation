@@ -711,6 +711,12 @@ CREDENTIAL_REGISTRY: list[tuple[str, str, str, str]] = [
     ),
     # --- Publishing ---
     (
+        "PYPI_TOKEN",
+        "PyPI API token (for publishing pip packages)",
+        "https://pypi.org/manage/account/token/ → Add API token",
+        "publishing",
+    ),
+    (
         "MEDIUM_TOKEN",
         "Medium integration token (publishing)",
         "https://medium.com/me/settings/security → Integration tokens → Get token",
