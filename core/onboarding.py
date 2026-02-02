@@ -217,16 +217,29 @@ def detect_system_for_init() -> dict:
     from core.environment import discover_system
 
     info = discover_system()
+    compute_type = "local-gpu" if info.gpu else "local-cpu"
     result = {
         "os": f"{info.os} {info.os_version}",
         "python": info.python_version,
         "cpu": info.cpu,
         "ram_gb": info.ram_gb,
         "gpu": info.gpu,
-        "compute_type": "local-gpu" if info.gpu else "local-cpu",
+        "compute_type": compute_type,
         "conda": info.conda_available,
         "docker": info.docker_available,
     }
+
+    # Log the detected environment decision
+    try:
+        from core.knowledge import log_decision
+
+        log_decision(
+            f"env detected: {compute_type}, conda={info.conda_available}",
+            f"system has GPU={bool(info.gpu)}, docker={info.docker_available}",
+        )
+    except Exception:
+        pass  # Never break the main flow for logging
+
     return result
 
 
@@ -1107,10 +1120,31 @@ def infer_packages_from_goal(
     if use_claude and len(goal_content.strip()) > 50:
         result = _infer_packages_via_claude(goal_content, run_cmd=run_cmd)
         if result:
+            try:
+                from core.knowledge import log_decision
+
+                log_decision(
+                    f"inferred {len(result)} packages via Claude",
+                    "Claude analyzed GOAL.md for domain-specific dependencies",
+                )
+            except Exception:
+                pass  # Never break the main flow for logging
             return result
 
     # Fallback: keyword matching
-    return _infer_packages_via_keywords(goal_content)
+    packages = _infer_packages_via_keywords(goal_content)
+
+    try:
+        from core.knowledge import log_decision
+
+        log_decision(
+            f"inferred {len(packages)} packages via keyword matching",
+            "Claude unavailable or goal too short, used keyword fallback",
+        )
+    except Exception:
+        pass  # Never break the main flow for logging
+
+    return packages
 
 
 def _infer_packages_via_claude(
@@ -1526,7 +1560,26 @@ def validate_goal_content(content: str, min_chars: int = 200) -> bool:
         text = text.replace(phrase, "")
     # Strip remaining whitespace
     text = text.strip()
-    return len(text) >= min_chars
+    is_valid = len(text) >= min_chars
+
+    # Log the validation outcome
+    try:
+        from core.knowledge import log_decision
+
+        if is_valid:
+            log_decision(
+                "GOAL.md validated as sufficient",
+                f"{len(text)} chars of real content (min {min_chars})",
+            )
+        else:
+            log_decision(
+                "GOAL.md flagged as insufficient",
+                f"only {len(text)} chars of real content (min {min_chars})",
+            )
+    except Exception:
+        pass  # Never break the main flow for logging
+
+    return is_valid
 
 
 def load_settings(project_path: Path) -> dict:

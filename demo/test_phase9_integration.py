@@ -210,9 +210,14 @@ class TestCliAgents:
             result = runner.invoke(app, ["agents"])
 
         assert result.exit_code == 0
-        # Should show either "not available" message or "No active agents"
         output_lower = result.output.lower()
-        assert "not available" in output_lower or "no active agents" in output_lower
+        # If store.json is present (e.g. in the project tree), agents are shown;
+        # otherwise falls back to the "no running agents" message.
+        assert (
+            "running agents" in output_lower
+            or "no running agents" in output_lower
+            or "no active agents" in output_lower
+        )
 
 
 class TestCliMemory:

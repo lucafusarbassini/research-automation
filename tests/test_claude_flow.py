@@ -142,12 +142,28 @@ class TestMemory:
             )
             result = bridge.query_memory("batch size")
             assert len(result["results"]) == 1
+            call_args = mock.call_args[0][0]
+            assert "memory" in call_args
+            assert "search" in call_args
+            assert "--query" in call_args
+            assert "--limit" in call_args
+
+    def test_query_memory_with_namespace(self, bridge):
+        with patch("core.claude_flow.subprocess.run") as mock:
+            mock.return_value = _mock_run(stdout='{"results": []}')
+            result = bridge.query_memory("test", namespace="patterns")
+            call_args = mock.call_args[0][0]
+            assert "--namespace" in call_args
+            assert "patterns" in call_args
 
     def test_store_memory(self, bridge):
         with patch("core.claude_flow.subprocess.run") as mock:
             mock.return_value = _mock_run(stdout='{"id": "mem-123"}')
             result = bridge.store_memory("vectorized ops are fast", namespace="tricks")
             assert result["id"] == "mem-123"
+            call_args = mock.call_args[0][0]
+            assert "--key" in call_args
+            assert "--value" in call_args
 
     def test_store_memory_with_metadata(self, bridge):
         with patch("core.claude_flow.subprocess.run") as mock:
@@ -158,7 +174,7 @@ class TestMemory:
             )
             assert result["id"] == "mem-456"
             call_args = mock.call_args[0][0]
-            assert "--metadata" in call_args
+            assert "--tags" in call_args
 
 
 class TestSecurity:

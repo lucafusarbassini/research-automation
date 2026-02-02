@@ -1,12 +1,78 @@
 """Paper pipeline: figure generation, citation management, and LaTeX compilation."""
 
 import logging
+import platform
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+# LaTeX tools required for paper compilation
+REQUIRED_LATEX_TOOLS = {
+    "pdflatex": "LaTeX compiler (core)",
+    "bibtex": "Bibliography processor",
+    "make": "Build system",
+}
+
+OPTIONAL_LATEX_TOOLS = {
+    "biber": "Modern bibliography processor (BibLaTeX)",
+    "latexmk": "Automated LaTeX build tool",
+    "dvips": "DVI to PostScript converter",
+}
+
+
+def check_latex_dependencies(*, verbose: bool = False) -> tuple[bool, list[str]]:
+    """Check that required LaTeX tools are installed.
+
+    Args:
+        verbose: If True, also report optional missing tools.
+
+    Returns:
+        Tuple of (all_required_present, list_of_error_messages).
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    system = platform.system()
+
+    for tool, description in REQUIRED_LATEX_TOOLS.items():
+        if shutil.which(tool) is None:
+            errors.append(f"  - {tool}: {description}")
+
+    if verbose:
+        for tool, description in OPTIONAL_LATEX_TOOLS.items():
+            if shutil.which(tool) is None:
+                warnings.append(f"  - {tool}: {description}")
+
+    messages: list[str] = []
+    if errors:
+        messages.append("Required LaTeX tools not found:\n" + "\n".join(errors))
+        if system == "Linux":
+            messages.append(
+                "Install with:\n"
+                "  sudo apt install texlive-full  # Debian/Ubuntu\n"
+                "  sudo dnf install texlive-scheme-full  # Fedora\n"
+                "  sudo pacman -S texlive  # Arch"
+            )
+        elif system == "Darwin":
+            messages.append(
+                "Install with:\n"
+                "  brew install --cask mactex\n"
+                "or download from https://tug.org/mactex/"
+            )
+        elif system == "Windows":
+            messages.append(
+                "Install MiKTeX from https://miktex.org/download\n"
+                "or TeX Live from https://tug.org/texlive/"
+            )
+
+    if verbose and warnings:
+        messages.append("Optional tools not found (non-fatal):\n" + "\n".join(warnings))
+
+    return len(errors) == 0, messages
+
 
 PAPER_DIR = Path("paper")
 FIGURES_DIR = Path("figures")
@@ -119,9 +185,19 @@ def list_citations(bib_file: Path = BIB_FILE) -> list[str]:
 def compile_paper(paper_dir: Path = PAPER_DIR) -> bool:
     """Compile the LaTeX paper using make.
 
+    Runs a pre-flight check for required LaTeX tools before attempting
+    compilation.
+
     Returns:
         True if compilation succeeded.
     """
+    # Pre-flight: check that LaTeX toolchain is available
+    deps_ok, dep_messages = check_latex_dependencies(verbose=True)
+    if not deps_ok:
+        for msg in dep_messages:
+            logger.error(msg)
+        return False
+
     makefile = paper_dir / "Makefile"
     if not makefile.exists():
         logger.error("Makefile not found in %s", paper_dir)

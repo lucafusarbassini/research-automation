@@ -1131,9 +1131,9 @@ def agents():
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
     # --- 1. Agent Definitions (from .claude/agents/*.md) ---
-    project_root = Path(__file__).resolve().parent.parent
-    agents_dir = project_root / ".claude" / "agents"
-    templates_agents_dir = project_root / "templates" / ".claude" / "agents"
+    source_root = Path(__file__).resolve().parent.parent
+    agents_dir = source_root / ".claude" / "agents"
+    templates_agents_dir = source_root / "templates" / ".claude" / "agents"
     definition_names: list[str] = []
     for search_dir in (agents_dir, templates_agents_dir):
         if search_dir.is_dir():
@@ -1154,20 +1154,34 @@ def agents():
     running_agents: list[dict] = []
 
     # 2a. Read .claude-flow/agents/store.json
-    store_path = project_root / ".claude-flow" / "agents" / "store.json"
+    # Look in cwd first (the user's project), then fall back to source tree.
+    cwd_store = Path.cwd() / ".claude-flow" / "agents" / "store.json"
+    src_store = source_root / ".claude-flow" / "agents" / "store.json"
+    store_path = cwd_store if cwd_store.is_file() else src_store
     if store_path.is_file():
         try:
             store_data = json.loads(store_path.read_text())
-            for _aid, info in store_data.get("agents", {}).items():
-                running_agents.append(
-                    {
-                        "id": info.get("agentId", _aid),
-                        "type": info.get("agentType", "unknown"),
-                        "status": info.get("status", "unknown"),
-                        "model": info.get("model", ""),
-                        "created": info.get("createdAt", ""),
-                    }
-                )
+            # The top-level key is "agents" (dict of agentId -> info).
+            agents_map = store_data.get("agents") or store_data
+            # If agents_map is a list (unlikely but defensive), convert.
+            if isinstance(agents_map, list):
+                agents_map = {
+                    a.get("agentId", f"agent-{i}"): a for i, a in enumerate(agents_map)
+                }
+            if isinstance(agents_map, dict):
+                # Skip non-agent top-level keys like "version"
+                for _aid, info in agents_map.items():
+                    if not isinstance(info, dict):
+                        continue
+                    running_agents.append(
+                        {
+                            "id": info.get("agentId", _aid),
+                            "type": info.get("agentType", "unknown"),
+                            "status": info.get("status", "unknown"),
+                            "model": info.get("model", ""),
+                            "created": info.get("createdAt", ""),
+                        }
+                    )
         except (json.JSONDecodeError, OSError) as exc:
             logger.debug("Could not read store.json: %s", exc)
 
@@ -1219,7 +1233,7 @@ def agents():
             f"[bold]Running Agents via claude-flow ({len(running_agents)}):[/bold]"
         )
         for ag in running_agents:
-            model_part = f" [{ag['model']}]" if ag.get("model") else ""
+            model_part = f" \\[{ag['model']}]" if ag.get("model") else ""
             console.print(f"  {ag['id']} ({ag['type']}) - {ag['status']}{model_part}")
     else:
         # Last resort: project-internal agent tracker
@@ -1648,6 +1662,14 @@ def paper(
     from core.paper import check_figure_references, clean_paper, compile_paper
 
     if action == "build":
+        from core.paper import check_latex_dependencies
+
+        console.print("[bold]Checking LaTeX dependencies...[/bold]")
+        deps_ok, dep_messages = check_latex_dependencies(verbose=True)
+        if not deps_ok:
+            for msg in dep_messages:
+                console.print(f"[red]{msg}[/red]")
+            raise typer.Exit(1)
         console.print("[bold]Compiling paper...[/bold]")
         clean_paper()
         success = compile_paper()

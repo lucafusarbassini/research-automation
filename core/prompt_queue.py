@@ -443,9 +443,20 @@ class PromptQueue:
         return True
 
     def _execute_prompt(self, entry: PromptEntry) -> TaskResult:
-        """Execute a single prompt with context injection."""
+        """Execute a single prompt with context injection.
+
+        Autonomously queries claude-flow vector memory for relevant prior
+        knowledge and merges it with the local shared-memory context before
+        dispatching the agent.
+        """
         # Build enriched prompt with shared memory context
-        context_lines = entry.context_snapshot
+        context_lines = list(entry.context_snapshot)
+
+        # Autonomous memory search: pull relevant knowledge from claude-flow
+        knowledge_hits = search_knowledge(entry.text)
+        if knowledge_hits:
+            context_lines.extend(f"[knowledge] {hit}" for hit in knowledge_hits[:5])
+
         if context_lines:
             context_block = "\n".join(context_lines)
             enriched = (

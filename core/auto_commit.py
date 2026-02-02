@@ -82,6 +82,16 @@ def auto_commit(
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
 
+    # Log the commit decision to the encyclopedia
+    try:
+        from core.knowledge import log_decision
+
+        log_decision(
+            f"auto-commit: {message}", "state-modifying CLI operation completed"
+        )
+    except Exception:
+        pass  # Never break the main flow for logging
+
     # Auto-update docs if enabled (runs on the user's project)
     try:
         from core.auto_docs import auto_update_docs

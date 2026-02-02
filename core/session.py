@@ -58,6 +58,14 @@ def create_session(name: Optional[str] = None) -> Session:
     except ClaudeFlowUnavailable:
         pass
 
+    # Log session start decision
+    try:
+        from core.knowledge import log_decision
+
+        log_decision(f"session started: {name}", "new work session initiated")
+    except Exception:
+        pass  # Never break the main flow for logging
+
     logger.info("Created session: %s", name)
     return session
 
@@ -118,6 +126,17 @@ def close_session(session: Session) -> None:
             if line and detect_operational_rule(line):
                 rule_type = classify_rule_type(line)
                 append_to_cheatsheet(line, rule_type=rule_type)
+
+    # Log session end decision
+    try:
+        from core.knowledge import log_decision
+
+        log_decision(
+            f"session ended: {session.name}",
+            f"completed {session.tasks_completed} tasks, {session.tasks_failed} failed",
+        )
+    except Exception:
+        pass  # Never break the main flow for logging
 
     logger.info("Closed session: %s", session.name)
 

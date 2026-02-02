@@ -12,7 +12,7 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 CLAUDE_FLOW_CMD = "npx"
-CLAUDE_FLOW_PKG = "claude-flow@v3alpha"
+CLAUDE_FLOW_PKG = "@claude-flow/cli@latest"
 
 # Agent type mapping: our types -> claude-flow types
 AGENT_TYPE_MAP = {
@@ -201,29 +201,63 @@ class ClaudeFlowBridge:
     # Vector memory (HNSW)
     # ------------------------------------------------------------------
 
-    def query_memory(self, query: str, *, top_k: int = 5) -> dict[str, Any]:
+    def query_memory(
+        self,
+        query: str,
+        *,
+        top_k: int = 5,
+        namespace: str | None = None,
+    ) -> dict[str, Any]:
         """Semantic search over the vector memory index.
+
+        Args:
+            query: Search query string.
+            top_k: Maximum number of results to return.
+            namespace: Optional namespace to restrict search.
 
         Returns:
             Dict with 'results' list of matching entries.
         """
-        return self._run("memory", "query", "--query", query, "--top-k", str(top_k))
+        args = ["memory", "search", "--query", query, "--limit", str(top_k)]
+        if namespace:
+            args.extend(["--namespace", namespace])
+        return self._run(*args)
 
     def store_memory(
         self,
         text: str,
         *,
+        key: str | None = None,
         namespace: str = "knowledge",
         metadata: Optional[dict] = None,
     ) -> dict[str, Any]:
         """Store an entry in the HNSW vector memory.
 
+        Args:
+            text: The value/content to store.
+            key: Optional key identifier. Auto-generated from text hash if omitted.
+            namespace: Memory namespace (default 'knowledge').
+            metadata: Optional metadata dict (passed as --tags).
+
         Returns:
             Dict with 'id' of the stored entry.
         """
-        args = ["memory", "store", "--text", text, "--namespace", namespace]
+        import hashlib
+
+        effective_key = key or f"auto-{hashlib.sha256(text.encode()).hexdigest()[:12]}"
+        args = [
+            "memory",
+            "store",
+            "--key",
+            effective_key,
+            "--value",
+            text,
+            "--namespace",
+            namespace,
+        ]
         if metadata:
-            args.extend(["--metadata", json.dumps(metadata)])
+            tags = ",".join(f"{k}={v}" for k, v in metadata.items())
+            args.extend(["--tags", tags])
         return self._run(*args)
 
     # ------------------------------------------------------------------
