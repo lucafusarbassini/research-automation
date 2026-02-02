@@ -31,7 +31,7 @@ Running a research project involves dozens of repetitive tasks: environment setu
 npm install -g @anthropic-ai/claude-code
 
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/research-automation
+git clone https://github.com/lucafusarbassini/research-automation
 cd research-automation
 
 # Install the CLI
@@ -56,7 +56,7 @@ See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough
 
 - **Multi-Agent Orchestration** -- Master agent routes tasks to Researcher, Coder, Reviewer, Falsifier, Writer, and Cleaner sub-agents, each with dedicated budgets and system prompts.
 - **70+ MCP Integrations** -- Automatically discovered and loaded based on task type, organized in eight tiers from essential tools to cloud infrastructure.
-- **Overnight Mode** -- Autonomous execution loop with auto-debug, resource monitoring, and recovery. Run `ricetovernight` and check results in the morning.
+- **Overnight Mode** -- Autonomous execution loop with auto-debug, resource monitoring, and recovery. Run `ricet overnight` and check results in the morning.
 - **Knowledge Accumulation** -- A project encyclopedia that records learnings, decisions, successful approaches, and failed attempts. Supports HNSW vector search when claude-flow is available.
 - **Paper Pipeline** -- LaTeX template, publication-quality figure generation with matplotlib rcParams, BibTeX citation management, and one-command compilation.
 - **Reproducibility** -- Every experiment run is logged with parameters, metrics, git hash, and SHA-256 artifact checksums.
@@ -84,6 +84,15 @@ See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough
 - **Docker Overnight** -- `ricet overnight --docker` runs autonomous sessions inside a Docker sandbox.
 - **Resource-Aware Overnight** -- Monitors CPU/RAM/disk between iterations, auto-pauses on low resources.
 - **Falsifier Auto-Trigger** -- Falsifier agent validates results after every overnight iteration automatically.
+- **Voice Prompting** -- `ricet voice` transcribes audio instructions and structures them into actionable research prompts.
+- **Mobile PWA** -- `ricet mobile` sets up Progressive Web App access for remote monitoring.
+- **Interactive Dashboard** -- `ricet dashboard` provides a Rich TUI with live agent status, budget, and resource utilization.
+- **Figure Gallery** -- `ricet gallery` scans and catalogs experiment figures by run ID for quick review and paper inclusion.
+- **Git Worktree Management** -- `ricet worktree` manages parallel branches for concurrent experiments.
+- **Task Queue** -- `ricet queue` manages and spools background tasks for batch execution.
+- **Website Builder** -- `ricet website` generates and deploys a GitHub Pages documentation site.
+- **RAG-Powered MCP Discovery** -- Searchable index of 1300+ MCP servers with keyword-based suggestion and on-demand installation.
+- **[PaperBoat](https://paperboatch.com/)** -- Recommended external service for daily cross-discipline paper discovery. Useful as a background SOTA knowledge source that updates daily.
 
 Explore all features in the [Features](features.md) page.
 
@@ -109,13 +118,15 @@ ricet is under active development. The core modules, CLI, Docker setup, template
 | Component | Status |
 |-----------|--------|
 | CLI (`ricet` command) | Implemented |
-| Core modules (20+ modules) | Implemented |
+| Core modules (45+ modules) | Implemented |
 | Docker containerization | Implemented |
 | Agent orchestration | Implemented |
 | Paper pipeline | Implemented |
-| MCP auto-discovery | Implemented |
+| MCP auto-discovery (70+) | Implemented |
 | claude-flow integration | Implemented (optional) |
 | GitHub workflows | Implemented |
+| Voice & mobile access | Implemented |
+| Interactive dashboard & gallery | Implemented |
 | Documentation site | You are here |
 
 ---

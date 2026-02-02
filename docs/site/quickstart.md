@@ -11,7 +11,7 @@ This tutorial walks you through creating a research project, running an interact
 npm install -g @anthropic-ai/claude-code
 
 # Clone and install research-automation
-git clone https://github.com/YOUR_USERNAME/research-automation
+git clone https://github.com/lucafusarbassini/research-automation
 cd research-automation
 pip install -e .
 

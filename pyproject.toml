@@ -56,6 +56,7 @@ ml = [
 ]
 paper = []  # LaTeX toolchain is external; no Python deps required
 browser = []  # Puppeteer is Node.js; no Python deps required
+mobile = []  # all stdlib; extension point for future
 data = [
     "daft",
 ]

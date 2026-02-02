@@ -75,7 +75,7 @@ ricet --version
 Expected output:
 
 ```
-ricet 0.2.0
+ricet 0.3.0
 ```
 
 ---
@@ -137,7 +137,7 @@ Inside the container, the `ricet` command is available and the workspace is moun
 ### Clone and install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/research-automation
+git clone https://github.com/lucafusarbassini/research-automation
 cd research-automation
 pip install -e ".[dev]"
 ```

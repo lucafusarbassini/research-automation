@@ -173,7 +173,7 @@ add_citation(
 
 ```bash
 cd paper && make all
-# Or: research paper build
+# Or: ricet paper build
 ```
 
 Runs `pdflatex` -> `biber` -> `pdflatex` -> `pdflatex` for a complete build.
@@ -820,3 +820,168 @@ ricet repro hash --path data/dataset.csv
 ```
 
 Every experiment run is logged with parameters, git hash, metrics, and SHA-256 artifact checksums.
+
+---
+
+## Voice Prompting
+
+Transcribe audio instructions and feed them into the agent pipeline:
+
+```bash
+ricet voice
+```
+
+The voice module:
+
+1. Accepts an audio file (WAV, MP3, FLAC).
+2. Transcribes it to text using whisper-cpp or a compatible backend.
+3. Detects the language automatically.
+4. Structures the transcription into an actionable research prompt.
+5. Routes the structured prompt to the appropriate agent.
+
+Useful for capturing ideas on the go or dictating experiment plans.
+
+---
+
+## Mobile & PWA Access
+
+Set up remote access to your research project from a mobile device:
+
+```bash
+ricet mobile
+```
+
+The mobile module generates a Progressive Web App (PWA) configuration that enables:
+
+- Remote dashboard access from any device with a browser.
+- Push notifications for overnight mode events.
+- Mobile-optimized prompt input for on-the-go task submission.
+
+---
+
+## Interactive Dashboard
+
+A Rich-powered terminal UI for monitoring active sessions:
+
+```bash
+ricet dashboard
+```
+
+### Panels
+
+- **Agents** -- Active agent types, current tasks, and budget usage.
+- **Resources** -- CPU, RAM, GPU, and disk utilization.
+- **Memory** -- Recent knowledge entries and vector memory stats.
+- **Progress** -- Task completion log and session history.
+
+The dashboard auto-refreshes and provides a single-pane view of your project's status.
+
+---
+
+## Figure Gallery
+
+Scan, catalog, and organize experiment figures:
+
+```bash
+ricet gallery
+```
+
+The gallery module:
+
+- Recursively scans the project for image files (PNG, PDF, SVG).
+- Groups figures by run ID and experiment.
+- Displays a navigable terminal-based preview.
+- Helps quickly select figures for paper inclusion.
+
+---
+
+## Git Worktree Management
+
+Manage parallel experiment branches using git worktrees:
+
+```bash
+ricet worktree add feature-branch     # Create a new worktree
+ricet worktree list                   # List active worktrees
+ricet worktree remove feature-branch  # Remove a worktree
+```
+
+Worktrees let you run concurrent experiments on different branches without stashing or switching, keeping each experiment isolated.
+
+---
+
+## Task Queue & Spooler
+
+Manage background task execution:
+
+```bash
+ricet queue add "run experiment with lr=0.01"    # Add a task to the queue
+ricet queue list                                 # List queued tasks
+ricet queue run                                  # Execute all queued tasks
+ricet queue clear                                # Clear the queue
+```
+
+The task spooler handles batch execution of queued tasks, integrating with the agent system for routing and with the reproducibility module for logging.
+
+---
+
+## Website Builder
+
+Generate and deploy a GitHub Pages documentation site:
+
+```bash
+ricet website init       # Scaffold MkDocs site
+ricet website build      # Build static site
+ricet website deploy     # Deploy to GitHub Pages
+```
+
+The website builder creates a Material-themed MkDocs site from your project's documentation, API reference, and README.
+
+---
+
+## Doability Assessment
+
+Assess the feasibility of a task before starting:
+
+The doability module analyzes a task description and returns:
+
+- A feasibility score (0-100).
+- Risk factors and potential blockers.
+- Estimated complexity classification.
+- Recommendations for approach.
+
+This is used internally by the agent system to plan work and can be triggered via `ricet auto` routines.
+
+---
+
+## Prompt Suggestions
+
+AI-powered next-step recommendations:
+
+The prompt suggestions module analyzes current project state and suggests the next 3-5 research steps. Used internally during interactive sessions to guide the user when they are unsure what to work on next.
+
+---
+
+## RAG-Powered MCP Discovery
+
+A searchable index of 1300+ Model Context Protocol servers:
+
+```bash
+ricet mcp-search "database migration"
+```
+
+The RAG MCP module (`core/rag_mcp.py`) provides:
+
+- **Keyword-based search** over a comprehensive catalog of MCP servers.
+- **Task-based suggestions** -- describe what you need and get ranked MCP recommendations.
+- **On-demand installation** -- install suggested MCPs directly from search results.
+- **JSON persistence** -- save and load custom indexes for project-specific MCP sets.
+
+The full catalog of 1300+ servers is available at `defaults/raggable_mcps.md`.
+
+---
+
+## PaperBoat Integration
+
+For exhaustive cross-discipline paper discovery, ricet recommends [PaperBoat](https://paperboatch.com/) -- an AI-powered service that scans thousands of journals daily and delivers personalized paper matches. Useful as a background SOTA knowledge source that updates daily across all disciplines.
+
+Referenced in the paper pipeline section of the README and available as a complement to `ricet cite` and `ricet discover` for broader literature coverage.

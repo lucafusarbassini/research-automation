@@ -111,7 +111,7 @@ research-automation/
 │   ├── dashboard.py              # Rich TUI dashboard
 │   └── gallery.py                # Figure gallery viewer
 │
-├── core/                         # Business logic (20+ modules)
+├── core/                         # Business logic (45+ modules)
 │   ├── agents.py                 # Agent types, routing, DAG execution
 │   ├── session.py                # Session CRUD, snapshots
 │   ├── tokens.py                 # Token estimation, budget checks
@@ -133,8 +133,24 @@ research-automation/
 │   ├── meta_rules.py             # Rule extraction from conversations
 │   ├── automation_utils.py       # Data helpers, experiment runners
 │   ├── auto_debug.py             # Automatic error diagnosis
+│   ├── auto_commit.py            # Auto-commit & push after operations
+│   ├── auto_docs.py              # Documentation generation
+│   ├── auto_test.py              # Test generation
 │   ├── browser.py                # Browser preview
-│   ├── task_spooler.py           # Task queue management
+│   ├── doability.py              # Task feasibility assessment
+│   ├── prompt_suggestions.py     # AI-powered next-step suggestions
+│   ├── mobile.py                 # Mobile PWA support
+│   ├── mobile_pwa.py             # Progressive Web App features
+│   ├── rag_mcp.py                # RAG index for MCP discovery
+│   ├── lazy_mcp.py               # Lazy MCP loading
+│   ├── markdown_commands.py      # Markdown command parsing
+│   ├── devops.py                 # Infrastructure automation
+│   ├── website.py                # GitHub Pages builder
+│   ├── two_repo.py               # Dual-repo management
+│   ├── multi_project.py          # Project workspace
+│   ├── prompt_queue.py           # Task queue management
+│   ├── task_spooler.py           # Background task execution
+│   ├── git_worktrees.py          # Git worktree management
 │   └── verification.py           # Result verification
 │
 ├── templates/                    # Copied into new projects

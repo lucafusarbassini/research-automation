@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/lucafusarbassini/research-automation/actions/workflows/ci.yml"><img src="https://github.com/lucafusarbassini/research-automation/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://pypi.org/project/research-automation/"><img src="https://img.shields.io/pypi/v/research-automation.svg" alt="PyPI"></a>
+  <a href="https://pypi.org/project/research-automation/"><img src="https://img.shields.io/badge/pypi-v0.3.0-blue.svg" alt="PyPI v0.3.0"></a>
   <img src="https://img.shields.io/badge/python-3.11%2B-blue.svg" alt="Python 3.11+">
   <a href="https://github.com/lucafusarbassini/research-automation/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <a href="https://lucafusarbassini.github.io/research-automation/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-brightgreen.svg" alt="Docs"></a>

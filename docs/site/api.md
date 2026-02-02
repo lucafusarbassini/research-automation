@@ -807,3 +807,319 @@ Take a random subsample for quick testing.
 #### `run_experiment(command: str, params: dict) -> RunLog`
 
 Execute an experiment command with parameter tracking.
+
+---
+
+## `core.auto_debug` -- Auto-Debug Loop
+
+Automatic error detection, diagnosis, and fix application.
+
+### Functions
+
+#### `capture_error(output: str) -> dict | None`
+
+Parse command output for errors. Returns a dict with `error_type`, `message`, and `traceback` if an error is found.
+
+#### `suggest_fix(error_info: dict) -> str`
+
+Generate a one-sentence fix suggestion using Claude CLI (falls back to pattern matching).
+
+#### `apply_fix(fix: str, file_path: Path) -> bool`
+
+Apply a suggested fix to the specified file.
+
+#### `debug_loop(command: str, max_retries: int = 3) -> bool`
+
+Run a command, detect errors, suggest fixes, apply them, and retry. Returns `True` if the command eventually succeeds.
+
+---
+
+## `core.browser` -- Browser Automation
+
+Headless browser sessions for web interaction.
+
+### Functions
+
+#### `browse_url(url: str) -> str`
+
+Fetch and extract readable text from a URL. Uses Puppeteer MCP when available, falls back to HTTP fetch.
+
+#### `take_screenshot(url: str, output_path: Path) -> Path`
+
+Capture a screenshot of a URL.
+
+#### `generate_pdf(url: str, output_path: Path) -> Path`
+
+Generate a PDF from a web page.
+
+---
+
+## `core.voice` -- Voice Input
+
+Audio transcription and prompt structuring.
+
+### Functions
+
+#### `transcribe_audio(audio_path: Path) -> str`
+
+Transcribe an audio file to text using whisper-cpp or a compatible backend.
+
+#### `detect_language(audio_path: Path) -> str`
+
+Detect the language of an audio file.
+
+#### `structure_prompt(raw_text: str) -> str`
+
+Convert raw transcribed text into a structured research prompt.
+
+---
+
+## `core.mobile` -- Mobile Access
+
+Mobile PWA support for remote monitoring.
+
+### Functions
+
+#### `setup_pwa(project_path: Path) -> dict`
+
+Generate Progressive Web App configuration files for remote access.
+
+#### `generate_manifest(project_name: str) -> dict`
+
+Create a PWA manifest file.
+
+---
+
+## `core.doability` -- Task Feasibility
+
+Assess whether a task is feasible before committing resources.
+
+### Functions
+
+#### `assess_doability(task: str) -> dict`
+
+Analyze a task description and return a feasibility assessment with score (0-100), risk factors, and recommendations. Uses Claude CLI when available.
+
+---
+
+## `core.prompt_suggestions` -- Prompt Suggestions
+
+AI-powered next-step recommendations.
+
+### Functions
+
+#### `suggest_next_steps(context: str) -> list[str]`
+
+Analyze current project context and suggest the next 3-5 research steps. Uses Claude CLI when available, falls back to template suggestions.
+
+---
+
+## `core.rag_mcp` -- RAG MCP Index
+
+Searchable index of MCP servers for discovery and suggestion.
+
+### `MCPEntry`
+
+```python
+@dataclass
+class MCPEntry:
+    name: str
+    description: str
+    category: str
+    keywords: list[str]
+    install_command: str
+    config_template: dict[str, Any]
+    url: str
+```
+
+### `MCPIndex`
+
+```python
+class MCPIndex:
+    def build_index(self, entries: list[MCPEntry]) -> None: ...
+    def search(self, query: str, top_k: int = 5) -> list[MCPEntry]: ...
+    def suggest_mcps(self, task_description: str) -> list[MCPEntry]: ...
+    def save_to_json(self, path: Path) -> None: ...
+    def load_from_json(self, path: Path) -> None: ...
+    def install_suggested(self, entries: list[MCPEntry]) -> dict[str, bool]: ...
+```
+
+---
+
+## `core.devops` -- Infrastructure Management
+
+Docker builds, CI/CD setup, and secrets management.
+
+### Functions
+
+#### `check_infrastructure() -> dict`
+
+Verify Docker, CI, and dependency status.
+
+#### `build_docker_image(tag: str = "ricet:latest") -> bool`
+
+Build the project Docker image.
+
+#### `manage_secrets(action: str) -> dict`
+
+Manage project secrets (list, add, remove).
+
+#### `setup_ci(provider: str = "github") -> bool`
+
+Generate or update CI workflow files.
+
+---
+
+## `core.website` -- Website Builder
+
+GitHub Pages site generation and deployment.
+
+### Functions
+
+#### `init_website(project_path: Path) -> bool`
+
+Scaffold a MkDocs site with Material theme.
+
+#### `build_website(project_path: Path) -> bool`
+
+Build the static site.
+
+#### `deploy_website(project_path: Path) -> bool`
+
+Deploy to GitHub Pages.
+
+---
+
+## `core.git_worktrees` -- Git Worktree Management
+
+Parallel branch management using git worktrees.
+
+### Functions
+
+#### `add_worktree(branch: str, path: Path | None = None) -> Path`
+
+Create a new git worktree for a branch.
+
+#### `list_worktrees() -> list[dict]`
+
+List all active worktrees.
+
+#### `remove_worktree(branch: str) -> bool`
+
+Remove a worktree.
+
+---
+
+## `core.two_repo` -- Dual-Repository Structure
+
+Manage experiments/ vs clean/ separation.
+
+### Functions
+
+#### `init_two_repo(project_path: Path) -> bool`
+
+Set up the dual-repo directory structure.
+
+#### `promote(source: str, target: str = "clean") -> bool`
+
+Promote validated code from experiments/ to clean/.
+
+#### `status() -> dict`
+
+Show what is in each side of the dual-repo.
+
+---
+
+## `core.prompt_queue` -- Task Queue
+
+Queue management for batch task execution.
+
+### Functions
+
+#### `add_task(description: str) -> str`
+
+Add a task to the queue. Returns task ID.
+
+#### `list_tasks() -> list[dict]`
+
+List all queued tasks.
+
+#### `run_queue() -> list[dict]`
+
+Execute all queued tasks sequentially.
+
+#### `clear_queue() -> int`
+
+Clear all tasks from the queue.
+
+---
+
+## `core.task_spooler` -- Background Task Execution
+
+Background execution of spooled tasks.
+
+### Functions
+
+#### `spool_task(command: str) -> str`
+
+Add a task to the background spooler.
+
+#### `get_task_status(task_id: str) -> dict`
+
+Check the status of a spooled task.
+
+#### `list_spooled() -> list[dict]`
+
+List all spooled tasks with their status.
+
+---
+
+## `core.lazy_mcp` -- Lazy MCP Loading
+
+Deferred loading of MCP servers to reduce startup time.
+
+### Functions
+
+#### `lazy_load(tier: str) -> dict`
+
+Load an MCP tier on demand (only when first needed).
+
+#### `is_loaded(tier: str) -> bool`
+
+Check if a tier has been loaded.
+
+---
+
+## `core.multi_project` -- Project Workspace
+
+Multi-project management from a single workspace.
+
+### Functions
+
+#### `register_project(name: str, path: Path) -> dict`
+
+Register a project in the global workspace.
+
+#### `list_projects() -> list[dict]`
+
+List all registered ricet projects.
+
+#### `switch_project(name: str) -> Path`
+
+Switch the active project context.
+
+---
+
+## `core.markdown_commands` -- Markdown Command Parsing
+
+Parse and execute code blocks from markdown files.
+
+### Functions
+
+#### `parse_commands(md_path: Path) -> list[dict]`
+
+Extract fenced code blocks from a markdown file.
+
+#### `execute_commands(commands: list[dict]) -> list[dict]`
+
+Execute extracted commands sequentially, reporting pass/fail for each.

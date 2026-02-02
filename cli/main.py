@@ -36,7 +36,7 @@ from core.onboarding import (
     write_settings,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 def version_callback(value: bool):
@@ -1545,9 +1545,15 @@ def paper(
 
 @app.command()
 def mobile(
-    action: str = typer.Argument(help="Action: start, stop, url"),
+    action: str = typer.Argument(
+        help="Action: serve, stop, pair, connect-info, tokens, cert-regen, status"
+    ),
+    port: int = typer.Option(8777, "--port", "-p", help="Server port"),
+    host: str = typer.Option("0.0.0.0", "--host", help="Bind address"),
+    no_tls: bool = typer.Option(False, "--no-tls", help="Disable TLS"),
+    label: str = typer.Option("", "--label", "-l", help="Token label (for pair)"),
 ):
-    """Manage mobile companion server for on-the-go monitoring."""
+    """Manage mobile companion server for secure on-the-go monitoring."""
     try:
         from core.mobile import mobile_server
     except ImportError:
@@ -1556,20 +1562,54 @@ def mobile(
         )
         raise typer.Exit(1)
 
-    if action == "start":
+    tls = not no_tls
+
+    if action in ("serve", "start"):
         console.print("[bold]Starting mobile server...[/bold]")
-        mobile_server.start()
-        console.print("[green]Mobile server started.[/green]")
+        try:
+            info = mobile_server.serve(host=host, port=port, tls=tls)
+            console.print(f"[green]{info}[/green]")
+        except Exception as exc:
+            console.print(f"[red]Failed to start server: {exc}[/red]")
+            raise typer.Exit(1)
     elif action == "stop":
         console.print("[bold]Stopping mobile server...[/bold]")
         mobile_server.stop()
         console.print("[green]Mobile server stopped.[/green]")
-    elif action == "url":
-        url = mobile_server.get_url()
-        console.print(f"[bold]Mobile URL:[/bold] {url}")
+    elif action in ("pair", "url"):
+        output = mobile_server.pair(label=label, host=host, port=port, tls=tls)
+        console.print(output)
+    elif action == "connect-info":
+        info = mobile_server.connect_info(host=host, port=port)
+        console.print(info)
+    elif action == "tokens":
+        token_list = mobile_server.tokens()
+        if not token_list:
+            console.print("[dim]No active tokens.[/dim]")
+        else:
+            for t in token_list:
+                console.print(
+                    f"  {t['hash_prefix']}  "
+                    f"[dim]{t.get('created', '')}[/dim]  "
+                    f"{t.get('label', '')}"
+                )
+    elif action == "cert-regen":
+        try:
+            info = mobile_server.cert_regen()
+            console.print(f"[green]{info}[/green]")
+        except Exception as exc:
+            console.print(f"[red]Failed: {exc}[/red]")
+            raise typer.Exit(1)
+    elif action == "status":
+        st = mobile_server.status()
+        running = "[green]running[/green]" if st["running"] else "[dim]stopped[/dim]"
+        tls_s = "[green]enabled[/green]" if st["tls"] else "[dim]disabled[/dim]"
+        console.print(f"Server: {running}  Port: {st['port']}  TLS: {tls_s}")
     else:
         console.print(f"[red]Unknown action: {action}[/red]")
-        console.print("Available: start, stop, url")
+        console.print(
+            "Available: serve, stop, pair, connect-info, tokens, cert-regen, status"
+        )
         raise typer.Exit(1)
 
 

@@ -643,6 +643,48 @@
       "createdAt": "2026-02-02T09:54:19.513Z",
       "model": "haiku",
       "modelRoutedBy": "router"
+    },
+    "agent-1770026794466-e55ekd": {
+      "agentId": "agent-1770026794466-e55ekd",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "echo hello world"
+      },
+      "createdAt": "2026-02-02T10:06:34.469Z",
+      "model": "haiku",
+      "modelRoutedBy": "router"
+    },
+    "agent-1770026999345-g8u321": {
+      "agentId": "agent-1770026999345-g8u321",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "echo hello world"
+      },
+      "createdAt": "2026-02-02T10:09:59.348Z",
+      "model": "haiku",
+      "modelRoutedBy": "router"
+    },
+    "agent-1770028865668-knttw5": {
+      "agentId": "agent-1770028865668-knttw5",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "echo hello world"
+      },
+      "createdAt": "2026-02-02T10:41:05.671Z",
+      "model": "haiku",
+      "modelRoutedBy": "router"
     }
   },
   "version": "3.0.0"
