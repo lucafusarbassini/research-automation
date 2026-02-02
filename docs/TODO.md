@@ -1,3 +1,22 @@
+FOR FUTURE
+
+Notification replies — CONFIRMED NOT IMPLEMENTED                                                                                                                            
+                                                                                                                                                                                 
+  The notification system (Slack, email, desktop) is send-only. No IMAP polling, no webhook ingestion, no workflow pause/resume on user reply. This would require a persistent   
+  background service to poll an inbox — a significant architecture addition beyond the current design. Noted as a known limitation.    
+
+For future
+* Dashboard (terminal TUI, not a mobile app or VS Code extension)!!!!!
+* Copilot as alternative
+* Hetzner/Namecheap purchasing automation
+* Token budget hard-capping
+* Cross-project learning transfer
+Integrate awesome-claude-code (hesreallyhim/awesome-claude-code)**
+- **NOT IMPLEMENTED** — Only appears in the archived feature requests. No code references or integration.
+Meta develop the package itself.. and phone is really important eg voice prompt to Claude to direct edits on paperbot on hetzner machine
+Also include useful materials such as stripe code, Django code... But maybe thats my personal collection which should be a database repo that user can provided with all their top materials
+
+
 SOONISH
 Sync w google drive for storage of key files generated
 (Are all features discussed later on in the chat truly implemented o ha fatto gatto che morde coda??)
