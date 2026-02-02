@@ -208,30 +208,7 @@ def _prefill_goal_from_readme(project_dir: Path) -> None:
 
 
 def _register_project(name: str, path: Path) -> None:
-    """Register project in ~/.ricet/projects.json."""
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    projects_file = CONFIG_DIR / "projects.json"
+    """Register project in ~/.ricet/projects.json via ProjectRegistry."""
+    from core.multi_project import register_project as _reg
 
-    projects: list[dict] = []
-    if projects_file.exists():
-        try:
-            projects = json.loads(projects_file.read_text())
-        except (json.JSONDecodeError, OSError):
-            projects = []
-
-    # Remove existing entry with same name
-    projects = [p for p in projects if p.get("name") != name]
-
-    # Deactivate all others
-    for p in projects:
-        p["active"] = False
-
-    projects.append(
-        {
-            "name": name,
-            "path": str(path),
-            "active": True,
-        }
-    )
-
-    projects_file.write_text(json.dumps(projects, indent=2))
+    _reg(name, path)
