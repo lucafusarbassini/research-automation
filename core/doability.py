@@ -128,12 +128,44 @@ class ReadinessReport:
 # ---------------------------------------------------------------------------
 
 
+def _assess_doability_claude(
+    goal: str,
+    constraints: dict,
+    available_resources: dict,
+) -> DoabilityReport | None:
+    """Try doability assessment via Claude CLI."""
+    from core.claude_helper import call_claude_json
+
+    prompt = (
+        "Assess whether this research goal is feasible. Return JSON with keys: "
+        "is_feasible (bool), missing_info (list of strings), "
+        "suggestions (list of strings), risk_level (low/medium/high).\n\n"
+        f"Goal: {goal[:1000]}\n"
+        f"Constraints: {constraints}\n"
+        f"Resources: {available_resources}"
+    )
+    result = call_claude_json(prompt)
+    if result and isinstance(result, dict):
+        try:
+            return DoabilityReport(
+                is_feasible=bool(result.get("is_feasible", False)),
+                missing_info=result.get("missing_info", []),
+                suggestions=result.get("suggestions", []),
+                risk_level=result.get("risk_level", "unknown"),
+            )
+        except (TypeError, ValueError):
+            pass
+    return None
+
+
 def assess_doability(
     goal: str,
     constraints: dict,
     available_resources: dict,
 ) -> DoabilityReport:
     """Analyse whether a research goal is well-defined and feasible.
+
+    Tries Claude CLI first, falls back to keyword heuristics.
 
     Args:
         goal: Natural-language description of the research goal.
@@ -143,6 +175,11 @@ def assess_doability(
     Returns:
         DoabilityReport summarising feasibility, gaps, and risks.
     """
+    # Try Claude CLI
+    claude_result = _assess_doability_claude(goal, constraints, available_resources)
+    if claude_result is not None:
+        return claude_result
+
     logger.debug("Assessing doability for goal: %s", goal[:80])
 
     report = DoabilityReport()

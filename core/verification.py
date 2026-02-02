@@ -73,10 +73,33 @@ class VerificationResult:
 # ---------------------------------------------------------------------------
 
 
+def _extract_factual_sentences_claude(text: str) -> list[str] | None:
+    """Try extracting factual claims via Claude CLI."""
+    from core.claude_helper import call_claude_json
+
+    prompt = (
+        "Extract factual claims from this text that could be verified. "
+        "Return a JSON array of strings (the claims).\n\n"
+        f"Text: {text[:2000]}"
+    )
+    result = call_claude_json(prompt)
+    if result and isinstance(result, list) and len(result) > 0:
+        return [str(s) for s in result]
+    return None
+
+
 def _extract_factual_sentences(text: str) -> list[str]:
-    """Return sentences that look like factual claims worth verifying."""
+    """Return sentences that look like factual claims worth verifying.
+
+    Tries Claude CLI first, falls back to regex heuristics.
+    """
     if not text.strip():
         return []
+
+    claude_result = _extract_factual_sentences_claude(text)
+    if claude_result is not None:
+        return claude_result
+
     sentences = _SENTENCE_RE.split(text.strip())
     claims: list[str] = []
     for s in sentences:

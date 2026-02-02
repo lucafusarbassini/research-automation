@@ -136,10 +136,30 @@ class Task:
 _active_agents: dict[str, dict] = {}
 
 
+def _route_task_claude(task_description: str) -> AgentType | None:
+    """Try routing via Claude CLI."""
+    from core.claude_helper import call_claude
+
+    prompt = (
+        "Which agent type best handles this task? "
+        "Reply with exactly one word from: researcher, coder, reviewer, "
+        "falsifier, writer, cleaner.\n\n"
+        f"Task: {task_description[:500]}"
+    )
+    result = call_claude(prompt, timeout=10)
+    if result:
+        word = result.strip().lower().split()[0] if result.strip() else ""
+        try:
+            return AgentType(word)
+        except ValueError:
+            pass
+    return None
+
+
 def route_task(task_description: str) -> AgentType:
     """Determine which agent should handle a task.
 
-    Tries claude-flow model routing first, falls back to keyword matching.
+    Tries claude-flow model routing first, then Claude CLI, falls back to keyword matching.
 
     Args:
         task_description: Natural language task description.
@@ -158,6 +178,11 @@ def route_task(task_description: str) -> AgentType:
             return AgentType(AGENT_TYPE_REVERSE[cf_agent])
     except (ClaudeFlowUnavailable, KeyError, ValueError):
         pass
+
+    # Try Claude CLI
+    claude_result = _route_task_claude(task_description)
+    if claude_result is not None:
+        return claude_result
 
     return _route_task_keywords(task_description)
 

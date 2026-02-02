@@ -1022,6 +1022,23 @@ def _infer_packages_via_keywords(goal_content: str) -> list[str]:
     return sorted(packages)
 
 
+def _suggest_alternative_package(pkg: str) -> str | None:
+    """Ask Claude for an alternative when pip install fails."""
+    from core.claude_helper import call_claude
+
+    prompt = (
+        f"pip install {pkg} failed. "
+        "Suggest one alternative pip package name (just the name, nothing else)."
+    )
+    result = call_claude(prompt)
+    if result:
+        # Take first word, strip quotes
+        word = result.strip().split()[0].strip("'\"")
+        if word and word != pkg:
+            return word
+    return None
+
+
 def install_inferred_packages(
     packages: list[str],
     *,
@@ -1076,6 +1093,14 @@ def install_inferred_packages(
             if result.returncode == 0:
                 installed.append(pkg)
             else:
+                # Ask Claude for alternative
+                alt = _suggest_alternative_package(pkg)
+                if alt and alt != pkg:
+                    logger.info("Trying alternative: %s", alt)
+                    result = run_cmd(f"pip install {alt}")
+                    if result.returncode == 0:
+                        installed.append(alt)
+                        continue
                 failed.append(pkg)
         except (FileNotFoundError, subprocess.TimeoutExpired):
             failed.append(pkg)

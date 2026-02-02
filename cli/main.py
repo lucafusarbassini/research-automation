@@ -31,6 +31,8 @@ from core.onboarding import (
     write_settings,
 )
 
+from core.auto_commit import auto_commit
+
 __version__ = "0.2.0"
 
 
@@ -239,6 +241,8 @@ def init(
             "  [dim]Remote 'origin' added. Push with: git push -u origin main[/dim]"
         )
 
+    auto_commit(f"ricet init: created project {project_name}", cwd=project_path)
+
     # --- Done ---
     console.print(f"\n[bold green]Project created at {project_path}[/bold green]")
     console.print("")
@@ -329,6 +333,7 @@ def config(
         yaml.dump(settings, default_flow_style=False, sort_keys=False)
     )
     console.print("[green]Settings updated.[/green]")
+    auto_commit(f"ricet config: updated {section}")
 
 
 @app.command()
@@ -344,6 +349,14 @@ def start(
     import uuid as _uuid
 
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
+    from core.collaboration import sync_before_start as _sync_before
+
+    # --- Collaborative sync ---
+    if not _sync_before():
+        console.print(
+            "[yellow]Warning: could not pull latest changes. "
+            "Resolve conflicts and retry.[/yellow]"
+        )
 
     # --- GOAL.md enforcement ---
     goal_file = Path("knowledge/GOAL.md")
@@ -448,6 +461,15 @@ def start(
     except ClaudeFlowUnavailable:
         pass
 
+    # Reindex linked repos for cross-repo RAG
+    try:
+        from core.cross_repo import reindex_all
+        reindex_all()
+    except Exception:
+        pass
+
+    auto_commit(f"ricet start: session {session_name}")
+
     console.print(
         f"[green]Session started: {session_name} ({session_uuid[:8]}...)[/green]"
     )
@@ -488,6 +510,7 @@ def overnight(
             if Path("state/DONE").exists():
                 console.print("[green]Task completed![/green]")
                 break
+        auto_commit("ricet overnight: completed swarm run")
         console.print("[bold]Overnight mode finished[/bold]")
         return
     except ClaudeFlowUnavailable:
@@ -512,6 +535,7 @@ def overnight(
             console.print("[green]Task completed![/green]")
             break
 
+    auto_commit("ricet overnight: completed run")
     console.print("[bold]Overnight mode finished[/bold]")
 
 
@@ -652,6 +676,7 @@ def paper(
         clean_paper()
         success = compile_paper()
         if success:
+            auto_commit("ricet paper: compiled paper")
             console.print("[green]Paper compiled successfully.[/green]")
         else:
             console.print("[red]Paper compilation failed. Check logs.[/red]")
@@ -810,6 +835,7 @@ def verify(
 
     console.print("[bold]Running verification...[/bold]")
     report = verify_text(text)
+    auto_commit("ricet verify: ran verification")
     verdict = report.get("verdict", "unknown")
 
     # Show hard failures (file refs, citations)
@@ -850,6 +876,7 @@ def debug(
 
     console.print(f"[bold]Starting auto-debug for:[/bold] {command}")
     result = auto_debug_loop(command)
+    auto_commit(f"ricet debug: auto-debug {command[:40]}")
     if result.get("fixed"):
         console.print("[green]Issue resolved after auto-debug.[/green]")
         if result.get("patch"):
@@ -890,6 +917,7 @@ def projects(
         name = typer.prompt("Project name")
         path = typer.prompt("Project path", default=str(Path.cwd()))
         project_manager.register(name, path)
+        auto_commit(f"ricet projects: registered {name}")
         console.print(f"[green]Registered project: {name}[/green]")
     else:
         console.print(f"[red]Unknown action: {action}[/red]")
@@ -917,6 +945,7 @@ def worktree(
             raise typer.Exit(1)
         console.print(f"[bold]Adding worktree for branch: {branch}[/bold]")
         path = worktree_manager.add(branch)
+        auto_commit(f"ricet worktree: added {branch}")
         console.print(f"[green]Worktree created at {path}[/green]")
     elif action == "list":
         trees = worktree_manager.list()
@@ -931,6 +960,7 @@ def worktree(
             console.print("[red]Branch name required for remove.[/red]")
             raise typer.Exit(1)
         worktree_manager.remove(branch)
+        auto_commit(f"ricet worktree: removed {branch}")
         console.print(f"[green]Worktree for {branch} removed.[/green]")
     elif action == "prune":
         worktree_manager.prune()
@@ -995,6 +1025,93 @@ def queue(
         console.print(f"[red]Unknown action: {action}[/red]")
         console.print("Available: submit, status, drain, cancel-all")
         raise typer.Exit(1)
+
+
+@app.command()
+def adopt(
+    source: str = typer.Argument(help="GitHub URL or local path to adopt"),
+    name: str = typer.Option(None, "--name", "-n", help="Project name"),
+    path: Path = typer.Option(None, "--path", help="Target directory"),
+    no_fork: bool = typer.Option(False, "--no-fork", help="Clone instead of fork"),
+):
+    """Adopt an existing repository as a Ricet project."""
+    from core.adopt import adopt_repo
+
+    console.print(f"[bold]Adopting: {source}[/bold]")
+    try:
+        project_dir = adopt_repo(
+            source,
+            project_name=name,
+            target_path=path,
+            fork=not no_fork,
+        )
+        console.print(f"[green]Project adopted at {project_dir}[/green]")
+        console.print("[bold]Next steps:[/bold]")
+        console.print(f"  1. cd {project_dir}")
+        console.print(
+            "  2. Edit [bold]knowledge/GOAL.md[/bold] with your research description"
+        )
+        console.print("  3. ricet start")
+    except (RuntimeError, FileNotFoundError) as exc:
+        console.print(f"[red]Error: {exc}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+def link(
+    repo_path: str = typer.Argument(help="Path to repository to link for RAG"),
+    name: str = typer.Option(None, "--name", "-n", help="Short name for the repo"),
+):
+    """Link an external repository for cross-repo RAG (read-only)."""
+    from core.cross_repo import link_repository
+
+    repo_name = name or Path(repo_path).name
+    link_repository(repo_name, repo_path, permissions=["read"])
+    console.print(f"[green]Linked '{repo_name}' at {repo_path} (read-only)[/green]")
+
+    # Index it immediately
+    try:
+        from core.cross_repo import index_linked_repo, LinkedRepo
+
+        repo = LinkedRepo(name=repo_name, path=repo_path)
+        count = index_linked_repo(repo)
+        console.print(f"[green]Indexed {count} files from '{repo_name}'[/green]")
+    except Exception as exc:
+        console.print(f"[yellow]Indexing skipped: {exc}[/yellow]")
+
+    auto_commit(f"ricet link: linked {repo_name}")
+
+
+@app.command()
+def unlink(
+    name: str = typer.Argument(help="Name of the linked repo to remove"),
+):
+    """Remove a linked repository from cross-repo RAG."""
+    from core.cross_repo import _load_linked_repos, _save_linked_repos, LINKED_REPOS_FILE
+
+    repos = _load_linked_repos()
+    original_len = len(repos)
+    repos = [r for r in repos if r.name != name]
+    if len(repos) == original_len:
+        console.print(f"[yellow]No linked repo named '{name}' found.[/yellow]")
+        return
+    _save_linked_repos(repos)
+    console.print(f"[green]Unlinked '{name}'[/green]")
+    auto_commit(f"ricet unlink: removed {name}")
+
+
+@app.command()
+def reindex():
+    """Re-index all linked repositories for cross-repo RAG."""
+    from core.cross_repo import reindex_all
+
+    console.print("[bold]Re-indexing all linked repos...[/bold]")
+    results = reindex_all()
+    for repo_name, count in results.items():
+        console.print(f"  {repo_name}: {count} files indexed")
+    if not results:
+        console.print("  No linked repos to index.")
+    console.print("[green]Done.[/green]")
 
 
 if __name__ == "__main__":

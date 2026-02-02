@@ -122,12 +122,36 @@ def _match_category(text: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+def _suggest_next_steps_claude(
+    current_task: str,
+    progress: list[str],
+    goal: str,
+) -> list[str] | None:
+    """Try getting next steps from Claude CLI."""
+    from core.claude_helper import call_claude_json
+
+    progress_text = "; ".join(progress[-5:]) if progress else "none"
+    prompt = (
+        "Given this progress and goal, suggest 3-5 concrete next steps. "
+        "Return a JSON array of strings.\n\n"
+        f"Current task: {current_task[:200]}\n"
+        f"Progress so far: {progress_text}\n"
+        f"Goal: {goal[:200]}"
+    )
+    result = call_claude_json(prompt)
+    if result and isinstance(result, list) and len(result) >= 3:
+        return [str(s) for s in result[:5]]
+    return None
+
+
 def suggest_next_steps(
     current_task: str,
     progress: list[str],
     goal: str,
 ) -> list[str]:
     """Given the current task state, suggest 3-5 logical next steps.
+
+    Tries Claude CLI first, falls back to keyword-based pattern matching.
 
     Args:
         current_task: Description of the task currently being worked on.
@@ -137,6 +161,11 @@ def suggest_next_steps(
     Returns:
         A list of 3-5 suggested next steps as plain-English strings.
     """
+    # Try Claude CLI
+    claude_result = _suggest_next_steps_claude(current_task, progress, goal)
+    if claude_result is not None:
+        return claude_result
+
     suggestions: list[str] = []
 
     # Try to match to a known pattern and pick steps after current progress.

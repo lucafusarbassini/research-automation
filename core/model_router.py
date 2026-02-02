@@ -109,10 +109,27 @@ FALLBACK_CHAINS: dict[str, list[str]] = {
 }
 
 
+def _classify_task_complexity_claude(description: str) -> TaskComplexity | None:
+    """Try classifying via Claude CLI."""
+    from core.claude_helper import call_claude
+
+    prompt = (
+        "Is this task simple, medium, complex, or critical? "
+        "Reply with exactly one word.\n\n"
+        f"Task: {description[:500]}"
+    )
+    result = call_claude(prompt)
+    if result:
+        word = result.strip().lower().split()[0] if result.strip() else ""
+        if word in {c.value for c in TaskComplexity}:
+            return TaskComplexity(word)
+    return None
+
+
 def classify_task_complexity(description: str) -> TaskComplexity:
     """Classify a task's complexity.
 
-    Tries claude-flow's 3-tier router first, falls back to keyword matching.
+    Tries claude-flow's 3-tier router first, then Claude CLI, falls back to keyword matching.
 
     Args:
         description: Natural language task description.
@@ -136,6 +153,11 @@ def classify_task_complexity(description: str) -> TaskComplexity:
             return tier_to_complexity[tier]
     except (ClaudeFlowUnavailable, KeyError, ValueError):
         pass
+
+    # Try Claude CLI
+    claude_result = _classify_task_complexity_claude(description)
+    if claude_result is not None:
+        return claude_result
 
     return _classify_task_complexity_keywords(description)
 

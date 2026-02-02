@@ -39,7 +39,14 @@ def append_learning(
 
     content = encyclopedia_path.read_text()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    formatted_entry = f"\n- [{timestamp}] {entry}"
+
+    # Include user_id for collaborative tracking
+    try:
+        from core.collaboration import get_user_id
+        user_id = get_user_id()
+        formatted_entry = f"\n- [{timestamp}] ({user_id}) {entry}"
+    except Exception:
+        formatted_entry = f"\n- [{timestamp}] {entry}"
 
     # Find the section header and append after the comment line
     pattern = rf"(## {re.escape(section)}\n(?:<!--.*?-->\n)?)"
@@ -144,6 +151,20 @@ def search_knowledge(
             stripped = line.strip()
             if query_lower in stripped.lower() and stripped not in results:
                 results.append(stripped)
+
+    # Cross-repo RAG: search linked repositories
+    if query:
+        try:
+            from core.cross_repo import search_all_linked
+            linked_results = search_all_linked(query)
+            for hit in linked_results:
+                text = hit.get("text", "").strip()
+                source = hit.get("source", "linked")
+                tagged = f"[{source}] {text}"
+                if tagged not in results and text not in results:
+                    results.append(tagged)
+        except Exception:
+            pass
 
     return results
 

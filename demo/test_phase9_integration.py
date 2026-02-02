@@ -49,6 +49,7 @@ class TestCliInit:
             patch("cli.main.shutil.copytree"),
             patch("cli.main.subprocess.run"),
             patch("cli.main._inject_claude_flow_mcp"),
+            patch("cli.main.auto_commit", return_value=False),
             patch("cli.main.TEMPLATE_DIR", tmp_path / "templates"),
         ):
             mock_detect.return_value = {

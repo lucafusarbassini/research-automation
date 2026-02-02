@@ -151,12 +151,28 @@ def parse_error(stderr: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _suggest_fix_claude(error: dict[str, Any]) -> str | None:
+    """Try getting a fix suggestion from Claude CLI."""
+    from core.claude_helper import call_claude
+
+    etype = error.get("error_type", "unknown")
+    message = error.get("message", "")
+    file = error.get("file", "")
+    prompt = (
+        f"Error type: {etype}. Message: {message}. File: {file}. "
+        "Give a one-sentence fix suggestion."
+    )
+    return call_claude(prompt)
+
+
 def suggest_fix(error: dict[str, Any]) -> str:
     """Return a human-readable fix suggestion for *error*.
 
-    The suggestion is a best-effort heuristic based on the ``error_type`` and
-    ``message`` fields produced by :func:`parse_error`.
+    Tries Claude CLI first, falls back to heuristic matching.
     """
+    claude_fix = _suggest_fix_claude(error)
+    if claude_fix:
+        return claude_fix
 
     etype = error.get("error_type", "unknown")
     message = error.get("message", "")

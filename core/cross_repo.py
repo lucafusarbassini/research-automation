@@ -169,6 +169,158 @@ def coordinated_commit(
     return results
 
 
+def index_linked_repo(repo: LinkedRepo) -> int:
+    """Walk a linked repo and index text files into memory.
+
+    Indexes .py, .md, .txt, .tex files. Tries HNSW memory via claude-flow,
+    falls back to a local JSON index.
+
+    Args:
+        repo: The linked repo to index.
+
+    Returns:
+        Number of files indexed.
+    """
+    repo_path = Path(repo.path)
+    if not repo_path.exists():
+        logger.warning("Linked repo path not found: %s", repo.path)
+        return 0
+
+    extensions = {".py", ".md", ".txt", ".tex", ".rst", ".yml", ".yaml", ".json"}
+    namespace = f"linked-{repo.name}"
+    count = 0
+
+    # Collect file contents
+    entries: list[dict] = []
+    for fpath in repo_path.rglob("*"):
+        if not fpath.is_file():
+            continue
+        if fpath.suffix not in extensions:
+            continue
+        # Skip hidden dirs, node_modules, .git, etc.
+        parts = fpath.relative_to(repo_path).parts
+        if any(p.startswith(".") or p == "node_modules" for p in parts):
+            continue
+        try:
+            text = fpath.read_text(errors="replace")[:5000]
+            if text.strip():
+                entries.append({
+                    "path": str(fpath.relative_to(repo_path)),
+                    "text": text,
+                    "repo": repo.name,
+                })
+                count += 1
+        except OSError:
+            continue
+
+    # Try storing in HNSW via claude-flow
+    try:
+        bridge = _get_bridge()
+        for entry in entries:
+            bridge.store_memory(
+                entry["text"][:2000],
+                namespace=namespace,
+                metadata={"path": entry["path"], "repo": entry["repo"]},
+            )
+        logger.info("Indexed %d files from '%s' into HNSW", count, repo.name)
+        return count
+    except ClaudeFlowUnavailable:
+        pass
+
+    # Fallback: local JSON index
+    index_dir = Path("state") / "linked_indexes"
+    index_dir.mkdir(parents=True, exist_ok=True)
+    index_file = index_dir / f"{repo.name}.json"
+    index_file.write_text(json.dumps(entries, indent=2))
+    logger.info("Indexed %d files from '%s' into local JSON", count, repo.name)
+    return count
+
+
+def search_all_linked(
+    query: str,
+    top_k: int = 10,
+    *,
+    repos_file: Path = LINKED_REPOS_FILE,
+) -> list[dict]:
+    """Search across all linked repo indexes.
+
+    Tries HNSW first, falls back to keyword search on local JSON indexes.
+
+    Args:
+        query: Search query.
+        top_k: Max results.
+        repos_file: Path to linked repos file.
+
+    Returns:
+        List of dicts with 'text', 'path', 'source' keys.
+    """
+    repos = _load_linked_repos(repos_file)
+    results: list[dict] = []
+
+    # Try HNSW search
+    try:
+        bridge = _get_bridge()
+        for repo in repos:
+            namespace = f"linked-{repo.name}"
+            cf_result = bridge.query_memory(query, top_k=top_k, namespace=namespace)
+            for hit in cf_result.get("results", []):
+                results.append({
+                    "text": hit.get("text", ""),
+                    "path": hit.get("metadata", {}).get("path", ""),
+                    "source": repo.name,
+                    "score": hit.get("score", 0),
+                })
+        # Sort by score descending
+        results.sort(key=lambda r: r.get("score", 0), reverse=True)
+        return results[:top_k]
+    except ClaudeFlowUnavailable:
+        pass
+
+    # Fallback: keyword search on local JSON indexes
+    query_lower = query.lower()
+    index_dir = Path("state") / "linked_indexes"
+    if not index_dir.exists():
+        return []
+
+    for repo in repos:
+        index_file = index_dir / f"{repo.name}.json"
+        if not index_file.exists():
+            continue
+        try:
+            entries = json.loads(index_file.read_text())
+            for entry in entries:
+                text = entry.get("text", "")
+                if query_lower in text.lower():
+                    results.append({
+                        "text": text[:500],
+                        "path": entry.get("path", ""),
+                        "source": repo.name,
+                    })
+        except (json.JSONDecodeError, OSError):
+            continue
+
+    return results[:top_k]
+
+
+def reindex_all(
+    repos_file: Path = LINKED_REPOS_FILE,
+) -> dict[str, int]:
+    """Re-index all linked repositories.
+
+    Args:
+        repos_file: Path to linked repos file.
+
+    Returns:
+        Dict mapping repo name -> number of files indexed.
+    """
+    repos = _load_linked_repos(repos_file)
+    results: dict[str, int] = {}
+    for repo in repos:
+        count = index_linked_repo(repo)
+        results[repo.name] = count
+    return results
+
+
 def enforce_permission_boundaries(
     repo_name: str,
     action: str,

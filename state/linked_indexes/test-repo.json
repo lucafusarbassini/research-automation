@@ -1,0 +1,7 @@
+[
+  {
+    "path": "file.py",
+    "text": "x = 1",
+    "repo": "test-repo"
+  }
+]
