@@ -61,7 +61,8 @@ def discover_system() -> SystemInfo:
 
 
 def _detect_gpu() -> str:
-    """Detect GPU using nvidia-smi."""
+    """Detect GPU using nvidia-smi, rocm-smi, or lspci as fallback."""
+    # Try nvidia-smi first
     try:
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
@@ -69,11 +70,52 @@ def _detect_gpu() -> str:
             text=True,
             timeout=5,
         )
-        if result.returncode == 0:
+        if result.returncode == 0 and result.stdout.strip():
             gpus = result.stdout.strip().splitlines()
             return ", ".join(gpus)
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
+
+    # Try rocm-smi for AMD GPUs
+    try:
+        result = subprocess.run(
+            ["rocm-smi", "--showproductname"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            lines = [
+                ln.strip()
+                for ln in result.stdout.splitlines()
+                if ln.strip() and not ln.startswith("=")
+            ]
+            if lines:
+                return ", ".join(lines[:4])
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    # Fallback: parse lspci for VGA/3D controllers
+    try:
+        result = subprocess.run(
+            ["lspci"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            gpus = []
+            for line in result.stdout.splitlines():
+                low = line.lower()
+                if "vga" in low or "3d" in low or "display" in low:
+                    # Extract the part after the colon
+                    if ": " in line:
+                        gpus.append(line.split(": ", 1)[1].strip())
+            if gpus:
+                return " + ".join(gpus) + " (via lspci)"
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
     return ""
 
 

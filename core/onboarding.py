@@ -651,156 +651,177 @@ def write_goal_file(project_path: Path, answers: OnboardingAnswers) -> None:
 
 
 # Each credential: (env_var, short_description, how_to_get_url, category)
-# Categories: "core", "publishing", "ml", "cloud", "comms"
+# Categories: "core", "publishing", "ml", "cloud", "integrations", "slack", "email"
+#
+# Pricing legend in descriptions:
+#   [FREE]  = free tier available, no credit card needed
+#   [PAID]  = requires a paid subscription or pay-as-you-go
+#   [FREE*] = free tier with limits, paid for production use
 CREDENTIAL_REGISTRY: list[tuple[str, str, str, str]] = [
     # --- Core (always ask) ---
     (
         "ANTHROPIC_API_KEY",
-        "Anthropic API key (skip if you used 'claude auth login')",
-        "https://console.anthropic.com/ → Settings → API Keys → Create Key",
+        "Anthropic API key [PAID, skip unless you need direct API access]",
+        "Most users: SKIP this — ricet uses your Claude subscription via 'claude auth login'.\n"
+        "  Only for direct API calls (billed separately): https://console.anthropic.com/ → API Keys",
         "core",
     ),
     (
         "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "GitHub Personal Access Token (repo + workflow scopes)",
-        "https://github.com/settings/tokens?type=beta → Generate new token",
+        "GitHub PAT [FREE] (only if you want ricet to create repos for you)",
+        "Option A (recommended): Skip — use SSH keys (https://github.com/settings/keys)\n"
+        "  Option B: https://github.com/settings/tokens?type=beta → 'repo' + 'workflow' scopes",
         "core",
     ),
     (
         "OPENAI_API_KEY",
-        "OpenAI API key (for embeddings & fallback models)",
+        "OpenAI API key [PAID, pay-as-you-go] (for embeddings & fallback models)",
         "https://platform.openai.com/api-keys → Create new secret key",
         "core",
     ),
     (
         "GOOGLE_API_KEY",
-        "Google / Gemini API key",
-        "https://aistudio.google.com/apikey → Create API key",
-        "core",
-    ),
-    (
-        "GAMMA_API_KEY",
-        "Gamma (AI presentations/slides)",
-        "Get from https://gamma.app/developers",
-        "core",
-    ),
-    (
-        "CANVA_API_KEY",
-        "Canva (design automation)",
-        "Get from https://www.canva.com/developers/",
-        "core",
-    ),
-    (
-        "GOOGLE_DRIVE_CREDENTIALS",
-        "Google Drive access",
-        "Get from Google Cloud Console → APIs & Services → Credentials",
+        "Google Gemini API key [FREE tier: 5-15 RPM, no credit card needed]",
+        "https://aistudio.google.com/apikey → sign in with Google account → Create API key.\n"
+        "  Free tier: up to 15 req/min. Paid: enable billing in Google Cloud for higher limits.",
         "core",
     ),
     # --- ML / Experiment tracking ---
     (
         "HUGGINGFACE_TOKEN",
-        "HuggingFace access token (models & datasets)",
+        "HuggingFace access token [FREE] (models & datasets)",
         "https://huggingface.co/settings/tokens → New token (read access)",
         "ml",
     ),
     (
         "WANDB_API_KEY",
-        "Weights & Biases API key (experiment tracking)",
+        "Weights & Biases API key [FREE*] (experiment tracking, free for personal use)",
         "https://wandb.ai/authorize → copy key",
         "ml",
     ),
     # --- Publishing ---
     (
         "PYPI_TOKEN",
-        "PyPI API token (for publishing pip packages)",
+        "PyPI API token [FREE] (for publishing pip packages)",
         "https://pypi.org/manage/account/token/ → Add API token",
         "publishing",
     ),
     (
         "MEDIUM_TOKEN",
-        "Medium integration token (publishing)",
+        "Medium integration token [FREE] (publishing)",
         "https://medium.com/me/settings/security → Integration tokens → Get token",
         "publishing",
     ),
     (
         "LINKEDIN_CLIENT_ID",
-        "LinkedIn app Client ID",
+        "LinkedIn app Client ID [FREE]",
         "https://www.linkedin.com/developers/apps → Create App → Auth tab",
         "publishing",
     ),
     (
         "LINKEDIN_CLIENT_SECRET",
-        "LinkedIn app Client Secret",
+        "LinkedIn app Client Secret [FREE]",
         "(same page as Client ID above)",
         "publishing",
     ),
     (
         "LINKEDIN_ACCESS_TOKEN",
-        "LinkedIn OAuth2 access token",
+        "LinkedIn OAuth2 access token [FREE]",
         "(generate via OAuth2 flow in LinkedIn developer portal)",
         "publishing",
     ),
     # --- Cloud / Infrastructure ---
     (
         "AWS_ACCESS_KEY_ID",
-        "AWS access key ID (for cloud compute/storage)",
+        "AWS access key ID [PAID] (for cloud compute/storage)",
         "https://console.aws.amazon.com/iam → Users → Security credentials",
         "cloud",
     ),
     (
         "AWS_SECRET_ACCESS_KEY",
-        "AWS secret access key",
+        "AWS secret access key [PAID]",
         "(same page as AWS access key above)",
         "cloud",
     ),
     (
         "NOTION_API_KEY",
-        "Notion integration token (project boards)",
+        "Notion integration token [FREE*] (project boards, free for personal use)",
         "https://www.notion.so/my-integrations → New integration → copy secret",
         "cloud",
     ),
-    # --- Automation / Integrations ---
     (
         "ZAPIER_NLA_API_KEY",
-        "Zapier NLA API key (workflow automation: Slack, sheets, webhooks)",
+        "Zapier NLA API key [FREE*] (workflow automation, free tier: 100 tasks/mo)",
         "https://nla.zapier.com/credentials/ → Create API key",
         "cloud",
     ),
-    # --- Communication (conditional) ---
+    # --- Optional integrations (separate prompt group) ---
+    (
+        "GAMMA_API_KEY",
+        "Gamma API key [PAID, requires Pro plan ~$15/mo] (AI presentations)",
+        "https://developers.gamma.app/docs/get-access → requires Gamma Pro subscription.\n"
+        "  Skip unless you specifically need programmatic slide generation.",
+        "integrations",
+    ),
+    (
+        "CANVA_API_KEY",
+        "Canva Connect API key [PAID, requires Canva Pro $13/mo] (design automation)",
+        "Note: Canva also has a FREE MCP connector in Claude Desktop (no key needed).\n"
+        "  For API access: https://www.canva.com/developers/ → requires Canva Pro plan.\n"
+        "  Skip unless you need programmatic design generation.",
+        "integrations",
+    ),
+    (
+        "GOOGLE_DRIVE_CREDENTIALS",
+        "Google Drive OAuth JSON path [FREE but complex setup] (file sync)",
+        "Requires Google Cloud project + OAuth2 credentials (not a simple API key!):\n"
+        "  1. https://console.cloud.google.com/ → Create project\n"
+        "  2. Enable 'Google Drive API'\n"
+        "  3. APIs & Services → Credentials → Create OAuth client ID (Desktop app)\n"
+        "  4. Download JSON → enter the file path here.\n"
+        "  Skip unless you need Drive integration.",
+        "integrations",
+    ),
+    # --- Communication: Slack (conditional) ---
     (
         "SLACK_BOT_TOKEN",
-        "Slack bot token",
+        "Slack bot token [FREE]",
         "https://api.slack.com/apps → Create App → OAuth & Permissions → Bot Token",
         "slack",
     ),
     (
         "SLACK_WEBHOOK_URL",
-        "Slack incoming webhook URL",
+        "Slack incoming webhook URL [FREE]",
         "https://api.slack.com/apps → Incoming Webhooks → Add New Webhook",
         "slack",
     ),
+    # --- Communication: Email / SMTP (conditional) ---
     (
         "SMTP_HOST",
-        "SMTP host (e.g. smtp.gmail.com)",
-        "Check your email provider's SMTP settings",
+        "SMTP host [FREE]",
+        "Common hosts: Gmail=smtp.gmail.com | Outlook=smtp.office365.com | Yahoo=smtp.mail.yahoo.com\n"
+        "  For institutional email, check with your IT department.",
         "email",
     ),
     (
         "SMTP_PORT",
-        "SMTP port (usually 587)",
-        "(same as SMTP host settings)",
+        "SMTP port (usually 587 for TLS)",
+        "587 works for Gmail, Outlook, and most providers. Use 465 for SSL-only.",
         "email",
     ),
     (
         "SMTP_USER",
-        "SMTP username (usually your email address)",
-        "(your email login)",
+        "SMTP username (usually your full email address)",
+        "e.g. yourname@gmail.com or yourname@university.edu",
         "email",
     ),
     (
         "SMTP_PASSWORD",
         "SMTP password or app password",
-        "For Gmail: https://myaccount.google.com/apppasswords",
+        "Gmail: Do NOT use your Gmail password! Create an App Password instead:\n"
+        "  https://myaccount.google.com/apppasswords → Select app → Generate.\n"
+        "  Requires 2-Step Verification enabled on your Google account.\n"
+        "  Outlook: Use your regular password or an app password if 2FA is on.",
         "email",
     ),
 ]
@@ -817,6 +838,17 @@ CREDENTIALS_SLACK = [
 CREDENTIALS_EMAIL = [
     (var, desc) for var, desc, _url, cat in CREDENTIAL_REGISTRY if cat == "email"
 ]
+
+# Category display headers for grouped credential prompts
+_CATEGORY_HEADERS: dict[str, str] = {
+    "core": "Essential credentials (Enter to skip any)",
+    "ml": "Machine learning & experiment tracking",
+    "publishing": "Publishing platforms",
+    "cloud": "Cloud & infrastructure",
+    "integrations": "Optional integrations (all paid services, skip if unsure)",
+    "slack": "Slack notifications",
+    "email": "Email notifications (SMTP)",
+}
 
 
 def collect_credentials(
@@ -839,28 +871,39 @@ def collect_credentials(
         Dict of env var name to value (only non-empty entries).
     """
     if prompt_fn is None:
-        prompt_fn = (
-            lambda prompt, default="": input(f"{prompt} [{default}]: ") or default
-        )
+        # Fixed: empty input returns "" (not default), so Enter = skip
+        def prompt_fn(prompt: str, default: str = "") -> str:
+            raw = input(f"{prompt}: ")
+            return raw if raw else default
+
     if print_fn is None:
         print_fn = print
 
     credentials: dict[str, str] = {}
 
     # Determine which categories to ask
-    active_cats = {"core", "ml", "publishing", "cloud"}
+    active_cats = {"core", "ml", "publishing", "cloud", "integrations"}
     if answers.notification_method == "slack":
         active_cats.add("slack")
     if answers.notification_method == "email":
         active_cats.add("email")
 
+    print_fn("  Press Enter to skip any credential you don't have yet.")
+
+    last_cat = ""
     for var, description, how_to_url, category in CREDENTIAL_REGISTRY:
         if category not in active_cats:
             continue
+        # Print category header on category change
+        if category != last_cat:
+            header = _CATEGORY_HEADERS.get(category, category)
+            print_fn(f"\n  --- {header} ---")
+            last_cat = category
         # Show guidance before each prompt
-        print_fn(f"  Get it: {how_to_url}")
+        print_fn(f"  {how_to_url}")
         value = prompt_fn(f"{description} ({var})", "").strip()
-        if value:
+        # Treat "skip" as empty
+        if value and value.lower() != "skip":
             credentials[var] = value
 
     return credentials
