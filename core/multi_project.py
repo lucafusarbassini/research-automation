@@ -33,7 +33,18 @@ class ProjectRegistry:
     def _load(self) -> dict:
         """Load registry from disk, returning empty structure if missing."""
         if self.registry_file.exists():
-            return json.loads(self.registry_file.read_text())
+            data = json.loads(self.registry_file.read_text())
+            # Migrate legacy format (plain list) to dict structure
+            if isinstance(data, list):
+                active = next(
+                    (p.get("name") for p in data if p.get("active")),
+                    None,
+                )
+                for p in data:
+                    p.pop("active", None)
+                data = {"projects": data, "active": active}
+                self.registry_file.write_text(json.dumps(data, indent=2))
+            return data
         return {"projects": [], "active": None}
 
     def _save(self) -> None:
