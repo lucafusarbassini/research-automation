@@ -68,7 +68,14 @@ def classify_task(task_description: str) -> Set[str]:
 
 
 def get_mcps_for_task(task_description: str) -> dict:
-    """Get all MCPs needed for a task."""
+    """Get all MCPs needed for a task.
+
+    MCPs are registered through LazyMCPLoader so they are tracked but not
+    fully loaded until explicitly requested.  The returned dict still
+    contains the same MCP configs for backward compatibility.
+    """
+    from core.lazy_mcp import LazyMCPLoader
+
     config = load_mcp_config()
     tiers = classify_task(task_description)
 
@@ -77,7 +84,36 @@ def get_mcps_for_task(task_description: str) -> dict:
         tier_mcps = config.get(tier, {}).get("mcps", {})
         mcps.update(tier_mcps)
 
+    # Register discovered MCPs through LazyMCPLoader for deferred loading.
+    # The loader is instantiated per-call; a module-level singleton could be
+    # used if cross-call state is needed later.
+    lazy = LazyMCPLoader()
+    for tier_name in tiers:
+        tier_cfg = config.get(tier_name, {})
+        tier_num = _tier_name_to_num(tier_name)
+        keywords = tier_cfg.get("trigger_keywords", [])
+        for mcp_name, mcp_cfg in tier_cfg.get("mcps", {}).items():
+            lazy.register_mcp(
+                name=mcp_name,
+                config=mcp_cfg,
+                tier=tier_num,
+                trigger_keywords=keywords,
+            )
+
+    # Only load MCPs that the lazy loader considers needed for this task.
+    needed = lazy.get_needed_mcps(task_description)
+    for name in needed:
+        lazy.load_mcp(name)
+
     return mcps
+
+
+def _tier_name_to_num(tier_name: str) -> int:
+    """Convert a tier config key like 'tier2_research' to its numeric tier."""
+    import re as _re
+
+    m = _re.match(r"tier(\d+)", tier_name)
+    return int(m.group(1)) if m else 1
 
 
 def get_priority_mcps() -> dict:
@@ -193,6 +229,27 @@ def search_mcp_catalog(need: str, *, run_cmd=None) -> dict | None:
     result = call_claude_json(prompt, run_cmd=run_cmd)
     if result and isinstance(result, dict) and result.get("name"):
         return result
+
+    # Fallback: if Claude is unavailable, use MCPIndex keyword search.
+    try:
+        from core.rag_mcp import DEFAULT_ENTRIES, MCPIndex
+
+        index = MCPIndex()
+        index.build_index(DEFAULT_ENTRIES)
+        hits = index.search(need, top_k=1)
+        if hits:
+            entry = hits[0]
+            return {
+                "name": entry.name,
+                "repo": entry.url,
+                "install_cmd": entry.install_command,
+                "needs_key": bool(entry.config_template.get("env")),
+                "key_name": next(iter(entry.config_template.get("env", {})), ""),
+                "key_instructions": "",
+            }
+    except Exception:
+        logger.debug("rag_mcp fallback failed", exc_info=True)
+
     return None
 
 

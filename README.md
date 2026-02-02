@@ -268,6 +268,12 @@ GITHUB_TOKEN=ghp_...
 | `ricet unlink <name>` | Remove a linked repository |
 | `ricet reindex` | Re-index all linked repositories |
 | `ricet docs` | Auto-update project docs from source code |
+| `ricet mcp-search <need>` | Search 1300+ MCP servers and install on demand |
+| `ricet two-repo <action>` | Manage experiments/ vs clean/ dual-repo structure |
+| `ricet browse <url>` | Fetch and extract text from a URL (literature review) |
+| `ricet infra <action>` | Infrastructure checks, Docker builds, CI/CD, secrets |
+| `ricet runbook <file>` | Parse and execute code blocks from a markdown runbook |
+| `ricet paper adapt-style` | Rewrite your paper in a reference paper's style |
 | `ricet list-sessions` | List all past and active sessions |
 | `ricet --version` | Print version |
 
@@ -340,6 +346,10 @@ You --> ricet start --> Master Agent --> Sub-agents (researcher, coder, ...)
 4. Each sub-agent executes inside the project environment, commits results, and updates shared memory.
 5. The falsifier agent validates outputs before anything is marked complete.
 6. `ricet overnight` repeats this cycle unattended until the task list is done.
+
+## Disclaimer
+
+This is an experimental hobby project, not production-hardened software. With the power of autonomous AI agents comes real responsibility: the more freedom you grant Claude (especially in overnight mode), the higher the risk of unintended changes, runaway costs, or unreviewed code making it into your repo. Measures like Docker isolation, permission guards, and auto-commit checkpoints are in place, but they do not eliminate risk. Always review agent outputs before publishing or deploying, set sensible iteration limits, and keep API spend alerts enabled. Use at your own discretion.
 
 ## Contributing
 

@@ -196,3 +196,50 @@ def verify_no_plagiarism(
     if flags:
         logger.warning("Found %d potential plagiarism matches", len(flags))
     return flags
+
+
+def rewrite_in_reference_style(
+    source_text: str,
+    reference_text: str,
+    *,
+    verify: bool = True,
+    run_cmd=None,
+) -> dict:
+    """Rewrite source_text in the style of reference_text using Claude.
+
+    Returns dict with keys: rewritten, source_profile, target_profile,
+    transformation_prompt, plagiarism_flags.
+    """
+    source_profile = analyze_paper_style(source_text)
+    target_profile = analyze_paper_style(reference_text)
+    transformation_prompt = generate_transformation_prompt(source_profile, target_profile)
+
+    full_prompt = (
+        f"{transformation_prompt}\n\n"
+        "Rewrite the following text accordingly. "
+        "Return ONLY the rewritten text, no commentary.\n\n"
+        f"--- TEXT ---\n{source_text}\n--- END ---"
+    )
+
+    from core.claude_helper import call_claude
+
+    rewritten = call_claude(full_prompt, run_cmd=run_cmd)
+
+    result: dict = {
+        "source_profile": source_profile,
+        "target_profile": target_profile,
+        "transformation_prompt": transformation_prompt,
+        "plagiarism_flags": [],
+    }
+
+    if rewritten is None:
+        result["rewritten"] = None
+        result["error"] = "Claude unavailable"
+        return result
+
+    result["rewritten"] = rewritten
+
+    if verify:
+        result["plagiarism_flags"] = verify_no_plagiarism(rewritten, [reference_text])
+
+    return result

@@ -862,7 +862,8 @@ def mcp_search(
 
 @app.command()
 def paper(
-    action: str = typer.Argument(help="Action: build, update, modernize, check"),
+    action: str = typer.Argument(help="Action: build, update, modernize, check, adapt-style"),
+    reference: Path = typer.Option(None, "--reference", help="Path to reference paper for adapt-style"),
 ):
     """Paper pipeline commands."""
     from core.paper import check_figure_references, clean_paper, compile_paper
@@ -916,9 +917,56 @@ def paper(
         else:
             console.print("[red]paper/main.tex not found[/red]")
 
+    elif action == "adapt-style":
+        console.print("[bold]Adapting paper style from reference...[/bold]")
+        from core.style_transfer import rewrite_in_reference_style
+
+        paper_tex = Path("paper/main.tex")
+        if not paper_tex.exists():
+            console.print("[red]paper/main.tex not found[/red]")
+            raise typer.Exit(1)
+        if reference is None:
+            console.print("[red]--reference is required for adapt-style[/red]")
+            raise typer.Exit(1)
+        if not reference.exists():
+            console.print(f"[red]Reference file not found: {reference}[/red]")
+            raise typer.Exit(1)
+
+        source_text = paper_tex.read_text()
+        reference_text = reference.read_text()
+        result = rewrite_in_reference_style(source_text, reference_text)
+
+        console.print("\n[bold]Source style:[/bold]")
+        sp = result["source_profile"]
+        console.print(f"  Avg sentence length: {sp.avg_sentence_length} words")
+        console.print(f"  Passive voice ratio: {sp.passive_voice_ratio}")
+        console.print(f"  Hedging ratio: {sp.hedging_ratio}")
+        console.print(f"  Vocabulary richness: {sp.vocabulary_richness}")
+        console.print(f"  Tense: {sp.tense}")
+
+        console.print("\n[bold]Target style:[/bold]")
+        tp = result["target_profile"]
+        console.print(f"  Avg sentence length: {tp.avg_sentence_length} words")
+        console.print(f"  Passive voice ratio: {tp.passive_voice_ratio}")
+        console.print(f"  Hedging ratio: {tp.hedging_ratio}")
+        console.print(f"  Vocabulary richness: {tp.vocabulary_richness}")
+        console.print(f"  Tense: {tp.tense}")
+
+        if result.get("rewritten"):
+            out_path = Path("paper/main_adapted.tex")
+            out_path.write_text(result["rewritten"])
+            console.print(f"\n[green]Adapted text written to {out_path}[/green]")
+            if result["plagiarism_flags"]:
+                console.print(f"[yellow]Plagiarism flags: {len(result['plagiarism_flags'])}[/yellow]")
+                for flag in result["plagiarism_flags"]:
+                    console.print(f"  - n-gram overlap: \"{flag['ngram']}\"")
+            auto_commit("ricet paper: adapted style from reference")
+        else:
+            console.print(f"\n[yellow]Rewrite skipped: {result.get('error', 'unknown')}[/yellow]")
+
     else:
         console.print(f"[red]Unknown action: {action}[/red]")
-        console.print("Available: build, update, modernize, check")
+        console.print("Available: build, update, modernize, check, adapt-style")
         raise typer.Exit(1)
 
 
@@ -1351,6 +1399,223 @@ def docs(
         console.print("[dim]Documentation is up to date. No gaps found.[/dim]")
         if idx:
             console.print(f"  Module index refreshed: {idx} modules")
+
+
+@app.command(name="two-repo")
+def two_repo(
+    action: str = typer.Argument(help="Action: init, status, promote, sync, diff"),
+    files: str = typer.Option("", "--files", "-f", help="Comma-separated file paths (for promote)"),
+    message: str = typer.Option("Promote files", "--message", "-m", help="Commit message (for promote)"),
+    shared: str = typer.Option("", "--shared", help="Comma-separated shared paths (for sync)"),
+):
+    """Manage two-repo structure (experiments/ vs clean/)."""
+    from core.two_repo import TwoRepoManager
+
+    mgr = TwoRepoManager(Path.cwd())
+
+    if action == "init":
+        console.print("[bold]Initializing two-repo structure...[/bold]")
+        result = mgr.init_two_repos()
+        for name, ok in result.items():
+            icon = "[green]ok[/green]" if ok else "[red]fail[/red]"
+            console.print(f"  {name}: {icon}")
+        auto_commit("ricet two-repo: initialized experiments/ and clean/")
+        console.print("[green]Two-repo structure ready.[/green]")
+
+    elif action == "status":
+        st = mgr.get_status()
+        for name, info in st.items():
+            dirty = "[yellow]dirty[/yellow]" if info["dirty"] else "[green]clean[/green]"
+            console.print(f"  {name}: branch={info['branch']} {dirty}")
+
+    elif action == "promote":
+        if not files:
+            console.print("[red]Provide --files/-f with comma-separated paths to promote.[/red]")
+            raise typer.Exit(1)
+        file_list = [f.strip() for f in files.split(",") if f.strip()]
+        console.print(f"[bold]Promoting {len(file_list)} file(s) to clean/...[/bold]")
+        ok = mgr.promote_to_clean(file_list, message)
+        if ok:
+            auto_commit(f"ricet two-repo: promoted {len(file_list)} files")
+            console.print("[green]Files promoted and committed in clean/.[/green]")
+        else:
+            console.print("[red]Promote failed. Check that source files exist in experiments/.[/red]")
+            raise typer.Exit(1)
+
+    elif action == "sync":
+        shared_files = [s.strip() for s in shared.split(",") if s.strip()] or None
+        console.print("[bold]Syncing shared files...[/bold]")
+        ok = mgr.sync_shared(shared_files)
+        if ok:
+            auto_commit("ricet two-repo: synced shared files")
+            console.print("[green]Shared files synced from experiments/ to clean/.[/green]")
+        else:
+            console.print("[red]Sync failed. Check that source paths exist.[/red]")
+            raise typer.Exit(1)
+
+    elif action == "diff":
+        diff_output = mgr.diff_repos()
+        if diff_output:
+            console.print("[bold]Differences between experiments/ and clean/:[/bold]")
+            console.print(diff_output)
+        else:
+            console.print("[green]No differences found.[/green]")
+
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: init, status, promote, sync, diff")
+        raise typer.Exit(1)
+
+
+@app.command()
+def browse(
+    url: str = typer.Argument(help="URL to fetch and extract text from"),
+    screenshot: str = typer.Option("", "--screenshot", "-s", help="Save screenshot to this path"),
+):
+    """Fetch a URL and extract its text content (useful for literature review)."""
+    from core.browser import BrowserSession
+
+    session = BrowserSession()
+    if not session.is_available():
+        console.print("[red]No browser backend available (need curl, wget, or Puppeteer).[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[bold]Fetching:[/bold] {url}")
+    try:
+        text = session.extract_text(url)
+        if text:
+            console.print(text)
+        else:
+            console.print("[yellow]No text content extracted.[/yellow]")
+    except Exception as exc:
+        console.print(f"[red]Fetch failed: {exc}[/red]")
+        raise typer.Exit(1)
+
+    if screenshot:
+        try:
+            out_path = session.screenshot(url, Path(screenshot))
+            console.print(f"[green]Screenshot saved to {out_path}[/green]")
+        except Exception as exc:
+            console.print(f"[yellow]Screenshot failed: {exc}[/yellow]")
+
+
+@app.command()
+def infra(
+    action: str = typer.Argument(help="Action: check, docker-build, docker-run, cicd, secrets"),
+    tag: str = typer.Option("", "--tag", "-t", help="Docker image tag (for docker-build/docker-run)"),
+    dockerfile: Path = typer.Option(Path("Dockerfile"), "--dockerfile", help="Dockerfile path"),
+    template: str = typer.Option("python", "--template", help="CI/CD template (python, node)"),
+):
+    """Manage infrastructure, Docker, CI/CD, and secrets."""
+    from core.devops import DockerManager, check_infrastructure, rotate_secrets, setup_ci_cd
+
+    if action == "check":
+        console.print("[bold]Infrastructure check:[/bold]")
+        results = check_infrastructure()
+        for name, info in results.items():
+            if info["available"]:
+                console.print(f"  {name}: [green]{info['version']}[/green]")
+            else:
+                console.print(f"  {name}: [red]not found[/red]")
+
+    elif action == "docker-build":
+        if not tag:
+            console.print("[red]Provide --tag/-t for the Docker image.[/red]")
+            raise typer.Exit(1)
+        dm = DockerManager()
+        if not dm.is_available():
+            console.print("[red]Docker is not available.[/red]")
+            raise typer.Exit(1)
+        console.print(f"[bold]Building Docker image: {tag}[/bold]")
+        ok = dm.build(tag, dockerfile)
+        if ok:
+            console.print(f"[green]Image {tag} built successfully.[/green]")
+        else:
+            console.print("[red]Docker build failed.[/red]")
+            raise typer.Exit(1)
+
+    elif action == "docker-run":
+        if not tag:
+            console.print("[red]Provide --tag/-t for the Docker image.[/red]")
+            raise typer.Exit(1)
+        dm = DockerManager()
+        if not dm.is_available():
+            console.print("[red]Docker is not available.[/red]")
+            raise typer.Exit(1)
+        console.print(f"[bold]Running container: {tag}[/bold]")
+        container_id = dm.run(tag)
+        if container_id:
+            console.print(f"[green]Container started: {container_id[:12]}[/green]")
+        else:
+            console.print("[red]Docker run failed.[/red]")
+            raise typer.Exit(1)
+
+    elif action == "cicd":
+        console.print(f"[bold]Setting up CI/CD ({template} template)...[/bold]")
+        workflow_path = setup_ci_cd(Path.cwd(), template)
+        auto_commit(f"ricet infra: created CI/CD workflow ({template})")
+        console.print(f"[green]Workflow created: {workflow_path}[/green]")
+
+    elif action == "secrets":
+        console.print("[bold]Scanning for secrets to rotate...[/bold]")
+        findings = rotate_secrets(Path.cwd())
+        if findings:
+            console.print(f"[yellow]Found {len(findings)} potential secret(s):[/yellow]")
+            for finding in findings:
+                console.print(f"  - {finding}")
+        else:
+            console.print("[green]No exposed secrets found.[/green]")
+
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: check, docker-build, docker-run, cicd, secrets")
+        raise typer.Exit(1)
+
+
+@app.command()
+def runbook(
+    file: Path = typer.Argument(help="Path to a markdown runbook file"),
+    execute: bool = typer.Option(False, "--execute", "-x", help="Actually execute code blocks (default: dry-run)"),
+):
+    """Parse and optionally execute code blocks from a markdown runbook."""
+    from core.markdown_commands import execute_runbook, parse_runbook
+
+    if not file.exists():
+        console.print(f"[red]File not found: {file}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[bold]Parsing runbook:[/bold] {file}")
+    steps = parse_runbook(file)
+
+    if not steps:
+        console.print("[yellow]No code blocks found in the runbook.[/yellow]")
+        return
+
+    console.print(f"Found {len(steps)} code block(s):")
+    for i, step in enumerate(steps, 1):
+        heading = step.get("heading", "(no heading)")
+        lang = step.get("language", "?")
+        console.print(f"  {i}. [{lang}] {heading}")
+
+    if not execute:
+        console.print("\n[dim]Dry-run mode. Use --execute/-x to run code blocks.[/dim]")
+
+    results = execute_runbook(steps, dry_run=not execute)
+    for i, r in enumerate(results, 1):
+        heading = r.get("heading", "(no heading)")
+        if r["skipped"]:
+            console.print(f"  {i}. [dim]SKIPPED[/dim] {heading}")
+        elif r["returncode"] == 0:
+            console.print(f"  {i}. [green]OK[/green] {heading}")
+            if r["output"]:
+                console.print(f"     {r['output'][:200]}")
+        else:
+            console.print(f"  {i}. [red]FAIL (rc={r['returncode']})[/red] {heading}")
+            if r["output"]:
+                console.print(f"     {r['output'][:200]}")
+
+    if execute:
+        auto_commit(f"ricet runbook: executed {file.name}")
 
 
 if __name__ == "__main__":
