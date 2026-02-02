@@ -38,16 +38,17 @@ if [ -d /root/.claude ] && [ -n "$(ls -A /root/.claude 2>/dev/null)" ]; then
     CLAUDE_AUTHENTICATED=true
 fi
 
-# Check for API key auth (fallback for CI/headless)
+# Check for API key auth (optional fallback for CI/headless only)
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    ok "Claude authenticated via API key."
+    ok "Claude authenticated via API key (optional fallback)."
     CLAUDE_AUTHENTICATED=true
 fi
 
 if [ "$CLAUDE_AUTHENTICATED" = false ]; then
     warn "No Claude authentication found."
-    warn "Run 'claude auth login' on the host first (recommended),"
-    warn "or set ANTHROPIC_API_KEY in docker-compose.yml / pass with -e flag."
+    warn "A Claude subscription (Pro or Team) is required and recommended."
+    warn "Run 'claude auth login' on the host to authenticate."
+    warn "Optional fallback for CI/headless: set ANTHROPIC_API_KEY in docker-compose.yml / pass with -e flag."
 fi
 
 # Optional keys — just inform
@@ -159,7 +160,7 @@ case "${1:-}" in
         echo ""
         echo "Environment variables:"
         echo "  ~/.claude/          Auth via 'claude auth login' (preferred)"
-    echo "  ANTHROPIC_API_KEY   Fallback for CI/headless environments"
+    echo "  ANTHROPIC_API_KEY   Optional fallback for CI/headless environments"
         echo "  OPENAI_API_KEY      Optional, for embeddings"
         echo "  GITHUB_TOKEN        Optional, for GitHub integration"
         echo "  TTYD_PORT           Web terminal port (default: 7681)"

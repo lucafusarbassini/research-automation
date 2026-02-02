@@ -413,6 +413,77 @@ def fresh_agent_audit(project_path: Path, *, run_cmd=None) -> dict:
     }
 
 
+def verify_at_checkpoint(
+    checkpoint: str,
+    content: str,
+    *,
+    project_path: str = "",
+    run_cmd=None,
+) -> dict:
+    """Run verification tailored to a specific falsification checkpoint.
+
+    Different checkpoints emphasize different checks:
+    - after_code_changes: focus on file references and code correctness claims
+    - after_test_run: focus on statistical claims and result plausibility
+    - after_results: full verification (claims + files + citations)
+    - after_major_change: full verification with Claude-powered fact-checking
+
+    Args:
+        checkpoint: The checkpoint name.
+        content: Text to verify (code diff, test output, results, etc.).
+        project_path: Project root for file checks.
+        run_cmd: Optional callable for testing.
+
+    Returns:
+        Dict with verdict, claims, and checkpoint-specific details.
+    """
+    result: dict = {"checkpoint": checkpoint, "verdict": "no_claims", "claims": []}
+
+    if checkpoint == "after_code_changes":
+        # Focus on file references existing and code correctness
+        if project_path:
+            file_results = verify_file_references(content, Path(project_path))
+            bad_files = [r for r in file_results if not r.verified]
+            if bad_files:
+                result["verdict"] = "issues_found"
+                result["file_issues"] = [r.claim for r in bad_files]
+        claims = verify_claims(content)
+        result["claims"] = [
+            {"claim": c.claim, "confidence": c.confidence} for c in claims
+        ]
+
+    elif checkpoint == "after_test_run":
+        # Focus on statistical and factual claims in test output
+        claims = verify_claims(content)
+        result["claims"] = [
+            {"claim": c.claim, "confidence": c.confidence} for c in claims
+        ]
+        # Flag suspiciously perfect results
+        for claim_text in [c.claim for c in claims]:
+            if any(
+                pattern in claim_text.lower()
+                for pattern in ["100%", "1.0", "perfect", "0 errors", "0 failures"]
+            ):
+                result.setdefault("warnings", []).append(
+                    f"Suspiciously perfect result: {claim_text}"
+                )
+                result["verdict"] = "needs_review"
+
+    elif checkpoint in ("after_results", "after_major_change"):
+        # Full verification pass
+        result = verify_text(content, project_path=project_path, run_cmd=run_cmd)
+        result["checkpoint"] = checkpoint
+
+    else:
+        # Unknown checkpoint -- run basic claim extraction
+        claims = verify_claims(content)
+        result["claims"] = [
+            {"claim": c.claim, "confidence": c.confidence} for c in claims
+        ]
+
+    return result
+
+
 def verify_text(text: str, project_path: str = "", *, run_cmd=None) -> dict:
     """Run all verifiers on *text* and return a summary dict.
 

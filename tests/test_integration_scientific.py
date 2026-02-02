@@ -45,8 +45,12 @@ PHI = (1 + math.sqrt(5)) / 2  # 1.6180339887...
 _results: list = []
 
 
-def _run(cmd: list[str], cwd: Path = PROJECT_DIR, env_extra: dict | None = None,
-         timeout: int = 60) -> subprocess.CompletedProcess:
+def _run(
+    cmd: list[str],
+    cwd: Path = PROJECT_DIR,
+    env_extra: dict | None = None,
+    timeout: int = 60,
+) -> subprocess.CompletedProcess:
     """Run a command, capture output, record result for the report."""
     env = os.environ.copy()
     env["RICET_NO_CLAUDE"] = "true"  # Use fallback paths by default
@@ -57,32 +61,46 @@ def _run(cmd: list[str], cwd: Path = PROJECT_DIR, env_extra: dict | None = None,
 
     try:
         result = subprocess.run(
-            cmd, cwd=str(cwd), capture_output=True, text=True,
-            timeout=timeout, env=env,
+            cmd,
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=env,
         )
     except subprocess.TimeoutExpired:
         result = subprocess.CompletedProcess(
-            cmd, returncode=124,
-            stdout="", stderr="TIMEOUT after {}s".format(timeout),
+            cmd,
+            returncode=124,
+            stdout="",
+            stderr="TIMEOUT after {}s".format(timeout),
         )
     return result
 
 
-def _record(step: int, name: str, cmd: str, result: subprocess.CompletedProcess,
-            passed: bool | None = None, note: str = ""):
+def _record(
+    step: int,
+    name: str,
+    cmd: str,
+    result: subprocess.CompletedProcess,
+    passed: bool | None = None,
+    note: str = "",
+):
     """Record a test step for the PDF report."""
     if passed is None:
         passed = result.returncode == 0
-    _results.append({
-        "step": step,
-        "name": name,
-        "command": cmd,
-        "stdout": result.stdout[:3000] if result.stdout else "",
-        "stderr": result.stderr[:1500] if result.stderr else "",
-        "returncode": result.returncode,
-        "passed": passed,
-        "note": note,
-    })
+    _results.append(
+        {
+            "step": step,
+            "name": name,
+            "command": cmd,
+            "stdout": result.stdout[:3000] if result.stdout else "",
+            "stderr": result.stderr[:1500] if result.stderr else "",
+            "returncode": result.returncode,
+            "passed": passed,
+            "note": note,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +126,11 @@ def init_project(setup_project):
     manual scaffolding if the CLI fails (e.g. because it requires
     additional interactive input we can't predict).
     """
-    env_extra = {"RICET_NO_CLAUDE": "true", "RICET_AUTO_COMMIT": "false", "AUTO_PUSH": "false"}
+    env_extra = {
+        "RICET_NO_CLAUDE": "true",
+        "RICET_AUTO_COMMIT": "false",
+        "AUTO_PUSH": "false",
+    }
     env = os.environ.copy()
     env.update(env_extra)
     # Pipe "none\n" for the notification method prompt
@@ -116,14 +138,21 @@ def init_project(setup_project):
         result = subprocess.run(
             ["ricet", "init", "fibonacci-golden-ratio", "--skip-repo"],
             cwd=str(PROJECT_DIR.parent),
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
             input="none\n\n\n\n\n\n\n",
             env=env,
         )
     except subprocess.TimeoutExpired:
         result = subprocess.CompletedProcess([], 124, stdout="TIMEOUT", stderr="")
 
-    _record(1, "Project initialization", "ricet init fibonacci-golden-ratio --skip-repo", result)
+    _record(
+        1,
+        "Project initialization",
+        "ricet init fibonacci-golden-ratio --skip-repo",
+        result,
+    )
 
     # Fallback: manually scaffold if init didn't create the directory
     if not PROJECT_DIR.exists():
@@ -133,11 +162,19 @@ def init_project(setup_project):
         (PROJECT_DIR / "knowledge" / "GOAL.md").write_text("# Goal\n\nTBD\n")
         (PROJECT_DIR / "knowledge" / "ENCYCLOPEDIA.md").write_text("# Encyclopedia\n\n")
         (PROJECT_DIR / "knowledge" / "CONSTRAINTS.md").write_text("# Constraints\n\n")
-        (PROJECT_DIR / "config" / "settings.yml").write_text("project:\n  name: fibonacci-golden-ratio\n")
+        (PROJECT_DIR / "config" / "settings.yml").write_text(
+            "project:\n  name: fibonacci-golden-ratio\n"
+        )
         (PROJECT_DIR / "state" / "TODO.md").write_text("# TODO\n\n")
-        _record(1, "Project initialization (fallback)", "manual scaffold", subprocess.CompletedProcess(
-            [], 0, stdout="Manually scaffolded project", stderr=""),
-            note="ricet init required interactive input; scaffolded manually")
+        _record(
+            1,
+            "Project initialization (fallback)",
+            "manual scaffold",
+            subprocess.CompletedProcess(
+                [], 0, stdout="Manually scaffolded project", stderr=""
+            ),
+            note="ricet init required interactive input; scaffolded manually",
+        )
 
     assert PROJECT_DIR.exists()
     return PROJECT_DIR
@@ -182,8 +219,13 @@ class TestFibonacciScientificWorkflow:
         - Prove geometric convergence rate analytically
         - Generate LaTeX table of first 20 ratios
         """))
-        _record(2, "Goal setup", "write GOAL.md", subprocess.CompletedProcess(
-            [], 0, stdout="GOAL.md written", stderr=""), note="Direct file write")
+        _record(
+            2,
+            "Goal setup",
+            "write GOAL.md",
+            subprocess.CompletedProcess([], 0, stdout="GOAL.md written", stderr=""),
+            note="Direct file write",
+        )
         assert goal_path.exists()
         assert "golden ratio" in goal_path.read_text().lower()
 
@@ -192,14 +234,20 @@ class TestFibonacciScientificWorkflow:
     def test_03_config_view(self, init_project):
         """ricet config shows current settings."""
         result = _run(["ricet", "config"], cwd=init_project)
-        _record(3, "Config view", "ricet config", result,
-                passed=result.returncode == 0 or "settings" in result.stdout.lower())
+        _record(
+            3,
+            "Config view",
+            "ricet config",
+            result,
+            passed=result.returncode == 0 or "settings" in result.stdout.lower(),
+        )
 
     # -- Step 4: Agent routing --
 
     def test_04_agent_routing(self):
         """Verify agent routing keywords for research tasks."""
-        from core.agents import route_task, AgentType
+        from core.agents import AgentType, route_task
+
         pairs = [
             ("implement fibonacci computation", AgentType.CODER),
             ("search for convergence rate papers", AgentType.RESEARCHER),
@@ -210,9 +258,17 @@ class TestFibonacciScientificWorkflow:
         ]
         for task, expected in pairs:
             actual = route_task(task)
-            assert actual == expected, f"route_task({task!r}) = {actual}, expected {expected}"
-        _record(4, "Agent routing", "route_task() x6 agents", subprocess.CompletedProcess(
-            [], 0, stdout="All 6 agents routed correctly", stderr=""))
+            assert (
+                actual == expected
+            ), f"route_task({task!r}) = {actual}, expected {expected}"
+        _record(
+            4,
+            "Agent routing",
+            "route_task() x6 agents",
+            subprocess.CompletedProcess(
+                [], 0, stdout="All 6 agents routed correctly", stderr=""
+            ),
+        )
 
     # -- Step 5: Code generation (the actual computation) --
 
@@ -293,8 +349,9 @@ class TestFibonacciScientificWorkflow:
         assert results_path.exists()
         data = json.loads(results_path.read_text())
         assert abs(data["phi_estimate"] - PHI) < 1e-15, "phi estimate wrong"
-        assert data["convergence_rate"] > 0.3, \
-            f"convergence rate {data['convergence_rate']} should be ~0.382"
+        assert (
+            data["convergence_rate"] > 0.3
+        ), f"convergence rate {data['convergence_rate']} should be ~0.382"
 
     # -- Step 6: Vector memory --
 
@@ -304,9 +361,14 @@ class TestFibonacciScientificWorkflow:
             ["ricet", "memory", "convergence rate of fibonacci ratios"],
             cwd=init_project,
         )
-        _record(6, "Memory search", "ricet memory 'convergence rate...'", result,
-                passed=True,  # May return no results if encyclopedia is empty
-                note="First search — encyclopedia may be empty")
+        _record(
+            6,
+            "Memory search",
+            "ricet memory 'convergence rate...'",
+            result,
+            passed=True,  # May return no results if encyclopedia is empty
+            note="First search — encyclopedia may be empty",
+        )
 
     # -- Step 7: Citation search --
 
@@ -314,28 +376,46 @@ class TestFibonacciScientificWorkflow:
         """ricet cite searches for papers (fallback mode)."""
         result = _run(
             ["ricet", "cite", "golden ratio fibonacci"],
-            cwd=init_project, timeout=30,
+            cwd=init_project,
+            timeout=30,
         )
-        _record(7, "Citation search", "ricet cite 'golden ratio fibonacci'", result,
-                passed=result.returncode == 0 or "cite" in (result.stdout + result.stderr).lower(),
-                note="Fallback mode — no real API")
+        _record(
+            7,
+            "Citation search",
+            "ricet cite 'golden ratio fibonacci'",
+            result,
+            passed=result.returncode == 0
+            or "cite" in (result.stdout + result.stderr).lower(),
+            note="Fallback mode — no real API",
+        )
 
     # -- Step 8: Paper build --
 
     def test_08_paper_build(self, init_project):
         """ricet paper build compiles LaTeX (or reports missing pdflatex)."""
         result = _run(["ricet", "paper", "build"], cwd=init_project, timeout=30)
-        _record(8, "Paper build", "ricet paper build", result,
-                passed=True,  # Acceptable to fail if pdflatex not installed
-                note="Depends on pdflatex installation")
+        _record(
+            8,
+            "Paper build",
+            "ricet paper build",
+            result,
+            passed=True,  # Acceptable to fail if pdflatex not installed
+            note="Depends on pdflatex installation",
+        )
 
     # -- Step 9: Verification --
 
     def test_09_verify(self, init_project):
         """ricet verify checks recent outputs."""
         result = _run(["ricet", "verify"], cwd=init_project)
-        _record(9, "Verification", "ricet verify", result,
-                passed=result.returncode == 0 or "verify" in (result.stdout + result.stderr).lower())
+        _record(
+            9,
+            "Verification",
+            "ricet verify",
+            result,
+            passed=result.returncode == 0
+            or "verify" in (result.stdout + result.stderr).lower(),
+        )
 
     # -- Step 10: Status --
 
@@ -363,8 +443,14 @@ class TestFibonacciScientificWorkflow:
     def test_13_test_gen(self, init_project):
         """ricet test-gen generates tests for source files."""
         result = _run(["ricet", "test-gen"], cwd=init_project, timeout=90)
-        _record(13, "Test generation", "ricet test-gen", result,
-                passed=result.returncode == 0 or "test" in (result.stdout + result.stderr).lower())
+        _record(
+            13,
+            "Test generation",
+            "ricet test-gen",
+            result,
+            passed=result.returncode == 0
+            or "test" in (result.stdout + result.stderr).lower(),
+        )
 
     # -- Step 14: Auto docs --
 
@@ -386,10 +472,16 @@ class TestFibonacciScientificWorkflow:
         """ricet browse fetches and extracts text from a URL."""
         result = _run(
             ["ricet", "browse", "https://en.wikipedia.org/wiki/Golden_ratio"],
-            cwd=init_project, timeout=30,
+            cwd=init_project,
+            timeout=30,
         )
-        _record(16, "Browse URL", "ricet browse https://...Golden_ratio", result,
-                note="Requires network access")
+        _record(
+            16,
+            "Browse URL",
+            "ricet browse https://...Golden_ratio",
+            result,
+            note="Requires network access",
+        )
 
     # -- Step 17: Reproducibility --
 
@@ -406,8 +498,13 @@ class TestFibonacciScientificWorkflow:
             ["ricet", "paper", "adapt-style", "--reference", "nonexistent.pdf"],
             cwd=init_project,
         )
-        _record(18, "Style transfer (edge case)", "ricet paper adapt-style --reference missing.pdf",
-                result, note="Edge case: nonexistent reference file")
+        _record(
+            18,
+            "Style transfer (edge case)",
+            "ricet paper adapt-style --reference missing.pdf",
+            result,
+            note="Edge case: nonexistent reference file",
+        )
 
     # -- Step 19: Session listing --
 
@@ -450,21 +547,34 @@ class TestFibonacciScientificWorkflow:
     def test_24_edge_empty_memory(self, init_project):
         """Edge case: empty memory query."""
         result = _run(["ricet", "memory", ""], cwd=init_project)
-        _record(24, "Edge: empty memory query", "ricet memory ''", result,
-                passed=True, note="Should handle gracefully, not crash")
+        _record(
+            24,
+            "Edge: empty memory query",
+            "ricet memory ''",
+            result,
+            passed=True,
+            note="Should handle gracefully, not crash",
+        )
 
     def test_25_edge_duplicate_cite(self, init_project):
         """Edge case: duplicate citation request."""
         _run(["ricet", "cite", "golden ratio"], cwd=init_project, timeout=15)
         result = _run(["ricet", "cite", "golden ratio"], cwd=init_project, timeout=15)
-        _record(25, "Edge: duplicate citation", "ricet cite 'golden ratio' x2", result,
-                passed=True, note="Second call should dedup or append safely")
+        _record(
+            25,
+            "Edge: duplicate citation",
+            "ricet cite 'golden ratio' x2",
+            result,
+            passed=True,
+            note="Second call should dedup or append safely",
+        )
 
     # -- Step 26: Model routing --
 
     def test_26_model_routing(self):
         """3-tier model routing classifies tasks correctly."""
-        from core.model_router import classify_task_complexity, TaskComplexity
+        from core.model_router import TaskComplexity, classify_task_complexity
+
         # Simple task -> SIMPLE
         simple = classify_task_complexity("format this list")
         assert simple == TaskComplexity.SIMPLE, f"Got {simple}"
@@ -474,8 +584,17 @@ class TestFibonacciScientificWorkflow:
             "design a distributed system architecture with fault tolerance"
         )
         assert complex_task == TaskComplexity.COMPLEX, f"Got {complex_task}"
-        _record(26, "Model routing", "classify_task_complexity() x2", subprocess.CompletedProcess(
-            [], 0, stdout=f"simple={simple.value}, complex={complex_task.value}", stderr=""))
+        _record(
+            26,
+            "Model routing",
+            "classify_task_complexity() x2",
+            subprocess.CompletedProcess(
+                [],
+                0,
+                stdout=f"simple={simple.value}, complex={complex_task.value}",
+                stderr="",
+            ),
+        )
 
     # -- Step 27: Knowledge CRUD --
 
@@ -501,11 +620,21 @@ class TestFibonacciScientificWorkflow:
             enc_path,
         )
         results = search_knowledge("fibonacci convergence", enc_path)
-        found = any("converges" in str(r).lower() or "phi" in str(r).lower() for r in results)
-        _record(27, "Encyclopedia CRUD", "append_learning + search_knowledge",
-                subprocess.CompletedProcess(
-                    [], 0, stdout=f"Found entry: {found}, results: {len(results)}", stderr=""),
-                passed=True)  # search may return empty if no vector DB; append is the real test
+        found = any(
+            "converges" in str(r).lower() or "phi" in str(r).lower() for r in results
+        )
+        _record(
+            27,
+            "Encyclopedia CRUD",
+            "append_learning + search_knowledge",
+            subprocess.CompletedProcess(
+                [],
+                0,
+                stdout=f"Found entry: {found}, results: {len(results)}",
+                stderr="",
+            ),
+            passed=True,
+        )  # search may return empty if no vector DB; append is the real test
         # Verify the entry was written
         content = enc_path.read_text()
         assert "converges to phi" in content
@@ -515,6 +644,7 @@ class TestFibonacciScientificWorkflow:
     def test_28_notification_config(self, init_project):
         """Notification config can be saved and loaded."""
         from core.notifications import NotificationConfig
+
         cfg = NotificationConfig(
             email_to="test@example.com",
             smtp_user="user@example.com",
@@ -525,15 +655,23 @@ class TestFibonacciScientificWorkflow:
         cfg.save(cfg_path)
         loaded = NotificationConfig.load(cfg_path)
         assert loaded.email_to == "test@example.com"
-        _record(28, "Notification config", "save+load NotificationConfig", subprocess.CompletedProcess(
-            [], 0, stdout="Config saved and loaded", stderr=""))
+        _record(
+            28,
+            "Notification config",
+            "save+load NotificationConfig",
+            subprocess.CompletedProcess(
+                [], 0, stdout="Config saved and loaded", stderr=""
+            ),
+        )
 
     # -- Step 29: Email with attachment --
 
     def test_29_email_attachment(self, init_project):
         """Email attachment function works (mocked SMTP)."""
-        from unittest.mock import MagicMock, patch as mock_patch
-        from core.notifications import send_email_with_attachment, NotificationConfig
+        from unittest.mock import MagicMock
+        from unittest.mock import patch as mock_patch
+
+        from core.notifications import NotificationConfig, send_email_with_attachment
 
         pdf = init_project / "test_attachment.pdf"
         pdf.write_bytes(b"%PDF-1.4 test")
@@ -552,8 +690,14 @@ class TestFibonacciScientificWorkflow:
 
         assert result is True
         server.send_message.assert_called_once()
-        _record(29, "Email with attachment", "send_email_with_attachment()", subprocess.CompletedProcess(
-            [], 0, stdout="Attachment sent (mocked)", stderr=""))
+        _record(
+            29,
+            "Email with attachment",
+            "send_email_with_attachment()",
+            subprocess.CompletedProcess(
+                [], 0, stdout="Attachment sent (mocked)", stderr=""
+            ),
+        )
 
     # -- Step 30: Fibonacci mathematical verification --
 
@@ -574,18 +718,27 @@ class TestFibonacciScientificWorkflow:
         # 3. Ratios should monotonically approach phi (alternating above/below)
         ratios = data["first_20_ratios"]
         for i in range(2, len(ratios)):
-            assert abs(ratios[i] - PHI) < abs(ratios[i-1] - PHI), \
-                f"Ratios not converging at step {i}: {ratios[i]} vs {ratios[i-1]}"
+            assert abs(ratios[i] - PHI) < abs(
+                ratios[i - 1] - PHI
+            ), f"Ratios not converging at step {i}: {ratios[i]} vs {ratios[i-1]}"
 
         # 4. Convergence rate should be close to 1/phi^2 ~ 0.3820
         expected_rate = 1 / PHI**2
-        assert abs(data["convergence_rate"] - expected_rate) < 0.05, \
-            f"Rate {data['convergence_rate']:.4f} not close to {expected_rate:.4f}"
+        assert (
+            abs(data["convergence_rate"] - expected_rate) < 0.05
+        ), f"Rate {data['convergence_rate']:.4f} not close to {expected_rate:.4f}"
 
-        _record(30, "Mathematical verification", "verify results.json", subprocess.CompletedProcess(
-            [], 0,
-            stdout=f"phi={data['phi_estimate']:.15f}, rate={data['convergence_rate']:.6f}",
-            stderr=""))
+        _record(
+            30,
+            "Mathematical verification",
+            "verify results.json",
+            subprocess.CompletedProcess(
+                [],
+                0,
+                stdout=f"phi={data['phi_estimate']:.15f}, rate={data['convergence_rate']:.6f}",
+                stderr="",
+            ),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -600,6 +753,7 @@ class TestMCPVerification:
     def test_mcp_nucleus_loads(self):
         """mcp-nucleus.json loads without errors."""
         from core.mcps import load_mcp_config
+
         config = load_mcp_config()
         assert isinstance(config, dict)
         assert len(config) >= 5, f"Expected 5+ tiers, got {len(config)}"
@@ -607,26 +761,42 @@ class TestMCPVerification:
     def test_mcp_count_at_least_25(self):
         """At least 25 distinct MCP servers are configured."""
         from core.mcps import load_mcp_config
+
         config = load_mcp_config()
         all_mcps = set()
         for tier_name, tier_data in config.items():
             mcps = tier_data.get("mcps", {})
             all_mcps.update(mcps.keys())
-        assert len(all_mcps) >= 25, f"Only {len(all_mcps)} MCPs found: {sorted(all_mcps)}"
-        _record(31, "MCP count >= 25", "load_mcp_config() count", subprocess.CompletedProcess(
-            [], 0, stdout=f"{len(all_mcps)} MCPs: {', '.join(sorted(all_mcps))}", stderr=""))
+        assert (
+            len(all_mcps) >= 25
+        ), f"Only {len(all_mcps)} MCPs found: {sorted(all_mcps)}"
+        _record(
+            31,
+            "MCP count >= 25",
+            "load_mcp_config() count",
+            subprocess.CompletedProcess(
+                [],
+                0,
+                stdout=f"{len(all_mcps)} MCPs: {', '.join(sorted(all_mcps))}",
+                stderr="",
+            ),
+        )
 
     def test_mcp_tier_structure(self):
         """Each tier has description and mcps dict."""
         from core.mcps import load_mcp_config
+
         config = load_mcp_config()
         for tier_name, tier_data in config.items():
             assert "mcps" in tier_data, f"Tier {tier_name} missing 'mcps'"
-            assert isinstance(tier_data["mcps"], dict), f"Tier {tier_name} mcps not dict"
+            assert isinstance(
+                tier_data["mcps"], dict
+            ), f"Tier {tier_name} mcps not dict"
 
     def test_mcp_classification(self):
         """Task classification maps to correct tiers."""
         from core.mcps import classify_task
+
         # Data tasks -> tier2_data
         data_tiers = classify_task("query the database for results")
         assert "tier2_data" in data_tiers, f"Expected tier2_data in {data_tiers}"
@@ -637,13 +807,21 @@ class TestMCPVerification:
     def test_mcp_essential_servers_present(self):
         """Core MCP servers (filesystem, git, fetch, github, memory) exist."""
         from core.mcps import load_mcp_config
+
         config = load_mcp_config()
         all_mcps = set()
         for tier_data in config.values():
             all_mcps.update(tier_data.get("mcps", {}).keys())
 
-        required = ["filesystem", "git", "github", "fetch", "memory",
-                     "sequential-thinking", "puppeteer"]
+        required = [
+            "filesystem",
+            "git",
+            "github",
+            "fetch",
+            "memory",
+            "sequential-thinking",
+            "puppeteer",
+        ]
         for mcp in required:
             assert mcp in all_mcps, f"Required MCP '{mcp}' not found in config"
 
@@ -653,12 +831,19 @@ class TestMCPVerification:
         if catalog.exists():
             text = catalog.read_text()
             assert len(text) > 1000, "MCP catalog seems too small"
-            _record(32, "MCP catalog check", "read MCP_CATALOG.md",
-                    subprocess.CompletedProcess([], 0, stdout=f"Catalog: {len(text)} chars", stderr=""))
+            _record(
+                32,
+                "MCP catalog check",
+                "read MCP_CATALOG.md",
+                subprocess.CompletedProcess(
+                    [], 0, stdout=f"Catalog: {len(text)} chars", stderr=""
+                ),
+            )
 
     def test_mcp_individual_configs(self):
         """Verify structure of each MCP entry in nucleus config."""
         from core.mcps import load_mcp_config
+
         config = load_mcp_config()
         verified = 0
         for tier_name, tier_data in config.items():
@@ -666,15 +851,21 @@ class TestMCPVerification:
                 # Each MCP should have either 'command' or 'source'
                 has_command = "command" in mcp_config
                 has_source = "source" in mcp_config
-                assert has_command or has_source, \
-                    f"MCP {mcp_name} in {tier_name} has neither 'command' nor 'source'"
+                assert (
+                    has_command or has_source
+                ), f"MCP {mcp_name} in {tier_name} has neither 'command' nor 'source'"
                 if has_command:
                     assert isinstance(mcp_config["command"], str)
                 verified += 1
         assert verified >= 25, f"Only verified {verified} MCPs"
-        _record(33, "MCP individual config verification",
-                f"Verified {verified} MCP configs",
-                subprocess.CompletedProcess([], 0, stdout=f"{verified} MCPs verified", stderr=""))
+        _record(
+            33,
+            "MCP individual config verification",
+            f"Verified {verified} MCP configs",
+            subprocess.CompletedProcess(
+                [], 0, stdout=f"{verified} MCPs verified", stderr=""
+            ),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -684,8 +875,8 @@ class TestMCPVerification:
 
 def generate_report():
     """Generate the integration test PDF report."""
+    from core.notifications import NotificationConfig, send_email_with_attachment
     from core.report import TestReport, TestResult, generate_pdf_report
-    from core.notifications import send_email_with_attachment, NotificationConfig
 
     report = TestReport(
         title="ricet 0.3.0 Scientific Integration Test Report",

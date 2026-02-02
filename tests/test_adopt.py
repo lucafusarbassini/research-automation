@@ -88,9 +88,13 @@ class TestAdoptLocal:
 
         registry_file = tmp_path / ".ricet" / "projects.json"
         fake_registry = ProjectRegistry(registry_file=registry_file)
-        with patch("core.adopt.CONFIG_DIR", tmp_path / ".ricet"), \
-             patch("core.multi_project._default_registry", fake_registry), \
-             patch("core.multi_project._get_default_registry", return_value=fake_registry):
+        with (
+            patch("core.adopt.CONFIG_DIR", tmp_path / ".ricet"),
+            patch("core.multi_project._default_registry", fake_registry),
+            patch(
+                "core.multi_project._get_default_registry", return_value=fake_registry
+            ),
+        ):
             adopt_repo(str(source_dir), project_name="test-proj", run_cmd=run_cmd)
 
             assert registry_file.exists()

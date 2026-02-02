@@ -28,22 +28,31 @@ send voice commands -- all from your phone's browser.
 
 ## 1. How Mobile Access Works
 
-The mobile module (`core/mobile.py`) runs a lightweight HTTP API server on port
-8777. It uses only Python standard library modules (no Flask, no Django) so
-there are no extra dependencies.
+The mobile module (`core/mobile.py`) runs a lightweight HTTPS API server on port
+8777 with self-signed TLS certificates. It uses only Python standard library
+modules (no Flask, no Django) so there are no extra dependencies.
 
-The server provides five endpoints:
+The server provides a Progressive Web App (PWA) at the root URL and nine API
+endpoints:
 
 | Method | Path | Purpose |
 |--------|------|---------|
+| GET | `/` | PWA dashboard (installable mobile app) |
 | POST | `/task` | Submit a new task |
 | GET | `/status` | Get project status |
 | GET | `/sessions` | List sessions |
 | POST | `/voice` | Submit voice-transcribed text as a task |
 | GET | `/progress` | View recent task progress |
+| GET | `/projects` | List all registered ricet projects |
+| GET | `/project/status?name=X` | Get a specific project's status |
+| POST | `/project/task?name=X` | Submit a task to a specific project |
+| GET | `/connect-info` | TLS fingerprint and connection methods |
 
 All responses are JSON, formatted for compact mobile display (strings truncated
 to 280 characters).
+
+The PWA includes four tabs (Dashboard, Tasks, Voice, Settings), works offline
+via a service worker, and can be installed to your phone's home screen.
 
 ---
 
@@ -250,10 +259,11 @@ auth.revoke("kF3x9Qm2-vB7_nL1pR8...")
 
 ### Security notes
 
-- Tokens are stored in memory only. Restarting the server invalidates all tokens.
-- For local network access, the token prevents others on your network from
-  controlling your research.
-- For internet-facing deployments, always use HTTPS (see tunnel section below).
+- Token SHA-256 hashes are persisted to `~/.ricet/mobile_tokens.json`. Tokens survive server restarts.
+- The plaintext token is shown exactly once during generation -- store it securely.
+- Rate limiting: 10 failed authentication attempts from a single IP triggers a 15-minute lockout.
+- The server uses self-signed TLS certificates by default. Verify the SHA-256 fingerprint on first connection.
+- For internet-facing deployments, always use a tunnel (see below) and keep bearer tokens confidential.
 
 ---
 
@@ -353,14 +363,15 @@ Use an app like **HTTP Shortcuts** (free, open source):
 - If an overnight task is consuming heavy CPU, API responses may be delayed
 - The server itself is lightweight; delays usually come from the research tasks
 
-### Phone shows raw JSON
+### Phone shows raw JSON instead of the PWA
 
-The mobile API returns JSON, not a web page. Options:
+Navigate to the server root URL (`https://<ip>:8777/`) to see the built-in PWA
+dashboard. The API endpoints (`/status`, `/task`, etc.) return raw JSON by
+design. If the PWA does not load:
 
-1. Use a JSON viewer browser extension on mobile
-2. Use a REST client app (e.g., HTTPBot on iOS, REST Client on Android)
-3. Build a simple HTML dashboard that fetches from the API (ask Claude to
-   generate one)
+1. Clear browser cache and reload
+2. Ensure you are using HTTPS (not HTTP)
+3. Try Chrome on Android or Safari on iOS for best PWA support
 
 ### Token in URL is not secure
 

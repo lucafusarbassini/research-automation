@@ -22,7 +22,7 @@ ricet uses a hierarchical agent system where a Master agent routes tasks to six 
 
 ### Task Routing
 
-Tasks are routed using Claude CLI intelligence (with keyword fallback). The Master agent analyzes your request and dispatches it to the best-fit sub-agent. For example:
+Tasks are routed using intelligent Opus-powered routing. Claude Opus semantically analyzes the task description to understand intent, domain, and required expertise, then dispatches it to the best-fit sub-agent. If Opus is unavailable, routing falls back to the claude-flow bridge, and finally to simple keyword matching as a last resort. For example:
 
 - "Search for papers on attention mechanisms" routes to **Researcher**
 - "Implement a data loader for the CSV files" routes to **Coder**
@@ -39,7 +39,7 @@ When claude-flow is available, swarm execution delegates to the bridge for enhan
 
 ## MCP Auto-Discovery
 
-ricet includes a catalog of 70+ Model Context Protocol (MCP) integrations organized into eight tiers. MCPs are loaded automatically based on task keywords.
+ricet includes a catalog of 70+ Model Context Protocol (MCP) integrations organized into eight tiers. MCPs are loaded automatically based on Opus-powered semantic task analysis.
 
 ### Tiers
 
@@ -264,7 +264,7 @@ All autonomous actions are recorded in `state/audit.log` with timestamps and act
 
 ## Model Routing
 
-Automatic model selection based on task complexity:
+Quality-first model selection based on task complexity:
 
 | Complexity | Model | Use Cases |
 |-----------|-------|-----------|
@@ -273,9 +273,36 @@ Automatic model selection based on task complexity:
 | Complex | claude-opus | Debugging, architecture, research |
 | Critical | claude-opus | Validation, paper writing, production |
 
-### Budget-Aware Fallback
+### Quality-First Budget Policy
 
-When the remaining budget drops below 20%, all tasks route to Haiku regardless of complexity.
+When the remaining budget drops below the configured threshold (default 20%), the router does **not** silently downgrade to a cheaper model. Instead:
+
+- **CRITICAL tasks** (validation, paper writing, falsification) **always** use Opus, regardless of budget. These are never downgraded.
+- **Interactive mode**: The user is warned that budget is getting low and asked for explicit confirmation before any downgrade.
+- **Overnight / autonomous mode**: Execution pauses and a notification is sent so a human can decide. The system will not continue with a degraded model.
+
+This prevents silent quality degradation that could compromise research results.
+
+### Minimum Quality Tier
+
+A `min_quality_tier` configuration option sets a floor on model selection. For example, setting the floor to `sonnet` means Haiku will never be chosen, regardless of task complexity or budget level. This gives users control over the minimum acceptable quality.
+
+### Model Selection Logging
+
+Every model-selection decision is logged at INFO level with the chosen model, tier, task complexity, remaining budget, and a truncated task description. This allows full auditing of which model was used for which task.
+
+### Configuration
+
+```python
+from core.model_router import RouterConfig, ModelTier, configure_router
+
+configure_router(RouterConfig(
+    quality_first=True,           # ON by default -- warn/pause instead of silent downgrade
+    min_quality_tier=ModelTier.SONNET,  # Never go below Sonnet
+    low_budget_threshold_pct=20.0,     # Budget % that triggers the policy
+    interactive=True,             # True for interactive sessions, False for overnight
+))
+```
 
 ### Thinking Mode Selection
 
@@ -843,19 +870,68 @@ Useful for capturing ideas on the go or dictating experiment plans.
 
 ---
 
-## Mobile & PWA Access
+## Mobile Access
 
-Set up remote access to your research project from a mobile device:
+Control your research projects from your phone with a full-featured mobile system.
+
+### Server Management
 
 ```bash
-ricet mobile
+ricet mobile serve          # Start HTTPS server on port 8777
+ricet mobile pair           # Generate bearer token + QR code for pairing
+ricet mobile connect-info   # Show connection methods (direct, SSH, WireGuard)
+ricet mobile tokens         # List active authentication tokens
+ricet mobile cert-regen     # Regenerate TLS certificates
+ricet mobile status         # Check if server is running
+ricet mobile stop           # Stop the server
 ```
 
-The mobile module generates a Progressive Web App (PWA) configuration that enables:
+### Security
 
-- Remote dashboard access from any device with a browser.
-- Push notifications for overnight mode events.
-- Mobile-optimized prompt input for on-the-go task submission.
+The mobile server implements defense-in-depth security:
+
+- **TLS encryption** -- Self-signed certificates generated via OpenSSL CLI. SHA-256 fingerprint displayed for verification.
+- **Bearer token authentication** -- Only SHA-256 hashes stored on disk (`~/.ricet/mobile_tokens.json`). Plaintext shown once during generation.
+- **Rate limiting** -- 10 failed auth attempts from a single IP triggers a 15-minute lockout.
+
+### API Endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/` | PWA dashboard (installable as home screen app) |
+| `GET` | `/status` | Server status and queue info |
+| `GET` | `/sessions` | List project sessions |
+| `GET` | `/progress` | Recent task entries (last 10) |
+| `POST` | `/task` | Submit a new task |
+| `POST` | `/voice` | Submit voice-transcribed text |
+| `GET` | `/projects` | List all registered projects |
+| `GET` | `/project/status?name=X` | Get a project's progress |
+| `POST` | `/project/task?name=X` | Submit a task to a specific project |
+| `GET` | `/connect-info` | TLS fingerprint and connection methods |
+
+### Progressive Web App
+
+The built-in PWA (`core/mobile_pwa.py`) provides a native-like mobile experience:
+
+- **Dashboard tab** -- Project list with status badges and progress bars. Auto-refreshes every 30 seconds.
+- **Tasks tab** -- Select a project and submit tasks via text input.
+- **Voice tab** -- Tap-to-speak voice command input using the Web Speech API. Transcribed text is sent as a task.
+- **Settings tab** -- Connection info, TLS fingerprint, and token management.
+- **Offline support** -- Service worker caches the app shell. API requests degrade gracefully when offline.
+- **Installable** -- Supports "Add to Home Screen" on iOS (Safari) and Android (Chrome) with standalone display mode.
+
+### Connection Methods
+
+- **Direct HTTPS** -- Same Wi-Fi network: `https://<local-ip>:8777`
+- **SSH tunnel** -- Remote access: `ssh -L 8777:localhost:8777 user@server`
+- **WireGuard VPN** -- Peer-to-peer: `https://<wg-ip>:8777`
+- **Cloudflare Tunnel / ngrok** -- Public access without opening ports
+
+### Auto-Start
+
+If mobile access is enabled during `ricet init`, the server starts automatically with `ricet start`. The URL is printed in the terminal.
+
+See [Mobile Access](mobile.md) for the complete guide.
 
 ---
 
@@ -971,12 +1047,48 @@ ricet mcp-search "database migration"
 
 The RAG MCP module (`core/rag_mcp.py`) provides:
 
-- **Keyword-based search** over a comprehensive catalog of MCP servers.
+- **Semantic search** over a comprehensive catalog of MCP servers.
 - **Task-based suggestions** -- describe what you need and get ranked MCP recommendations.
 - **On-demand installation** -- install suggested MCPs directly from search results.
 - **JSON persistence** -- save and load custom indexes for project-specific MCP sets.
 
 The full catalog of 1300+ servers is available at `defaults/raggable_mcps.md`.
+
+---
+
+## Social Media Publishing
+
+Draft, validate, and publish research summaries to social media platforms:
+
+```bash
+ricet publish medium      # Publish to Medium
+ricet publish linkedin    # Publish to LinkedIn
+```
+
+### Supported Platforms
+
+| Platform | Character Limit | Features |
+|----------|----------------|----------|
+| Medium | ~100,000 | Title, markdown body, up to 5 tags |
+| LinkedIn | 3,000 | Professional post with link |
+| Twitter/X | 280 | Short-form summary |
+
+### How It Works
+
+The `core/social_media.py` module:
+
+1. **Drafts** a post using Claude to summarize your research for the target audience.
+2. **Validates** the draft against platform constraints (character limits, tag counts).
+3. **Publishes** via the platform API (requires API tokens in `secrets/.env`).
+
+Posts are automatically formatted for each platform's conventions and character limits.
+
+### Required Credentials
+
+Configure these in `secrets/.env` (prompted during `ricet init`):
+
+- **Medium**: `MEDIUM_TOKEN` (free integration token)
+- **LinkedIn**: `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_ACCESS_TOKEN`
 
 ---
 

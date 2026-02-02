@@ -43,7 +43,7 @@ DEFAULT_BUDGET_SPLIT = {
     AgentType.CLEANER: 5,
 }
 
-# Keywords used to route tasks to agents
+# Keywords used as last-resort fallback when Opus and claude-flow are unavailable
 ROUTING_KEYWORDS = {
     AgentType.RESEARCHER: [
         "literature",
@@ -136,8 +136,50 @@ class Task:
 _active_agents: dict[str, dict] = {}
 
 
+def _route_task_opus(task_description: str) -> AgentType | None:
+    """Intelligent Opus-powered task routing (primary method).
+
+    Uses Claude Opus to semantically analyze the task description and determine
+    the best agent.  This goes beyond keyword matching -- Opus understands task
+    *intent*, handles ambiguous or multi-domain requests, and considers the full
+    context of the description.
+
+    Returns:
+        The best-fit AgentType, or ``None`` if Opus is unavailable.
+    """
+    from core.claude_helper import call_claude
+
+    prompt = (
+        "You are the routing brain for a multi-agent research automation system. "
+        "Analyze the following task description semantically -- consider intent, "
+        "domain, and required expertise, NOT just surface keywords.\n\n"
+        "Agent types and their responsibilities:\n"
+        "- researcher: Literature search, paper synthesis, citation management, "
+        "survey creation, finding related work\n"
+        "- coder: Code writing, implementation, bug fixes, feature development, "
+        "scripting, test writing\n"
+        "- reviewer: Code quality audits, improvement suggestions, best practices "
+        "checks, architecture review\n"
+        "- falsifier: Adversarial validation, data leakage detection, statistical "
+        "audits, reproducibility checks, trying to break results\n"
+        "- writer: Paper sections, documentation, reports, abstracts, manuscripts\n"
+        "- cleaner: Refactoring, optimization, dead code removal, style fixes, "
+        "formatting, code organization\n\n"
+        "Reply with EXACTLY one word -- the agent type that best handles this task.\n\n"
+        f"Task: {task_description[:500]}"
+    )
+    result = call_claude(prompt, model="opus", timeout=15)
+    if result:
+        word = result.strip().lower().split()[0] if result.strip() else ""
+        try:
+            return AgentType(word)
+        except ValueError:
+            pass
+    return None
+
+
 def _route_task_claude(task_description: str) -> AgentType | None:
-    """Try routing via Claude CLI."""
+    """Try routing via Claude CLI (secondary, non-Opus fallback)."""
     from core.claude_helper import call_claude
 
     prompt = (
@@ -159,7 +201,17 @@ def _route_task_claude(task_description: str) -> AgentType | None:
 def route_task(task_description: str) -> AgentType:
     """Determine which agent should handle a task.
 
-    Tries claude-flow model routing first, then Claude CLI, falls back to keyword matching.
+    Uses a three-tier routing strategy:
+
+    1. **Opus-powered intelligent routing** (primary) -- Claude Opus semantically
+       analyzes the task description to understand intent, domain, and required
+       expertise.  This is the preferred method and handles ambiguous or
+       multi-domain requests accurately.
+    2. **claude-flow bridge routing** (secondary) -- When claude-flow is installed,
+       its built-in model routing provides an alternative intelligent path.
+    3. **Keyword matching** (last-resort fallback) -- A simple keyword scorer used
+       only when both Claude Opus and claude-flow are unavailable (e.g. offline
+       environments or CI).
 
     Args:
         task_description: Natural language task description.
@@ -167,10 +219,15 @@ def route_task(task_description: str) -> AgentType:
     Returns:
         The most appropriate agent type.
     """
+    # 1. Primary: Opus-powered semantic routing
+    opus_result = _route_task_opus(task_description)
+    if opus_result is not None:
+        return opus_result
+
+    # 2. Secondary: claude-flow bridge routing
     try:
         bridge = _get_bridge()
         result = bridge.route_model(task_description)
-        # claude-flow returns an agent type suggestion we can map back
         cf_agent = result.get("agent_type", "")
         from core.claude_flow import AGENT_TYPE_REVERSE
 
@@ -179,16 +236,12 @@ def route_task(task_description: str) -> AgentType:
     except (ClaudeFlowUnavailable, KeyError, ValueError):
         pass
 
-    # Try Claude CLI
-    claude_result = _route_task_claude(task_description)
-    if claude_result is not None:
-        return claude_result
-
+    # 3. Last-resort fallback: keyword matching
     return _route_task_keywords(task_description)
 
 
 def _route_task_keywords(task_description: str) -> AgentType:
-    """Keyword-based task routing (legacy fallback)."""
+    """Keyword-based task routing (last-resort fallback for offline/CI environments)."""
     task_lower = task_description.lower()
     scores: dict[AgentType, int] = {}
 
@@ -579,6 +632,140 @@ def plan_execute_iterate(
             logger.warning("Failed tasks at iteration %d: %s", iteration, failed)
 
     return all_results
+
+
+class FalsificationCheckpoint(str, Enum):
+    """Named checkpoints where falsification runs during iterations."""
+
+    AFTER_CODE_CHANGES = "after_code_changes"
+    AFTER_TEST_RUN = "after_test_run"
+    AFTER_RESULTS = "after_results"
+    AFTER_MAJOR_CHANGE = "after_major_change"
+
+
+@dataclass
+class FalsificationResult:
+    """Outcome of a falsification checkpoint."""
+
+    checkpoint: str
+    passed: bool
+    issues: list[str] = field(default_factory=list)
+    severity: str = "none"  # none, low, medium, high, critical
+    output: str = ""
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+
+
+def run_falsification_checkpoint(
+    checkpoint: FalsificationCheckpoint | str,
+    context: str,
+    *,
+    project_root: Path | None = None,
+    dangerously_skip_permissions: bool = False,
+) -> FalsificationResult:
+    """Run a falsification check at a specific checkpoint during iteration.
+
+    This is the main entry point for mid-iteration falsification. It invokes
+    the Falsifier agent with checkpoint-specific instructions, then parses
+    the result for critical issues.
+
+    Args:
+        checkpoint: Which checkpoint is triggering this check.
+        context: Description of what just happened (code diff, test output, etc.).
+        project_root: Project root for file-based checks.
+        dangerously_skip_permissions: Skip permission checks (overnight mode).
+
+    Returns:
+        FalsificationResult with pass/fail and any issues found.
+    """
+    if isinstance(checkpoint, FalsificationCheckpoint):
+        checkpoint_name = checkpoint.value
+    else:
+        checkpoint_name = checkpoint
+
+    prompt = (
+        f"## Falsification Checkpoint: {checkpoint_name}\n\n"
+        "You are running as an inline falsification check -- NOT a full post-hoc audit.\n"
+        "Focus on fast, targeted verification relevant to this checkpoint.\n\n"
+        f"### What just happened\n{context[:3000]}\n\n"
+        "### Your task\n"
+        "1. Identify any issues introduced or revealed at this stage.\n"
+        "2. Check for data leakage, statistical errors, or code correctness problems.\n"
+        "3. Reply with a short structured report:\n"
+        "   - PASSED or FAILED\n"
+        "   - List of issues (if any), each with severity (low/medium/high/critical)\n"
+        "   - One-line recommendation\n"
+    )
+
+    logger.info("Falsification checkpoint [%s]: running...", checkpoint_name)
+
+    task_result = execute_agent_task(
+        AgentType.FALSIFIER,
+        prompt,
+        dangerously_skip_permissions=dangerously_skip_permissions,
+    )
+
+    # Parse the falsifier output for pass/fail and issues
+    output = task_result.output or ""
+    output_lower = output.lower()
+    passed = "failed" not in output_lower or (
+        "passed" in output_lower and "failed" not in output_lower
+    )
+
+    issues: list[str] = []
+    severity = "none"
+    for line in output.splitlines():
+        stripped = line.strip().lstrip("- ").lstrip("* ")
+        if any(
+            kw in stripped.lower()
+            for kw in ["issue:", "problem:", "error:", "warning:", "critical:"]
+        ):
+            issues.append(stripped)
+
+    if issues:
+        # Determine highest severity mentioned
+        for sev in ("critical", "high", "medium", "low"):
+            if any(sev in issue.lower() for issue in issues):
+                severity = sev
+                break
+        if severity == "none":
+            severity = "medium"
+        passed = False
+
+    result = FalsificationResult(
+        checkpoint=checkpoint_name,
+        passed=passed,
+        issues=issues,
+        severity=severity,
+        output=output,
+    )
+
+    _log_falsification_result(result)
+
+    if not passed:
+        logger.warning(
+            "Falsification checkpoint [%s] FAILED: %d issues (severity=%s)",
+            checkpoint_name,
+            len(issues),
+            severity,
+        )
+    else:
+        logger.info("Falsification checkpoint [%s] PASSED", checkpoint_name)
+
+    return result
+
+
+def _log_falsification_result(result: FalsificationResult) -> None:
+    """Append a falsification checkpoint result to the progress file."""
+    PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    status_icon = "x" if result.passed else "!"
+    timestamp = datetime.now().strftime("%H:%M")
+    issue_count = len(result.issues)
+    line = (
+        f"- [{status_icon}] [falsifier-checkpoint] {result.checkpoint} "
+        f"({issue_count} issues, severity={result.severity}) ({timestamp})\n"
+    )
+    with open(PROGRESS_FILE, "a") as f:
+        f.write(line)
 
 
 def get_active_agents_status() -> list[dict]:

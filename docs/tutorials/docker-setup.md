@@ -1,14 +1,22 @@
 # Tutorial 2: Docker Setup
 
-This tutorial covers installing Docker on your system and running ricet
-inside a container. The Docker setup provides a fully isolated
-environment with Python 3.12, Node.js 20, LaTeX, and all required dependencies
-pre-installed.
+**Docker is required for overnight mode.** This tutorial covers installing
+Docker on your system and running ricet inside a container. The Docker setup
+provides a fully isolated environment with Python 3.12, Node.js 20, LaTeX, and
+all required dependencies pre-installed.
+
+> **Why is Docker required?** Overnight mode runs Claude with elevated
+> permissions (`--dangerously-skip-permissions`) so it can work unattended.
+> Docker ensures that even with these permissions, Claude operates inside a
+> safe sandbox and cannot modify your host system. This is especially important
+> for users from non-technical backgrounds who may not be familiar with the
+> risks of unrestricted command execution.
 
 **Time:** ~20 minutes
 
-**Prerequisites:** [Tutorial 1: Getting API Keys](getting-api-keys.md) completed
-(you need Claude authentication via `claude auth login` or an Anthropic API key).
+**Prerequisites:** [Tutorial 1: Authentication & Credentials](getting-api-keys.md) completed.
+A Claude subscription (Pro or Team) is required and recommended. Use `claude auth login`
+to authenticate.
 
 ---
 
@@ -121,8 +129,9 @@ project root:
 
 ```bash
 $ cat > .env << 'EOF'
-# Only needed if NOT using `claude auth login`:
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+# ANTHROPIC_API_KEY is NOT needed if you use `claude auth login` (recommended).
+# Optional fallback for CI/headless only:
+# ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 
 GITHUB_TOKEN=github_pat_your-token-here
 
@@ -281,10 +290,12 @@ the `CLAUDE_AUTH_DIR` environment variable:
 $ CLAUDE_AUTH_DIR=/path/to/custom/.claude docker compose -f docker/docker-compose.yml up
 ```
 
-### Fallback: API key
+### Optional Fallback: API key (CI/headless only)
 
-If you cannot use browser login (CI pipelines, headless servers), set
-`ANTHROPIC_API_KEY` in your `.env` file or pass it directly:
+If you cannot use browser login (CI pipelines, headless servers), you may
+optionally set `ANTHROPIC_API_KEY` in your `.env` file or pass it directly.
+Note: API usage is billed separately and can be expensive. A Claude subscription
+via `claude auth login` is strongly recommended instead.
 
 ```bash
 $ ANTHROPIC_API_KEY=sk-ant-... docker compose -f docker/docker-compose.yml up
@@ -399,8 +410,46 @@ ports:
 $ ANTHROPIC_API_KEY=sk-ant-... docker compose -f docker/docker-compose.yml up
 ```
 
-Or run `claude auth login` on the host and restart the container (the
-`~/.claude/` mount will provide credentials automatically).
+Or (recommended) run `claude auth login` on the host and restart the container.
+The `~/.claude/` mount will provide credentials automatically. A Claude
+subscription (Pro or Team) is required and recommended.
+
+---
+
+## Automatic Setup During `ricet init`
+
+When you run `ricet init`, Docker setup happens automatically as Step 7:
+
+1. **Checks Docker installation** -- if Docker is not installed, provides
+   OS-specific installation instructions.
+2. **Checks Docker daemon** -- if Docker is installed but not running, tells
+   you how to start it.
+3. **Builds the `ricet:latest` image** -- if the image does not exist locally,
+   it is built automatically (this takes 10-20 minutes on the first run).
+4. **Pre-installs project dependencies** -- reads your `requirements.txt`,
+   `environment.yml`, or `pyproject.toml` and installs packages inside the
+   container so overnight runs start faster.
+5. **Runs a smoke test** -- verifies Python and Node.js work inside the
+   container.
+
+If Docker is not available during `ricet init`, the project is still created
+but overnight mode will not work until Docker is installed. You can install
+Docker later and run `ricet overnight` -- it will build the image on first use.
+
+---
+
+## Docker and Overnight Mode
+
+**Docker is required for overnight mode.** When you run `ricet overnight`:
+
+- If Docker is available, the run automatically launches inside a container.
+- If Docker is not available, the command refuses to start and provides
+  installation instructions.
+- Advanced users can pass `--no-docker` to bypass the Docker requirement, but
+  this is strongly discouraged as it removes all safety isolation.
+
+You do **not** need to manually run `docker compose` or `docker run` for
+overnight mode. The `ricet overnight` command handles everything automatically.
 
 ---
 
@@ -415,6 +464,8 @@ Or run `claude auth login` on the host and restart the container (the
 | Shell into running container | `docker compose -f docker/docker-compose.yml exec app bash` |
 | View logs | `docker compose -f docker/docker-compose.yml logs -f` |
 | Rebuild from scratch | `docker compose -f docker/docker-compose.yml build --no-cache` |
+| Run overnight mode | `ricet overnight --iterations 20` (Docker is automatic) |
+| Bypass Docker (unsafe) | `ricet overnight --no-docker --iterations 20` |
 
 ---
 

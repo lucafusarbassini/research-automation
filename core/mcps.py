@@ -213,7 +213,9 @@ def search_mcp_catalog(need: str, *, run_cmd=None) -> dict | None:
         catalog_parts.append(RAGGABLE_CATALOG.read_text())
 
     if not catalog_parts:
-        logger.warning("No MCP catalogs found at %s or %s", MCP_CATALOG, RAGGABLE_CATALOG)
+        logger.warning(
+            "No MCP catalogs found at %s or %s", MCP_CATALOG, RAGGABLE_CATALOG
+        )
         return None
 
     catalog_text = "\n\n".join(catalog_parts)

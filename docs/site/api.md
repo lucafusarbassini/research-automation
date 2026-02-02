@@ -12,23 +12,53 @@ The main Typer application providing the `ricet` command.
 
 | Command | Description |
 |---------|-------------|
-| `ricetinit <name>` | Initialize a new research project with interactive onboarding |
-| `ricetstart` | Start an interactive research session |
-| `ricetovernight` | Run autonomous overnight mode |
-| `ricetstatus` | Show current TODO and progress |
-| `ricetpaper build` | Compile the LaTeX paper |
-| `ricetdashboard` | Launch the TUI dashboard |
-| `ricetagents` | List agent types and their status |
-| `ricetmemory search <query>` | Search the knowledge base |
-| `ricetmetrics` | Display token and cost metrics |
-| `ricet--version` | Print version and exit |
+| `ricet init <name>` | Initialize a new research project with interactive onboarding |
+| `ricet start` | Start an interactive research session |
+| `ricet overnight` | Run autonomous overnight mode |
+| `ricet status` | Show current TODO and progress |
+| `ricet config [section]` | View or reconfigure project settings |
+| `ricet paper <action>` | Paper pipeline (build, update, modernize, check, adapt-style) |
+| `ricet dashboard` | Launch the TUI dashboard |
+| `ricet agents` | List agent types and their status |
+| `ricet memory <action>` | Knowledge base (search, log-decision, export, import, stats) |
+| `ricet metrics` | Display token and cost metrics |
+| `ricet mobile <action>` | Mobile server (serve, stop, pair, connect-info, tokens, cert-regen, status) |
+| `ricet voice` | Record and transcribe voice commands |
+| `ricet publish <platform>` | Publish to social media (medium, linkedin) |
+| `ricet cite <query>` | Search and cite papers from Semantic Scholar and arXiv |
+| `ricet discover <query>` | Broad literature search with ranked results |
+| `ricet fidelity` | Check GOAL.md alignment score |
+| `ricet maintain` | Run daily maintenance pass |
+| `ricet verify <text>` | Verify factual claims |
+| `ricet debug <command>` | Auto-debug loop for a command |
+| `ricet adopt <source>` | Adopt an existing repository |
+| `ricet link <path>` | Link a repository for cross-repo RAG |
+| `ricet unlink <name>` | Remove a linked repository |
+| `ricet reindex` | Re-index all linked repositories |
+| `ricet docs` | Auto-update project documentation |
+| `ricet browse <url>` | Fetch and extract text from a URL |
+| `ricet infra <action>` | Infrastructure management (check, docker-build, cicd, secrets) |
+| `ricet runbook <file>` | Execute code blocks from a markdown runbook |
+| `ricet projects <action>` | Multi-project management (list, switch, register) |
+| `ricet worktree <action>` | Git worktree management (add, list, remove, prune) |
+| `ricet queue <action>` | Task queue (submit, status, drain, cancel-all) |
+| `ricet package <action>` | Python package management (init, build, publish) |
+| `ricet repro <action>` | Reproducibility tracking (log, list, show, hash) |
+| `ricet auto <action>` | Automation routines (add-routine, list-routines, monitor) |
+| `ricet website <action>` | Website builder (init, build, deploy, preview) |
+| `ricet audit` | Audit project code for stubs and incomplete features |
+| `ricet list-sessions` | List all sessions |
+| `ricet resume <name>` | Resume a previous session |
+| `ricet --version` | Print version and exit |
 
-### Options
+### Selected Options
 
 ```
-ricet init <name> [--path PATH]
-research start [--session-name NAME]
-research overnight [--task-file PATH] [--iterations N]
+ricet init <name> [--path PATH] [--skip-repo] [--no-env]
+ricet start [--session-name NAME]
+ricet overnight [--task-file PATH] [--iterations N] [--docker]
+ricet mobile serve|stop|pair|connect-info|tokens|cert-regen|status
+ricet paper build|update|modernize|check|adapt-style
 ```
 
 ---
@@ -517,29 +547,87 @@ Remove checkpoints exceeding the maximum count. Returns the number removed.
 
 ## `core.onboarding` -- Project Initialization
 
-Interactive onboarding questionnaire and workspace setup.
+Full onboarding workflow: system detection, questionnaire, credential collection, workspace setup, and goal-aware scaffolding.
 
 ### `OnboardingAnswers`
 
-Dataclass holding all user responses from the init wizard: project goal, type, timeline, constraints, and credentials.
+```python
+@dataclass
+class OnboardingAnswers:
+    project_name: str = ""
+    goal: str = ""
+    project_type: str = "general"
+    github_repo: str = ""
+    success_criteria: list[str] = field(default_factory=list)
+    timeline: str = "flexible"
+    compute_type: str = "local-cpu"    # Auto-detected
+    gpu_name: str = ""                 # Auto-detected
+    notification_method: str = "none"
+    notification_email: str = ""
+    slack_webhook: str = ""
+    credentials: dict[str, str] = field(default_factory=dict)
+    journal_target: str = ""
+    needs_website: bool = False
+    needs_mobile: bool = False
+```
 
 ### Functions
 
-#### `collect_answers() -> OnboardingAnswers`
+#### `detect_system_for_init() -> dict`
 
-Run the interactive questionnaire and return structured answers.
+Auto-detect system capabilities (OS, Python, CPU, GPU, RAM, Docker, Conda). Returns a summary dict used to pre-fill compute settings.
 
-#### `setup_workspace(project_path: Path, answers: OnboardingAnswers) -> None`
+#### `auto_install_claude_flow(*, run_cmd=None) -> bool`
 
-Create the project directory structure from templates.
+Install claude-flow via npm if not already available. Returns True if available after the call.
 
-#### `write_goal_file(path: Path, answers: OnboardingAnswers) -> None`
+#### `collect_answers(project_name: str, *, prompt_fn=None, system_info: dict = None) -> OnboardingAnswers`
+
+Run the streamlined questionnaire. GPU and compute type are auto-detected from `system_info`. Asks for: notification method, journal target, website needs, mobile access.
+
+#### `collect_credentials(answers: OnboardingAnswers, *, prompt_fn=None, print_fn=None) -> dict[str, str]`
+
+Walk through 20+ API credentials grouped by category (core, ML, publishing, cloud, integrations, Slack, email). Each shows where to get the key and pricing info. Enter to skip any.
+
+#### `setup_workspace(project_path: Path) -> None`
+
+Create workspace directories (`reference/`, `uploads/`, `secrets/`, `local/`) with guided README files.
+
+#### `write_settings(project_path: Path, answers: OnboardingAnswers) -> Path`
+
+Write `config/settings.yml` from onboarding answers.
+
+#### `write_goal_file(project_path: Path, answers: OnboardingAnswers) -> None`
 
 Write the customized GOAL.md.
 
-#### `write_settings(path: Path, answers: OnboardingAnswers) -> None`
+#### `write_env_file(project_path: Path, credentials: dict[str, str]) -> Path`
 
-Write `config/settings.yml` from onboarding answers.
+Write credentials to `secrets/.env`.
+
+#### `write_env_example(project_path: Path) -> Path`
+
+Write `secrets/.env.example` template showing all possible variables with how-to-get URLs.
+
+#### `infer_packages_from_goal(goal_content: str, *, use_claude: bool = True) -> list[str]`
+
+Infer Python packages from GOAL.md content. Tries Claude CLI for domain-specific inference, falls back to keyword matching.
+
+#### `install_inferred_packages(packages: list[str]) -> tuple[list[str], list[str]]`
+
+Install a list of pip packages, returning `(installed, failed)`. Asks Claude for alternatives when installation fails.
+
+#### `generate_goal_todos(goal_content: str) -> str`
+
+Generate 8-12 goal-specific TODO items as a markdown checklist using Claude CLI.
+
+#### `generate_goal_folders(goal_content: str) -> list[str]`
+
+Suggest 3-6 project-specific directory names based on the research goal.
+
+#### `validate_goal_content(content: str, min_chars: int = 200) -> bool`
+
+Check that GOAL.md has real user content (strips boilerplate, comments, placeholders).
 
 ---
 
@@ -876,17 +964,157 @@ Convert raw transcribed text into a structured research prompt.
 
 ## `core.mobile` -- Mobile Access
 
-Mobile PWA support for remote monitoring.
+HTTPS API server for phone-based control of research projects. Uses only standard library modules (`http.server`, `ssl`, `hashlib`, `threading`).
+
+### `TLSManager`
+
+```python
+class TLSManager:
+    def __init__(self, certs_dir: Optional[Path] = None) -> None: ...
+    def ensure_certs(self) -> None: ...
+    def generate_certs(self) -> None: ...
+    def fingerprint(self) -> str: ...
+    def create_ssl_context(self) -> ssl.SSLContext: ...
+```
+
+Manages self-signed TLS certificates via the `openssl` CLI. Certificates are stored in `~/.ricet/certs/`. Key file permissions are restricted to `0600`.
+
+### `MobileAuth`
+
+```python
+class MobileAuth:
+    def __init__(self, tokens_file: Optional[Path] = None) -> None: ...
+    def generate_token(self, label: str = "") -> str: ...
+    def validate(self, token: str, client_ip: str = "") -> bool: ...
+    def revoke(self, hash_prefix: str) -> bool: ...
+    def list_tokens(self) -> list[dict]: ...
+```
+
+Bearer token authentication with persistent SHA-256 hash storage (`~/.ricet/mobile_tokens.json`). Includes per-IP rate limiting: 10 failures triggers a 15-minute lockout.
+
+### `ProjectRegistry`
+
+```python
+class ProjectRegistry:
+    def __init__(self, projects_file: Optional[Path] = None) -> None: ...
+    def list_projects(self) -> list[dict]: ...
+    def get_project(self, name: str) -> Optional[dict]: ...
+    def get_project_status(self, name: str) -> dict: ...
+```
+
+Reads the global project list from `~/.ricet/projects.json` and returns project status including `PROGRESS.md` content and recent sessions.
+
+### `MobileServer`
+
+```python
+class MobileServer:
+    def __init__(self, auth=None, registry=None, tls_manager=None) -> None: ...
+    def dispatch(self, method, path, body=None, *, headers=None, query_params=None, client_ip="") -> dict: ...
+```
+
+Route-based HTTP dispatch with 9 default endpoints. Authentication is enforced for all routes except PWA asset routes (`/`, `/manifest.json`, `/sw.js`, `/icon.svg`). All responses are JSON formatted for mobile display (strings truncated to 280 characters).
+
+### Module-Level Functions
+
+#### `start_server(host="0.0.0.0", port=8777, auth=None, tls=True, tls_manager=None) -> threading.Thread`
+
+Start the mobile API server in a daemon thread. Returns the thread handle.
+
+#### `stop_server() -> None`
+
+Shut down the running mobile API server.
+
+#### `is_server_running() -> bool`
+
+Return True if the mobile server thread is alive.
+
+#### `generate_mobile_url(host="0.0.0.0", port=8777, auth=None, tls=True) -> str`
+
+Generate a URL for mobile access, embedding a fresh auth token.
+
+#### `generate_qr_terminal(url: str) -> str`
+
+Generate a QR code for the terminal using `qrencode` if available. Falls back to plain URL text.
+
+### CLI Adapter
+
+```python
+from core.mobile import mobile_server
+
+mobile_server.serve(host, port, tls)  # Start HTTPS server
+mobile_server.stop()                   # Stop server
+mobile_server.pair(label)              # Generate token + QR code
+mobile_server.connect_info()           # Print connection methods
+mobile_server.tokens()                 # List active tokens
+mobile_server.cert_regen()             # Regenerate TLS certs
+mobile_server.status()                 # Server status dict
+```
+
+---
+
+## `core.mobile_pwa` -- PWA Assets
+
+Static HTML/CSS/JS constants served by the mobile server. No imports, no logic.
+
+### Constants
+
+- `PWA_HTML` -- Full single-page application with Dashboard, Tasks, Voice, and Settings tabs.
+- `MANIFEST_JSON` -- PWA manifest for standalone display mode.
+- `SERVICE_WORKER_JS` -- Cache-first for app shell, network-first for API routes.
+- `ICON_SVG` -- Scalable app icon.
+
+---
+
+## `core.social_media` -- Social Media Publishing
+
+Draft, validate, and publish to Medium, LinkedIn, and Twitter/X.
+
+### `PostDraft`
+
+```python
+@dataclass
+class PostDraft:
+    platform: str           # "medium", "linkedin", "twitter"
+    body: str
+    title: str = ""
+    tags: list[str] = field(default_factory=list)
+    link: str = ""
+    char_count: int = 0
+    ready: bool = False
+```
+
+### Constants
+
+```python
+CHAR_LIMITS = {"twitter": 280, "linkedin": 3000, "medium": 100_000}
+MEDIUM_MAX_TAGS = 5
+```
 
 ### Functions
 
-#### `setup_pwa(project_path: Path) -> dict`
+#### `draft_medium_post(title: str, content: str, tags: list[str]) -> dict`
 
-Generate Progressive Web App configuration files for remote access.
+Prepare a Medium article draft in markdown format. Tags trimmed to 5 maximum.
 
-#### `generate_manifest(project_name: str) -> dict`
+#### `draft_linkedin_post(content: str, link: str = "") -> dict`
 
-Create a PWA manifest file.
+Prepare a LinkedIn post with optional link attachment.
+
+#### `draft_twitter_post(content: str) -> dict`
+
+Prepare a tweet, truncated to 280 characters.
+
+#### `validate_post(draft: PostDraft) -> list[str]`
+
+Validate a draft against platform constraints. Returns a list of issues (empty = valid).
+
+#### `publish_medium(draft: PostDraft, token: str) -> dict`
+
+Publish to Medium via their API. Requires a Medium integration token.
+
+#### `publish_linkedin(draft: PostDraft, access_token: str) -> dict`
+
+Publish to LinkedIn via their API. Requires an OAuth2 access token.
 
 ---
 

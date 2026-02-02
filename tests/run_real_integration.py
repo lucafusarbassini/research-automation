@@ -33,9 +33,15 @@ results = []
 step_counter = 0
 
 
-def run_step(name: str, cmd: list[str] | str, cwd: Path | str | None = None,
-             timeout: int = 120, input_text: str | None = None,
-             env_extra: dict | None = None, shell: bool = False) -> dict:
+def run_step(
+    name: str,
+    cmd: list[str] | str,
+    cwd: Path | str | None = None,
+    timeout: int = 120,
+    input_text: str | None = None,
+    env_extra: dict | None = None,
+    shell: bool = False,
+) -> dict:
     """Run a command, capture everything, record result."""
     global step_counter
     step_counter += 1
@@ -60,8 +66,14 @@ def run_step(name: str, cmd: list[str] | str, cwd: Path | str | None = None,
     start = time.time()
     try:
         r = subprocess.run(
-            cmd, cwd=cwd, capture_output=True, text=True,
-            timeout=timeout, env=env, input=input_text, shell=shell,
+            cmd,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=env,
+            input=input_text,
+            shell=shell,
         )
         elapsed = time.time() - start
         stdout = r.stdout or ""
@@ -107,21 +119,29 @@ def generate_report():
 
     report = TestReport(
         title="ricet 0.3.0 — Real End-to-End Integration Test",
-        started_at=datetime.datetime.fromisoformat(results[0].get("_ts", datetime.datetime.now().isoformat())) if results else datetime.datetime.now(),
+        started_at=(
+            datetime.datetime.fromisoformat(
+                results[0].get("_ts", datetime.datetime.now().isoformat())
+            )
+            if results
+            else datetime.datetime.now()
+        ),
         finished_at=datetime.datetime.now(),
     )
 
     for r in results:
-        report.add(TestResult(
-            step=r["step"],
-            name=r["name"],
-            command=r["command"],
-            stdout=r["stdout"],
-            stderr=r["stderr"],
-            returncode=r["returncode"],
-            passed=r["passed"],
-            note=f"[{r['elapsed']}s] {r.get('note', '')}",
-        ))
+        report.add(
+            TestResult(
+                step=r["step"],
+                name=r["name"],
+                command=r["command"],
+                stdout=r["stdout"],
+                stderr=r["stderr"],
+                returncode=r["returncode"],
+                passed=r["passed"],
+                note=f"[{r['elapsed']}s] {r.get('note', '')}",
+            )
+        )
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     pdf_path = generate_pdf_report(report, REPORT_DIR)
@@ -149,6 +169,7 @@ def generate_report():
 # ---------------------------------------------------------------------------
 # THE REAL TEST
 # ---------------------------------------------------------------------------
+
 
 def main():
     print(f"Starting real integration test at {datetime.datetime.now().isoformat()}")
@@ -326,8 +347,11 @@ def main():
     # -----------------------------------------------------------------------
     run_step(
         "ricet verify (real Claude)",
-        ["ricet", "verify",
-         "The golden ratio phi=1.618033988749895 and F(n+1)/F(n) converges geometrically at rate 1/phi^2"],
+        [
+            "ricet",
+            "verify",
+            "The golden ratio phi=1.618033988749895 and F(n+1)/F(n) converges geometrically at rate 1/phi^2",
+        ],
         timeout=90,
     )
 
@@ -405,7 +429,9 @@ def main():
     # -----------------------------------------------------------------------
     # STEP 24: Edge — duplicate cite
     # -----------------------------------------------------------------------
-    run_step("Edge: duplicate ricet cite", ["ricet", "cite", "golden ratio"], timeout=60)
+    run_step(
+        "Edge: duplicate ricet cite", ["ricet", "cite", "golden ratio"], timeout=60
+    )
 
     # -----------------------------------------------------------------------
     # STEP 25: ricet discover
@@ -434,16 +460,29 @@ def main():
 
         run_step(
             "GitHub: view research-automation repo",
-            ["gh", "repo", "view", "lucafusarbassini/research-automation", "--json", "name,description,url"],
+            [
+                "gh",
+                "repo",
+                "view",
+                "lucafusarbassini/research-automation",
+                "--json",
+                "name,description,url",
+            ],
         )
     else:
-        results.append({
-            "step": step_counter + 1,
-            "name": "GitHub tests",
-            "command": "SKIPPED — no GITHUB_PAT",
-            "stdout": "", "stderr": "", "returncode": -1,
-            "passed": False, "elapsed": 0, "note": "Set GITHUB_PAT env var",
-        })
+        results.append(
+            {
+                "step": step_counter + 1,
+                "name": "GitHub tests",
+                "command": "SKIPPED — no GITHUB_PAT",
+                "stdout": "",
+                "stderr": "",
+                "returncode": -1,
+                "passed": False,
+                "elapsed": 0,
+                "note": "Set GITHUB_PAT env var",
+            }
+        )
         step_counter += 1
 
     # -----------------------------------------------------------------------
@@ -466,7 +505,10 @@ def main():
     # -----------------------------------------------------------------------
     run_step(
         "Mathematical verification of results.json",
-        [sys.executable, "-c", textwrap.dedent("""\
+        [
+            sys.executable,
+            "-c",
+            textwrap.dedent("""\
         import json, math
         PHI = (1 + math.sqrt(5)) / 2
         data = json.loads(open('results.json').read())
@@ -483,7 +525,8 @@ def main():
         assert abs(data['phi_estimate']-PHI) < 1e-15, "PHI MISMATCH"
         assert abs(data['convergence_rate']-data['expected_rate']) < 0.01, "RATE MISMATCH"
         print("ALL MATHEMATICAL CHECKS PASSED")
-        """)],
+        """),
+        ],
     )
 
     # -----------------------------------------------------------------------
@@ -495,7 +538,10 @@ def main():
     if SMTP_USER and SMTP_PASS:
         run_step(
             "Send real email with PDF attachment",
-            [sys.executable, "-c", textwrap.dedent(f"""\
+            [
+                sys.executable,
+                "-c",
+                textwrap.dedent(f"""\
             import sys; sys.path.insert(0, '{REPO_ROOT}')
             from core.notifications import send_email_with_attachment, NotificationConfig
             from pathlib import Path
@@ -515,17 +561,24 @@ def main():
                 cfg,
             )
             print(f'Email sent: {{r}}')
-            """)],
+            """),
+            ],
             cwd=REPO_ROOT,
         )
     else:
-        results.append({
-            "step": step_counter + 1,
-            "name": "Email PDF",
-            "command": "SKIPPED — no SMTP_USER/SMTP_PASS",
-            "stdout": "", "stderr": "", "returncode": -1,
-            "passed": False, "elapsed": 0, "note": "",
-        })
+        results.append(
+            {
+                "step": step_counter + 1,
+                "name": "Email PDF",
+                "command": "SKIPPED — no SMTP_USER/SMTP_PASS",
+                "stdout": "",
+                "stderr": "",
+                "returncode": -1,
+                "passed": False,
+                "elapsed": 0,
+                "note": "",
+            }
+        )
         step_counter += 1
 
     # Regenerate report with email step included

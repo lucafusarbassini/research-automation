@@ -1,9 +1,9 @@
-# Tutorial 1: Getting API Keys
+# Tutorial 1: Authentication & Credentials
 
 This tutorial walks you through authenticating with Claude and obtaining every
-credential that ricet can use. Browser login via `claude auth login`
-is the recommended method. API keys are available as a fallback for CI/headless
-environments. Everything else is optional and can be added later.
+credential that ricet can use. A Claude subscription (Pro or Team) is required
+and recommended. Use `claude auth login` to authenticate -- no API key needed.
+Everything else is optional and can be added later.
 
 **Time:** ~10 minutes
 
@@ -29,10 +29,11 @@ environments. Everything else is optional and can be added later.
 
 ## 1. Claude Authentication (required)
 
-Claude Code is the engine behind every agent in ricet. The
-recommended way to authenticate is browser login -- no API key needed.
+A Claude subscription (Pro or Team) is required and recommended. Claude Code is
+the engine behind every agent in ricet. Use `claude auth login` to
+authenticate -- no API key needed.
 
-### Recommended: Browser Login
+### Recommended: Claude Subscription + Browser Login
 
 Run the following command and follow the prompts in your browser:
 
@@ -41,7 +42,7 @@ $ claude auth login
 ```
 
 This stores credentials in `~/.claude/` and keeps them refreshed automatically.
-No API key management required.
+No API key management required. Your Claude subscription covers all usage.
 
 ### Verify
 
@@ -51,10 +52,12 @@ $ claude --version
 
 If the command succeeds without authentication errors, you are ready to go.
 
-### Alternative: API Key (for CI/headless environments)
+### Optional Fallback: API Key (CI/headless environments only)
 
 If you are running in a CI pipeline, headless server, or environment where
-browser login is not possible, use an API key instead.
+browser login is not possible, you may use an Anthropic API key as an optional
+fallback. Note: API usage is billed separately and can be expensive. A Claude
+subscription via `claude auth login` is strongly recommended instead.
 
 1. Go to [console.anthropic.com](https://console.anthropic.com/).
 2. Sign up or log in.
@@ -64,7 +67,7 @@ browser login is not possible, use an API key instead.
 6. Copy the key immediately -- it will not be shown again.
 
 ```bash
-# Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
+# Optional fallback for CI/headless only (~/.bashrc, ~/.zshrc, etc.)
 $ export ANTHROPIC_API_KEY="sk-ant-api03-..."
 ```
 
@@ -78,9 +81,9 @@ $ source ~/.bashrc   # or ~/.zshrc
 
 | Problem | Solution |
 |---------|----------|
-| `claude auth login` fails | Ensure you have a working browser. On headless systems, use an API key instead. |
+| `claude auth login` fails | Ensure you have a working browser. On headless systems, use an API key as fallback. |
 | "Invalid API key" errors | Make sure there are no extra spaces or newlines. Copy the key again from the console. |
-| Key stops working | Check your billing at console.anthropic.com. Free-tier credits may have expired. |
+| Key stops working | Check your billing at console.anthropic.com. Prefer `claude auth login` with a Claude subscription instead. |
 | Accidentally committed a key | Revoke it immediately in the console, generate a new one, and add `*.env` to `.gitignore`. |
 
 ---
@@ -449,8 +452,8 @@ For other providers, check their SMTP settings documentation.
 
 ## 13. Storing Your Keys Safely
 
-Never commit API keys to git. ricet uses two mechanisms for safe
-key storage.
+Never commit credentials to git. ricet uses two mechanisms for safe
+credential storage.
 
 ### Option A: Environment variables in your shell profile
 
@@ -458,7 +461,8 @@ Add exports to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 # ~/.bashrc (or ~/.zshrc)
-export ANTHROPIC_API_KEY="sk-ant-..."
+# NOTE: ANTHROPIC_API_KEY is NOT needed if you use `claude auth login` (recommended).
+# ANTHROPIC_API_KEY="sk-ant-..."   # Optional fallback for CI/headless only
 export GITHUB_TOKEN="github_pat_..."
 export NOTIFICATION_WEBHOOK="https://hooks.slack.com/..."
 # Add other keys as needed
@@ -470,7 +474,8 @@ Create a `.env` file in your project root:
 
 ```bash
 $ cat > .env << 'EOF'
-ANTHROPIC_API_KEY=sk-ant-...
+# ANTHROPIC_API_KEY is NOT needed if you use `claude auth login` (recommended).
+# ANTHROPIC_API_KEY=sk-ant-...   # Optional fallback for CI/headless only
 GITHUB_TOKEN=github_pat_...
 NOTIFICATION_WEBHOOK=https://hooks.slack.com/...
 EOF
@@ -510,8 +515,8 @@ rotate them immediately.
 
 | Key | Required | Where to Get It | Environment Variable |
 |-----|----------|----------------|---------------------|
-| Claude Auth (browser login) | Yes | `claude auth login` | `~/.claude/` |
-| Anthropic API Key (fallback) | CI/headless only | console.anthropic.com | `ANTHROPIC_API_KEY` |
+| Claude subscription (Pro/Team) | Yes | `claude auth login` | `~/.claude/` |
+| Anthropic API Key (optional fallback) | CI/headless only | console.anthropic.com | `ANTHROPIC_API_KEY` |
 | GitHub SSH Key | For git push | ssh-keygen locally | N/A (file-based) |
 | GitHub Token | For API features | github.com/settings/tokens | `GITHUB_PERSONAL_ACCESS_TOKEN` |
 | OpenAI API Key | No | platform.openai.com | `OPENAI_API_KEY` |

@@ -3,7 +3,7 @@
 Provides ``call_claude`` and ``call_claude_json`` which invoke
 ``claude -p <prompt>`` and return the result text.
 All callers should treat a ``None`` return as "Claude unavailable" and
-fall back to their existing keyword-based logic.
+fall back to their existing heuristic logic.
 """
 
 import json
@@ -16,6 +16,13 @@ logger = logging.getLogger(__name__)
 
 # Model to use for lightweight CLI calls (literature search, TODO generation, etc.)
 CLAUDE_CLI_MODEL = "claude-3-5-haiku-20241022"
+
+# Model aliases for callers that need a specific tier
+CLAUDE_MODEL_ALIASES: dict[str, str] = {
+    "haiku": CLAUDE_CLI_MODEL,
+    "sonnet": "claude-sonnet-4-20250514",
+    "opus": "claude-opus-4-5-20251101",
+}
 
 
 def _claude_cli_available() -> bool:
@@ -66,6 +73,7 @@ def _extract_result_text(stdout: str) -> str | None:
 def call_claude(
     prompt: str,
     *,
+    model: str | None = None,
     timeout: int = 30,
     run_cmd=None,
 ) -> str | None:
@@ -73,6 +81,8 @@ def call_claude(
 
     Args:
         prompt: The prompt text.
+        model: Optional model alias (``"haiku"``, ``"sonnet"``, ``"opus"``)
+               or a full model ID.  Defaults to :data:`CLAUDE_CLI_MODEL`.
         timeout: Subprocess timeout in seconds.
         run_cmd: Optional ``callable(cmd_list) -> CompletedProcess``
                  override for testing.
@@ -80,6 +90,10 @@ def call_claude(
     Returns:
         Response text on success, ``None`` on any failure.
     """
+    resolved_model = (
+        CLAUDE_MODEL_ALIASES.get(model, model) if model else CLAUDE_CLI_MODEL
+    )
+
     if run_cmd is None:
         if not _claude_cli_available():
             return None
@@ -101,7 +115,7 @@ def call_claude(
                 "--output-format",
                 "text",
                 "--model",
-                CLAUDE_CLI_MODEL,
+                resolved_model,
             ]
         )
         if result.returncode == 0 and result.stdout.strip():

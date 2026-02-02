@@ -15,7 +15,7 @@ git clone https://github.com/lucafusarbassini/research-automation
 cd research-automation
 pip install -e .
 
-# Authenticate with Claude (no API key needed)
+# Authenticate with Claude subscription (Pro or Team required, no API key needed)
 claude auth login
 ```
 
@@ -27,11 +27,83 @@ claude auth login
 ricet init my-first-project
 ```
 
-The interactive onboarding wizard will ask you:
+The `ricet init` wizard runs through several automated and interactive steps:
 
-1. **Project goal** -- A one-liner describing what you want to achieve.
-2. **Project type** -- Choose from `ml-research`, `data-analysis`, `paper-writing`, or `general`.
-3. **Timeline and constraints** -- Budget, deadlines, compute limits.
+### Step 0: Package Check
+
+The CLI verifies that required Python packages (`typer`, `rich`, `pyyaml`, `python-dotenv`) are installed, auto-installing any that are missing.
+
+### Step 1: System Detection
+
+The wizard auto-detects your system capabilities:
+
+```
+Step 1: Detecting system...
+  OS:      Linux 6.8.0-52-generic
+  Python:  3.11.10
+  CPU:     x86_64
+  RAM:     32 GB
+  GPU:     NVIDIA RTX 4090
+  Compute: local-gpu (auto-detected)
+  Docker:  Available
+  Conda:   Available
+```
+
+GPU availability and compute type are inferred automatically -- you do not need to specify them manually.
+
+### Step 2: Claude-Flow Setup
+
+The wizard checks for and installs `claude-flow` (optional orchestration layer) and verifies Claude CLI authentication:
+
+```
+Step 2: Setting up claude-flow...
+  claude-flow is ready
+
+Step 2b: Checking Claude authentication...
+  Claude CLI available
+```
+
+### Step 3: Interactive Questionnaire
+
+The streamlined questionnaire asks for:
+
+1. **Notification method** -- `email`, `slack`, or `none`.
+2. **Target journal or conference** -- e.g. `Nature Machine Intelligence` or `skip`.
+3. **Web dashboard** -- whether you want a project website (`yes`/`no`).
+4. **Mobile access** -- whether you want mobile phone control (`yes`/`no`).
+
+!!! note
+    The project goal is **not** entered as a one-liner during init. Instead, you write a detailed description in `knowledge/GOAL.md` after the project is created. The wizard prompts you to do this.
+
+### Step 3b: API Credentials
+
+The wizard walks you through optional API credentials one by one, grouped by category (core, ML, publishing, cloud, integrations). Each credential shows where to get it and whether it is free or paid. Press Enter to skip any credential you do not have yet.
+
+```
+Step 3b: API credentials
+  Press Enter to skip any credential you don't have yet.
+
+  --- Essential credentials (Enter to skip any) ---
+  Anthropic API key [PAID, skip unless you need direct API access] (ANTHROPIC_API_KEY):
+  GitHub PAT [FREE] (GITHUB_PERSONAL_ACCESS_TOKEN):
+  ...
+```
+
+All credentials are stored in `secrets/.env` (gitignored) and a `secrets/.env.example` template is generated for reference.
+
+### Step 4: Project Creation
+
+The wizard copies templates, creates workspace directories, writes settings, and optionally creates a conda/mamba environment with packages inferred from your goal description.
+
+### Step 5: GitHub Repository
+
+Optionally creates a private GitHub repository using the `gh` CLI, sets the remote, and configures repo description and topics from `GOAL.md`.
+
+### Step 6: Git Initialization
+
+Initializes git, commits the scaffolded project, and registers it in the global project registry (`~/.ricet/projects.json`).
+
+### Result
 
 The command creates a fully scaffolded project directory:
 
@@ -43,7 +115,7 @@ my-first-project/
 │   ├── skills/             # Paper writing, figure making, code style
 │   └── hooks/              # Pre-task, post-task, on-error hooks
 ├── knowledge/
-│   ├── GOAL.md             # Your project goal
+│   ├── GOAL.md             # Your project goal (EDIT THIS)
 │   ├── ENCYCLOPEDIA.md     # Auto-growing knowledge base
 │   └── CONSTRAINTS.md      # Boundaries and rules
 ├── paper/
@@ -52,19 +124,57 @@ my-first-project/
 │   └── Makefile            # Build automation
 ├── config/
 │   └── settings.yml        # Project settings
-└── state/                  # Session logs, progress tracking
+├── reference/
+│   ├── papers/             # Background papers (PDF, etc.)
+│   └── code/               # Reference code, scripts, notebooks
+├── uploads/
+│   ├── data/               # Datasets (large files auto-gitignored)
+│   └── personal/           # Your papers, CV, writing samples
+├── secrets/
+│   ├── .env                # API keys (never committed)
+│   └── .env.example        # Template showing all variables
+├── state/
+│   ├── sessions/           # Session logs
+│   ├── TODO.md             # Goal-aware task list
+│   └── PROGRESS.md         # Progress tracking
+└── environment.yml         # Conda environment spec
 ```
 
 ---
 
-## Step 3: Start an Interactive Session
+## Step 3: Edit GOAL.md
+
+Before starting your first session, write a detailed project description:
 
 ```bash
 cd my-first-project
+$EDITOR knowledge/GOAL.md
+```
+
+Write at least 200 characters of real content describing your research question, methodology, expected outcomes, and constraints. `ricet start` enforces this minimum and will open your editor if the file is insufficient.
+
+!!! tip
+    The more detailed your GOAL.md, the better the agents perform. Include your research question, methodology, expected outcomes, datasets, and constraints. One full page is ideal.
+
+---
+
+## Step 4: Start an Interactive Session
+
+```bash
 ricet start
 ```
 
-This creates a tracked session and launches Claude Code. The agent system follows the **Progressive Instruction Protocol**:
+This creates a tracked session and launches Claude Code. On start, the system:
+
+1. Syncs with remote (`git pull --rebase`) for collaborative workflows.
+2. Validates that `knowledge/GOAL.md` has sufficient content.
+3. Infers and installs Python packages based on your goal description.
+4. Starts the mobile server if enabled in settings.
+5. Re-indexes linked repositories for cross-repo RAG.
+6. Suggests next research steps based on your goal and progress.
+7. Launches Claude Code with a tracked session UUID.
+
+The agent system follows the **Progressive Instruction Protocol**:
 
 1. **Orient** -- Reads GOAL.md, CONSTRAINTS.md, and TODO.md to understand context.
 2. **Explore** -- Examines relevant code and data, builds a mental model.
@@ -82,7 +192,7 @@ The Master agent routes this to the Researcher agent, which uses paper-search MC
 
 ---
 
-## Step 4: Check Status
+## Step 5: Check Status
 
 Open a new terminal:
 
@@ -95,7 +205,7 @@ This displays the current TODO list and progress log.
 
 ---
 
-## Step 5: Run Overnight Mode
+## Step 6: Run Overnight Mode
 
 For longer tasks, use overnight mode:
 
@@ -109,7 +219,14 @@ This runs Claude in an autonomous loop:
 - Executes tasks one by one
 - Auto-commits after each subtask
 - Monitors resources and checkpoints progress
+- Runs the falsifier agent after every iteration
 - Stops when all tasks are done or the iteration limit is reached
+
+For Docker-sandboxed execution:
+
+```bash
+ricet overnight --iterations 30 --docker
+```
 
 Check results in the morning:
 
@@ -120,7 +237,7 @@ git log --oneline -20
 
 ---
 
-## Step 6: Build Your Paper
+## Step 7: Build Your Paper
 
 Once you have results:
 
@@ -141,7 +258,7 @@ The paper pipeline provides:
 
 ---
 
-## Step 7: View the Dashboard
+## Step 8: View the Dashboard
 
 For a richer view of your project:
 
@@ -155,6 +272,25 @@ The TUI dashboard shows:
 - Token budget usage
 - Resource utilization (CPU, RAM, GPU)
 - Recent progress entries
+
+---
+
+## Step 9: Mobile Access
+
+If you enabled mobile access during init, the server starts automatically with `ricet start`. You can also manage it manually:
+
+```bash
+# Start the mobile HTTPS server
+ricet mobile serve
+
+# Pair your phone (generates token + QR code)
+ricet mobile pair
+
+# View connection methods
+ricet mobile connect-info
+```
+
+Open the generated URL on your phone to access the PWA dashboard with task submission, voice commands, and project monitoring. See [Mobile Access](mobile.md) for the full guide.
 
 ---
 
@@ -189,7 +325,7 @@ This overlays the ricet workspace structure without disturbing existing code, pr
 
 ---
 
-## Step 8: Link Related Repositories
+## Step 10: Link Related Repositories
 
 If you work across multiple repos, link them for cross-repository search:
 
@@ -199,7 +335,7 @@ ricet link ~/code/shared-library --name shared
 ricet link ~/code/data-pipeline
 
 # Agents can now search across all linked repos
-ricet memory "data preprocessing pipeline"
+ricet memory search "data preprocessing pipeline"
 
 # Re-index after external changes
 ricet reindex
@@ -212,6 +348,7 @@ Linked repos are read-only -- agents search them for context but only write to t
 ## Next Steps
 
 - Read [Features](features.md) for a complete overview of all capabilities.
+- Read [Mobile Access](mobile.md) for phone-based project control.
 - Read [Architecture](architecture.md) to understand the module relationships.
 - Read [API Reference](api.md) for detailed module documentation.
 - Check the [FAQ](faq.md) for common questions.

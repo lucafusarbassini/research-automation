@@ -61,6 +61,7 @@ def test_collect_answers_defaults():
         [
             "none",
             "skip",
+            "journal-article",
             "no",
             "no",
         ]
@@ -82,6 +83,7 @@ def test_collect_answers_with_gpu():
         [
             "none",
             "skip",
+            "journal-article",
             "no",
             "no",
         ]
@@ -101,6 +103,7 @@ def test_collect_answers_with_email():
             "email",
             "a@b.com",
             "skip",
+            "journal-article",
             "no",
             "no",
         ]
@@ -262,6 +265,7 @@ def test_collect_answers_new_fields():
         [
             "none",
             "Nature",
+            "journal-article",
             "yes",
             "yes",
         ]

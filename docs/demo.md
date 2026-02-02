@@ -31,7 +31,7 @@ Step 3: Project configuration
 
 Step 3b: API credentials
   Press Enter to skip any credential you don't have yet.
-  Anthropic API key (ANTHROPIC_API_KEY) []: sk-ant-...
+  Anthropic API key [OPTIONAL FALLBACK for CI/headless only] (ANTHROPIC_API_KEY) []:
   GitHub token (GITHUB_PERSONAL_ACCESS_TOKEN) []: ghp_...
   HuggingFace access token (HUGGINGFACE_TOKEN) []:
   Weights & Biases API key (WANDB_API_KEY) []: ...
@@ -51,7 +51,7 @@ Project created at ./learning-rate-study
     ├── uploads/data/       ← datasets (large files auto-gitignored)
     ├── uploads/personal/   ← your papers, CV, writing samples
     ├── knowledge/GOAL.md   ← your research description (EDIT THIS)
-    ├── secrets/.env        ← API keys (never committed)
+    ├── secrets/.env        ← credentials (never committed)
     └── config/settings.yml ← project configuration
 
 Next steps:
@@ -214,7 +214,7 @@ learning-rate-study/
 │   └── figures/               ← experiment plots
 ├── src/                       ← experiment code
 ├── output/                    ← raw results
-├── secrets/.env               ← API keys (gitignored)
+├── secrets/.env               ← credentials (gitignored)
 └── state/
     ├── TODO.md
     ├── PROGRESS.md

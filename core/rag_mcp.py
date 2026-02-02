@@ -373,15 +373,17 @@ DEFAULT_ENTRIES: list[MCPEntry] = [
 # or:
 #   name-of-server 🐍 ☁️ - Description text here
 _ENTRY_RE = re.compile(
-    r"^(?P<name>\S+)"        # name/repo (no spaces)
+    r"^(?P<name>\S+)"  # name/repo (no spaces)
     r"\s+"
-    r"(?P<badges>[^-]*?)"    # emoji badges (optional)
+    r"(?P<badges>[^-]*?)"  # emoji badges (optional)
     r"\s*-\s+"
-    r"(?P<desc>.+)$"         # description after the dash
+    r"(?P<desc>.+)$"  # description after the dash
 )
 
 # Category headers look like: 🔗 Aggregators  or  ## Biology, Medicine ...
-_CATEGORY_RE = re.compile(r"^(?:[#]+\s*)?(?:\S+\s+)?(?P<cat>[A-Z][\w &,/]+)", re.IGNORECASE)
+_CATEGORY_RE = re.compile(
+    r"^(?:[#]+\s*)?(?:\S+\s+)?(?P<cat>[A-Z][\w &,/]+)", re.IGNORECASE
+)
 
 
 def parse_raggable_catalog(
@@ -409,11 +411,25 @@ def parse_raggable_catalog(
             continue
 
         # Detect category headers (emoji + title, or ## title)
-        if stripped.startswith(("#", "\U0001f517", "\U0001f680", "\U0001f3a8",
-                                "\U0001f4d0", "\U0001f9ec", "\U0001f4ac",
-                                "\u2601", "\U0001f4bc", "\U0001f4ca",
-                                "\U0001f527", "\U0001f3ae", "\U0001f310",
-                                "\U0001f512", "\U0001f4d6")):
+        if stripped.startswith(
+            (
+                "#",
+                "\U0001f517",
+                "\U0001f680",
+                "\U0001f3a8",
+                "\U0001f4d0",
+                "\U0001f9ec",
+                "\U0001f4ac",
+                "\u2601",
+                "\U0001f4bc",
+                "\U0001f4ca",
+                "\U0001f527",
+                "\U0001f3ae",
+                "\U0001f310",
+                "\U0001f512",
+                "\U0001f4d6",
+            )
+        ):
             # Try to extract a clean category name
             cat_match = _CATEGORY_RE.match(stripped.lstrip("#").strip())
             if cat_match:

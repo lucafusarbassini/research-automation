@@ -18,15 +18,18 @@ Install Claude Code globally before proceeding:
 npm install -g @anthropic-ai/claude-code
 ```
 
-Authenticate with Claude (recommended -- no API key needed):
+A Claude subscription (Pro or Team) is required and recommended. Authenticate
+with Claude via browser login -- no API key needed:
 
 ```bash
 claude auth login
 ```
 
-Alternatively, for CI/headless environments, set an API key:
+For CI/headless environments only, you may optionally set an API key as a
+fallback (billed separately, expensive):
 
 ```bash
+# Optional fallback for CI/headless only:
 export ANTHROPIC_API_KEY="your-key-here"
 ```
 
@@ -101,8 +104,9 @@ REFERENCE_PATH=/path/to/reference/papers
 OUTPUTS_PATH=/path/to/outputs
 SECRETS_PATH=/path/to/secrets
 SHARED_PATH=/path/to/shared/knowledge
-# If not using `claude auth login`, set an API key:
-ANTHROPIC_API_KEY=your-key-here
+# ANTHROPIC_API_KEY is NOT needed if you use `claude auth login` (recommended).
+# Optional fallback for CI/headless only:
+# ANTHROPIC_API_KEY=your-key-here
 GITHUB_TOKEN=your-token-here
 ```
 
@@ -153,7 +157,7 @@ pytest
 ```
 research-automation/
 ├── cli/                 # CLI entry point (ricet command)
-├── core/                # Python modules (20+ modules)
+├── core/                # Python modules (45+ modules)
 ├── templates/           # Copied into new projects
 │   ├── config/          # MCP config, settings
 │   ├── knowledge/       # Encyclopedia, goals
@@ -196,7 +200,7 @@ If claude-flow is available, metrics will report actual token counts and cost da
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| Claude authentication | Yes | `claude auth login` (preferred) or `ANTHROPIC_API_KEY` for CI/headless |
+| Claude subscription (Pro/Team) | Yes | `claude auth login` (required and recommended). `ANTHROPIC_API_KEY` is an optional fallback for CI/headless only |
 | `GITHUB_TOKEN` | No | GitHub access for PRs, issues, Actions |
 | `NOTIFICATION_WEBHOOK` | No | Slack/webhook URL for notifications |
 | `SMTP_USER` / `SMTP_PASSWORD` | No | Email notification credentials |

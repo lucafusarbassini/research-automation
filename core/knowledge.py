@@ -4,6 +4,10 @@ Handles persistent knowledge across sessions: learnings, decisions,
 successful/failed approaches. When claude-flow is available, search_knowledge
 uses HNSW vector memory for semantic search, and append_learning dual-writes
 to both markdown and the vector index.
+
+Section matching is fuzzy and case-insensitive: aliases like "tips" resolve to
+"Tricks", "failures" resolves to "What Doesn't Work", etc.  If a section
+doesn't exist in the file it is created dynamically at the end.
 """
 
 import json
@@ -20,6 +24,171 @@ logger = logging.getLogger(__name__)
 ENCYCLOPEDIA_PATH = Path("knowledge/ENCYCLOPEDIA.md")
 SHARED_KNOWLEDGE_PATH = Path("/shared/knowledge")
 
+# ---------------------------------------------------------------------------
+# Section type definitions with canonical names and aliases
+# ---------------------------------------------------------------------------
+
+# Canonical section type -> (canonical header name, set of lowercase aliases)
+SECTION_TYPES: dict[str, tuple[str, set[str]]] = {
+    "tricks": (
+        "Tricks",
+        {
+            "tricks",
+            "tips",
+            "useful tips",
+            "tips and tricks",
+            "hints",
+        },
+    ),
+    "decisions": (
+        "Decisions",
+        {
+            "decisions",
+            "design decisions",
+            "choices",
+            "rationale",
+            "design choices",
+        },
+    ),
+    "what_works": (
+        "What Works",
+        {
+            "what works",
+            "successes",
+            "working approaches",
+            "good results",
+            "successful approaches",
+        },
+    ),
+    "what_doesnt_work": (
+        "What Doesn't Work",
+        {
+            "what doesn't work",
+            "what doesnt work",
+            "what doesn\u2019t work",
+            "failures",
+            "failed approaches",
+            "what failed",
+            "pitfalls",
+        },
+    ),
+}
+
+
+def _normalize(name: str) -> str:
+    """Lowercase, strip, collapse whitespace, remove trailing punctuation."""
+    name = name.strip().lower()
+    name = re.sub(r"\s+", " ", name)
+    name = name.rstrip(":")
+    return name
+
+
+def _resolve_section_type(name: str) -> str | None:
+    """Return the canonical section-type key for *name*, or ``None``.
+
+    Tries, in order:
+    1. Exact alias match (case-insensitive).
+    2. Substring / containment match (alias contained in name or vice-versa).
+    """
+    norm = _normalize(name)
+    # 1. Exact alias hit
+    for key, (_canon, aliases) in SECTION_TYPES.items():
+        if norm in aliases or norm == _normalize(_canon):
+            return key
+    # 2. Fuzzy containment
+    for key, (_canon, aliases) in SECTION_TYPES.items():
+        for alias in aliases:
+            if alias in norm or norm in alias:
+                return key
+    return None
+
+
+def discover_sections(content: str) -> dict[str, str]:
+    """Scan *content* for ``## <name>`` headers and return ``{lowercase_name: original_name}``.
+
+    This allows the system to discover section names that may have drifted
+    from the canonical names without breaking.
+    """
+    sections: dict[str, str] = {}
+    for m in re.finditer(r"^## (.+)$", content, re.MULTILINE):
+        header = m.group(1).strip()
+        sections[_normalize(header)] = header
+    return sections
+
+
+def find_section(content: str, section_type: str) -> str | None:
+    """Find the actual ``## <header>`` name present in *content* that matches *section_type*.
+
+    *section_type* can be a canonical key (``"tricks"``), a canonical header
+    (``"Tricks"``), or any known alias (``"tips and tricks"``).
+
+    Returns the **exact header text** as it appears in the file, or ``None``
+    if no matching header exists.
+    """
+    discovered = discover_sections(content)
+
+    # Resolve the requested name to a canonical type key
+    type_key = _resolve_section_type(section_type)
+
+    if type_key is not None:
+        _canon, aliases = SECTION_TYPES[type_key]
+        # Check discovered headers against the canonical name + aliases
+        for norm_header, orig_header in discovered.items():
+            if norm_header == _normalize(_canon):
+                return orig_header
+            if norm_header in aliases:
+                return orig_header
+            # Also try containment for drifted names
+            for alias in aliases:
+                if alias in norm_header or norm_header in alias:
+                    return orig_header
+
+    # Fallback: try direct normalized match against discovered headers
+    norm_requested = _normalize(section_type)
+    if norm_requested in discovered:
+        return discovered[norm_requested]
+
+    return None
+
+
+def _default_comment_for_type(type_key: str) -> str:
+    """Return the default HTML comment for a canonical section type."""
+    comments = {
+        "tricks": "<!-- Learnings get appended here -->",
+        "decisions": "<!-- Design decisions get logged here -->",
+        "what_works": "<!-- Successful approaches -->",
+        "what_doesnt_work": "<!-- Failed approaches (to avoid repeating) -->",
+    }
+    return comments.get(type_key, "")
+
+
+def _ensure_section(content: str, section_type: str) -> tuple[str, str]:
+    """Ensure *content* contains a header matching *section_type*.
+
+    Returns ``(possibly_updated_content, actual_header_name)``.
+    If the section didn't exist, it is appended at the end of the file.
+    """
+    header = find_section(content, section_type)
+    if header is not None:
+        return content, header
+
+    # Section missing -- create it
+    type_key = _resolve_section_type(section_type)
+    if type_key is not None:
+        canon_name = SECTION_TYPES[type_key][0]
+        comment = _default_comment_for_type(type_key)
+    else:
+        # Completely unknown section -- use the provided name capitalised
+        canon_name = section_type.strip().title()
+        comment = ""
+
+    new_section = f"\n\n## {canon_name}\n"
+    if comment:
+        new_section += f"{comment}\n"
+    content = content.rstrip("\n") + new_section
+    logger.info("Created missing section '%s' in encyclopedia", canon_name)
+    return content, canon_name
+
 
 def append_learning(
     section: str,
@@ -28,14 +197,22 @@ def append_learning(
 ) -> None:
     """Append a learning to the encyclopedia under the given section.
 
+    *section* is matched fuzzily: ``"tips"``, ``"Tricks"``, ``"tips and tricks"``
+    all resolve to the Tricks section.  If the section doesn't exist yet it is
+    created dynamically.
+
     Args:
-        section: One of 'Tricks', 'Decisions', 'What Works', 'What Doesn\\'t Work'.
+        section: Section name, alias, or canonical type key.
         entry: The text to append.
         encyclopedia_path: Path to the encyclopedia file.
     """
     if not encyclopedia_path.exists():
-        logger.warning("Encyclopedia not found at %s", encyclopedia_path)
-        return
+        encyclopedia_path.parent.mkdir(parents=True, exist_ok=True)
+        encyclopedia_path.write_text(
+            "# Encyclopedia\n\n## Tricks\n\n## Decisions\n\n"
+            "## What Works\n\n## What Fails\n"
+        )
+        logger.info("Created encyclopedia at %s", encyclopedia_path)
 
     content = encyclopedia_path.read_text()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -49,14 +226,17 @@ def append_learning(
     except Exception:
         formatted_entry = f"\n- [{timestamp}] {entry}"
 
+    # Ensure the target section exists (creates it if missing)
+    content, actual_header = _ensure_section(content, section)
+
     # Find the section header and append after the comment line
-    pattern = rf"(## {re.escape(section)}\n(?:<!--.*?-->\n)?)"
+    pattern = rf"(## {re.escape(actual_header)}\n(?:<!--.*?-->\n)?)"
     match = re.search(pattern, content)
     if match:
         insert_pos = match.end()
         content = content[:insert_pos] + formatted_entry + content[insert_pos:]
         encyclopedia_path.write_text(content)
-        logger.info("Added entry to '%s' section", section)
+        logger.info("Added entry to '%s' section", actual_header)
 
         # Dual-write to claude-flow HNSW vector memory
         try:
@@ -64,7 +244,7 @@ def append_learning(
             bridge.store_memory(
                 entry,
                 namespace="knowledge",
-                metadata={"section": section, "timestamp": timestamp},
+                metadata={"section": actual_header, "timestamp": timestamp},
             )
         except ClaudeFlowUnavailable:
             pass
@@ -340,18 +520,25 @@ def get_encyclopedia_stats(
 ) -> dict:
     """Get statistics about the encyclopedia.
 
+    Uses fuzzy matching to find sections, so files with drifted header names
+    still report correctly.
+
     Returns:
-        Dict with counts per section.
+        Dict with counts per canonical section name.
     """
     if not encyclopedia_path.exists():
         return {}
 
     content = encyclopedia_path.read_text()
-    sections = ["Tricks", "Decisions", "What Works", "What Doesn't Work"]
+    canonical_sections = ["Tricks", "Decisions", "What Works", "What Doesn't Work"]
     stats = {}
 
-    for section in sections:
-        pattern = rf"## {re.escape(section)}\n(.*?)(?=\n## |\Z)"
+    for section in canonical_sections:
+        actual_header = find_section(content, section)
+        if actual_header is None:
+            stats[section] = 0
+            continue
+        pattern = rf"## {re.escape(actual_header)}\n(.*?)(?=\n## |\Z)"
         match = re.search(pattern, content, re.DOTALL)
         if match:
             entries = [

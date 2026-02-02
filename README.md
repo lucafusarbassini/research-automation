@@ -27,7 +27,7 @@ ricet turns a research idea into reproducible code, validated results, and a pub
 | **Node.js** | 20+ | [nodejs.org](https://nodejs.org/) |
 | **Docker** | 24+ | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
 | **Git** | 2.40+ | [git-scm.com](https://git-scm.com/) |
-| **Claude authentication** | -- | `claude auth login` (preferred) or [API key](https://console.anthropic.com/) for CI |
+| **Claude subscription** (Pro or Team) | -- | `claude auth login` (required and recommended). [API key](https://console.anthropic.com/) is an optional fallback for CI only |
 | **GitHub SSH key** | -- | [docs.github.com/authentication](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) |
 
 > Docker is optional for local-only usage but strongly recommended for overnight autonomous runs.
@@ -239,15 +239,19 @@ ricet config compute
 
 ### Authentication
 
-The recommended way to authenticate with Claude is browser login (no API key needed):
+A Claude subscription (Pro or Team) is required and recommended. Authenticate
+with browser login -- no API key needed:
 
 ```bash
 claude auth login
 ```
 
-For CI/headless environments, store an API key in a `.env` file at the project root (auto-loaded, never committed):
+For CI/headless environments only, you may optionally store an API key as a
+fallback in a `.env` file at the project root (auto-loaded, never committed).
+Note: API usage is billed separately and can be expensive.
 
 ```
+# Optional fallback for CI/headless only:
 ANTHROPIC_API_KEY=sk-ant-...
 GITHUB_TOKEN=ghp_...
 ```

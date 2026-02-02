@@ -28,6 +28,10 @@ graph TB
         Onboard["onboarding.py<br/>Project Init"]
         CrossRepo["cross_repo.py<br/>Multi-Repo"]
         Auto["autonomous.py<br/>Scheduled Tasks"]
+        Mobile["mobile.py<br/>Phone API + PWA"]
+        Social["social_media.py<br/>Publishing"]
+        Adopt["adopt.py<br/>Repo Adoption"]
+        Voice["voice.py<br/>Audio Input"]
     end
 
     Bridge["claude_flow.py<br/>Claude-Flow Bridge"]
@@ -37,10 +41,15 @@ graph TB
 
     User --> CLI
     User --> Dashboard
+    User -.-> Mobile
     CLI --> Agents
     CLI --> Session
     CLI --> Onboard
     CLI --> Paper
+    CLI --> Mobile
+    CLI --> Social
+    CLI --> Adopt
+    CLI --> Voice
     Agents --> Router
     Agents --> Tokens
     Agents --> Bridge
@@ -139,8 +148,11 @@ research-automation/
 │   ├── browser.py                # Browser preview
 │   ├── doability.py              # Task feasibility assessment
 │   ├── prompt_suggestions.py     # AI-powered next-step suggestions
-│   ├── mobile.py                 # Mobile PWA support
-│   ├── mobile_pwa.py             # Progressive Web App features
+│   ├── mobile.py                 # Mobile HTTPS API server + auth + TLS
+│   ├── mobile_pwa.py             # PWA HTML/CSS/JS/manifest/service worker
+│   ├── social_media.py           # Medium, LinkedIn, Twitter/X publishing
+│   ├── adopt.py                  # Repository adoption (fork + scaffold)
+│   ├── report.py                 # Report generation
 │   ├── rag_mcp.py                # RAG index for MCP discovery
 │   ├── lazy_mcp.py               # Lazy MCP loading
 │   ├── markdown_commands.py      # Markdown command parsing
@@ -193,20 +205,31 @@ sequenceDiagram
     participant U as User
     participant CLI as cli/main.py
     participant OB as core/onboarding.py
+    participant ENV as core/environment.py
     participant T as templates/
-    participant G as Git
+    participant G as Git + GitHub
 
     U->>CLI: ricet init my-project
-    CLI->>OB: collect_answers()
-    OB->>U: Interactive questionnaire
-    U->>OB: Goal, type, constraints
-    OB->>CLI: OnboardingAnswers
+    CLI->>OB: check_and_install_packages()
+    CLI->>ENV: detect_system_for_init()
+    ENV-->>CLI: OS, CPU, GPU, RAM, Docker, Conda
+    CLI->>OB: auto_install_claude_flow()
+    CLI->>OB: collect_answers(system_info)
+    OB->>U: Notification, journal, website, mobile
+    U->>OB: Answers
+    CLI->>OB: collect_credentials()
+    OB->>U: Guided credential prompts (Enter to skip)
+    U->>OB: API keys
+    OB-->>CLI: OnboardingAnswers + credentials
     CLI->>T: Copy templates to my-project/
-    CLI->>OB: write_goal_file()
-    CLI->>OB: write_settings()
     CLI->>OB: setup_workspace()
-    CLI->>G: git init && git add -A && git commit
-    CLI->>U: Project created
+    CLI->>OB: write_settings() + write_goal_file()
+    CLI->>OB: write_env_file() + write_env_example()
+    CLI->>ENV: create_project_env()
+    CLI->>OB: infer_packages_from_goal()
+    CLI->>OB: generate_goal_todos() + generate_goal_folders()
+    CLI->>G: git init, commit, create GitHub repo
+    CLI->>U: Project ready + folder guide
 ```
 
 ---
@@ -359,4 +382,4 @@ graph TB
     Classify -->|"website, slides"| T8
 ```
 
-Tier 1 is always loaded. Other tiers activate when task keywords match their trigger words.
+Tier 1 is always loaded. Higher tiers are activated by Opus-powered semantic analysis of the task description, with simple keyword matching as a last-resort fallback for offline environments.

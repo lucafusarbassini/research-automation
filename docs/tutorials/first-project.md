@@ -8,7 +8,7 @@ with agents, knowledge files, a paper template, and a TODO list.
 **Time:** ~30 minutes
 
 **Prerequisites:**
-- [Tutorial 1: Getting API Keys](getting-api-keys.md) -- Anthropic key set
+- [Tutorial 1: Authentication & Credentials](getting-api-keys.md) -- Claude subscription authenticated via `claude auth login`
 - Python 3.11+ and Node.js 20+ installed (or [Tutorial 2: Docker Setup](docker-setup.md) completed)
 - Claude Code CLI installed: `npm install -g @anthropic-ai/claude-code`
 

@@ -30,6 +30,9 @@ Running a research project involves dozens of repetitive tasks: environment setu
 # Install Claude Code (requires Node.js 20+)
 npm install -g @anthropic-ai/claude-code
 
+# Authenticate with Claude subscription (Pro or Team required, no API key needed)
+claude auth login
+
 # Clone the repository
 git clone https://github.com/lucafusarbassini/research-automation
 cd research-automation
@@ -37,18 +40,21 @@ cd research-automation
 # Install the CLI
 pip install -e .
 
-# Create your first project
+# Create your first project (interactive wizard)
 ricet init my-project
 
-# Start an interactive session
+# Edit your research goal
 cd my-project
+$EDITOR knowledge/GOAL.md
+
+# Start an interactive session
 ricet start
 
 # Or run overnight
 ricet overnight --iterations 20
 ```
 
-See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough.
+The `ricet init` wizard auto-detects your system (GPU, conda, Docker), installs claude-flow, walks you through notification and credential setup, creates an isolated Python environment, and optionally creates a GitHub repository. See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough.
 
 ---
 
@@ -68,7 +74,7 @@ See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough
 - **Cross-Repo RAG** -- Link external repositories with `ricet link` so agents can search across all your code while only editing the current project.
 - **Auto-Commit & Push** -- Every state-modifying command automatically commits and pushes, controlled by environment variables.
 - **Collaborative Research** -- Multiple researchers on the same repo with auto-sync, user attribution, and merge-friendly append-only files.
-- **Claude-Powered Intelligence** -- Seven core modules use Claude CLI for intelligent routing, debugging, and suggestions with keyword fallback.
+- **Claude-Powered Intelligence** -- Seven core modules use Claude Opus for intelligent semantic routing, debugging, and suggestions with graceful fallback.
 - **Literature Search** -- `ricet cite` and `ricet discover` search Semantic Scholar and arXiv, format BibTeX, and append to your bibliography.
 - **Style Transfer** -- `ricet paper adapt-style` rewrites your paper to match a reference paper's writing style with plagiarism checks.
 - **Auto Test Generation** -- `ricet test-gen` scans for uncovered source files and generates pytest stubs using Claude.
@@ -85,13 +91,14 @@ See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough
 - **Resource-Aware Overnight** -- Monitors CPU/RAM/disk between iterations, auto-pauses on low resources.
 - **Falsifier Auto-Trigger** -- Falsifier agent validates results after every overnight iteration automatically.
 - **Voice Prompting** -- `ricet voice` transcribes audio instructions and structures them into actionable research prompts.
-- **Mobile PWA** -- `ricet mobile` sets up Progressive Web App access for remote monitoring.
+- **Mobile PWA** -- `ricet mobile serve` launches an HTTPS API server with a full Progressive Web App (dashboard, task submission, voice commands, QR pairing, bearer token authentication, and TLS with certificate pinning).
 - **Interactive Dashboard** -- `ricet dashboard` provides a Rich TUI with live agent status, budget, and resource utilization.
 - **Figure Gallery** -- `ricet gallery` scans and catalogs experiment figures by run ID for quick review and paper inclusion.
 - **Git Worktree Management** -- `ricet worktree` manages parallel branches for concurrent experiments.
 - **Task Queue** -- `ricet queue` manages and spools background tasks for batch execution.
 - **Website Builder** -- `ricet website` generates and deploys a GitHub Pages documentation site.
-- **RAG-Powered MCP Discovery** -- Searchable index of 1300+ MCP servers with keyword-based suggestion and on-demand installation.
+- **RAG-Powered MCP Discovery** -- Searchable index of 1300+ MCP servers with semantic suggestion and on-demand installation.
+- **Social Media Publishing** -- `ricet publish medium` and `ricet publish linkedin` draft, validate, and publish research summaries to Medium, LinkedIn, and Twitter/X with platform-specific formatting.
 - **[PaperBoat](https://paperboatch.com/)** -- Recommended external service for daily cross-discipline paper discovery. Useful as a background SOTA knowledge source that updates daily.
 
 Explore all features in the [Features](features.md) page.

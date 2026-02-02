@@ -63,7 +63,9 @@ class TestReport:
             lines.append(f"**Started:** {self.started_at.isoformat()}")
         if self.finished_at:
             lines.append(f"**Finished:** {self.finished_at.isoformat()}")
-        lines.append(f"**Results:** {self.passed} passed, {self.failed} failed, {self.total} total")
+        lines.append(
+            f"**Results:** {self.passed} passed, {self.failed} failed, {self.total} total"
+        )
         lines.append("")
         lines.append("---")
         lines.append("")
@@ -111,6 +113,7 @@ def _md_to_pdf_wkhtmltopdf(md_path: Path, pdf_path: Path) -> bool:
     md_text = md_path.read_text()
     try:
         import markdown
+
         html_body = markdown.markdown(md_text, extensions=["fenced_code", "tables"])
     except ImportError:
         # Minimal fallback: wrap in <pre> tags
@@ -145,7 +148,11 @@ def _md_to_pdf_wkhtmltopdf(md_path: Path, pdf_path: Path) -> bool:
             timeout=30,
         )
         return pdf_path.exists()
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+    ):
         return False
     finally:
         html_path.unlink(missing_ok=True)

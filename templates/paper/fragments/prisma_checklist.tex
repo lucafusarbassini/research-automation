@@ -1,0 +1,30 @@
+% Fragment: PRISMA flow diagram template
+% Used by: systematic reviews and meta-analyses in biology/medical fields
+% Requires: tikz package
+
+% \begin{figure}[htbp]
+%   \centering
+%   \begin{tikzpicture}[
+%     box/.style={draw, rectangle, minimum width=4cm, minimum height=1cm, align=center},
+%     arrow/.style={-{Stealth[length=3mm]}, thick},
+%   ]
+%     \node[box] (id) {Records identified\\through database searching\\(n = )};
+%     \node[box, right=2cm of id] (other) {Additional records from\\other sources\\(n = )};
+%     \node[box, below=1cm of id] (dup) {After duplicates removed\\(n = )};
+%     \node[box, below=1cm of dup] (screen) {Records screened\\(n = )};
+%     \node[box, right=2cm of screen] (excl1) {Records excluded\\(n = )};
+%     \node[box, below=1cm of screen] (ft) {Full-text articles\\assessed for eligibility\\(n = )};
+%     \node[box, right=2cm of ft] (excl2) {Full-text articles excluded\\with reasons\\(n = )};
+%     \node[box, below=1cm of ft] (incl) {Studies included in\\qualitative synthesis\\(n = )};
+%
+%     \draw[arrow] (id) -- (dup);
+%     \draw[arrow] (other) |- (dup);
+%     \draw[arrow] (dup) -- (screen);
+%     \draw[arrow] (screen) -- (excl1);
+%     \draw[arrow] (screen) -- (ft);
+%     \draw[arrow] (ft) -- (excl2);
+%     \draw[arrow] (ft) -- (incl);
+%   \end{tikzpicture}
+%   \caption{PRISMA flow diagram of study selection.}
+%   \label{fig:prisma}
+% \end{figure}

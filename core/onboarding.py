@@ -82,6 +82,7 @@ class OnboardingAnswers:
     slack_webhook: str = ""
     credentials: dict[str, str] = field(default_factory=dict)
     journal_target: str = ""
+    paper_type: str = "journal-article"
     needs_website: bool = False
     needs_mobile: bool = False
 
@@ -530,6 +531,24 @@ def collect_answers(
     if answers.journal_target == "skip":
         answers.journal_target = ""
 
+    # --- Paper type ---
+    paper_type_resp = prompt_fn(
+        "Paper type (journal-article, conference-paper, thesis-chapter, "
+        "technical-report, review-paper)",
+        "journal-article",
+    )
+    valid_paper_types = {
+        "journal-article",
+        "conference-paper",
+        "thesis-chapter",
+        "technical-report",
+        "review-paper",
+    }
+    if paper_type_resp in valid_paper_types:
+        answers.paper_type = paper_type_resp
+    else:
+        answers.paper_type = "journal-article"
+
     # --- Website dashboard ---
     website_resp = prompt_fn("Do you need a web dashboard? (yes/no)", "no")
     answers.needs_website = website_resp.lower() in ("yes", "y", "true", "1")
@@ -582,7 +601,7 @@ def print_folder_map(project_path: Path) -> list[str]:
         "  ├── uploads/data/       ← datasets (large files auto-gitignored)",
         "  ├── uploads/personal/   ← your papers, CV, writing samples",
         "  ├── knowledge/GOAL.md   ← your research description (EDIT THIS)",
-        "  ├── secrets/.env        ← API keys (never committed)",
+        "  ├── secrets/.env        ← credentials (never committed)",
         "  └── config/settings.yml ← project configuration",
     ]
     return lines
@@ -625,6 +644,9 @@ def write_settings(project_path: Path, answers: OnboardingAnswers) -> Path:
 
     if answers.journal_target:
         settings["project"]["journal_target"] = answers.journal_target
+
+    if answers.paper_type:
+        settings["project"]["paper_type"] = answers.paper_type
 
     if answers.github_repo and answers.github_repo != "skip":
         settings["credentials"]["github_repo"] = answers.github_repo
@@ -674,9 +696,11 @@ CREDENTIAL_REGISTRY: list[tuple[str, str, str, str]] = [
     # --- Core (always ask) ---
     (
         "ANTHROPIC_API_KEY",
-        "Anthropic API key [PAID, skip unless you need direct API access]",
-        "Most users: SKIP this — ricet uses your Claude subscription via 'claude auth login'.\n"
-        "  Only for direct API calls (billed separately): https://console.anthropic.com/ → API Keys",
+        "Anthropic API key [OPTIONAL FALLBACK for CI/headless only]",
+        "SKIP this — a Claude subscription (Pro or Team) is required and recommended.\n"
+        "  Authenticate via: claude auth login\n"
+        "  API key is an optional fallback for CI/headless environments only (billed separately, expensive).\n"
+        "  If you must use an API key: https://console.anthropic.com/ → API Keys",
         "core",
     ),
     (
@@ -1661,3 +1685,120 @@ def _generate_milestones_keywords(goal_text: str) -> list[str]:
     if "dataset" in text_lower:
         milestones.insert(1, "Acquire and explore dataset")
     return milestones[:10]
+
+
+# ---------------------------------------------------------------------------
+# Docker setup for overnight mode (called during ricet init)
+# ---------------------------------------------------------------------------
+
+
+def setup_docker_for_overnight(
+    project_path: Path,
+    *,
+    print_fn=None,
+) -> dict:
+    """Check Docker availability, build image, and test the setup during init.
+
+    This ensures that everything is ready for overnight mode before the user
+    finishes onboarding. Non-technical users get clear guidance if Docker is
+    missing.
+
+    Args:
+        project_path: Root of the project being initialised.
+        print_fn: Optional callable(message) for output. Uses print() if None.
+
+    Returns:
+        dict with keys:
+            "docker_available" (bool) - Docker is installed and running
+            "image_built" (bool)      - ricet:latest image exists or was built
+            "deps_installed" (bool)   - project deps pre-installed in container
+            "test_passed" (bool)      - smoke test passed
+            "skipped" (bool)          - Docker not available, setup was skipped
+    """
+    from core.devops import (
+        build_ricet_image,
+        ensure_docker_ready,
+        get_docker_install_instructions,
+        prepare_docker_environment,
+        test_docker_setup,
+    )
+
+    if print_fn is None:
+        print_fn = print
+
+    result = {
+        "docker_available": False,
+        "image_built": False,
+        "deps_installed": False,
+        "test_passed": False,
+        "skipped": False,
+    }
+
+    # Step 1: Check Docker availability
+    docker_status = ensure_docker_ready()
+
+    if not docker_status["docker_installed"]:
+        print_fn(
+            "\n  Docker is NOT installed on this system.\n"
+            "  Docker is required for safe overnight mode (autonomous runs).\n"
+        )
+        print_fn("  " + get_docker_install_instructions().replace("\n", "\n  "))
+        print_fn(
+            "\n  You can install Docker later and run 'ricet init' again,\n"
+            "  or install it now and the setup will continue.\n"
+            "  Overnight mode will NOT work until Docker is installed."
+        )
+        result["skipped"] = True
+        return result
+
+    if not docker_status["daemon_running"]:
+        print_fn(
+            "\n  Docker is installed but the daemon is not running.\n"
+            "  Start Docker and run 'ricet init' again to set up overnight mode.\n"
+            "  Linux: sudo systemctl start docker\n"
+            "  macOS/Windows: Launch Docker Desktop"
+        )
+        result["docker_available"] = False
+        result["skipped"] = True
+        return result
+
+    result["docker_available"] = True
+
+    # Step 2: Build or verify the ricet image
+    if docker_status["image_available"]:
+        print_fn("  Docker image 'ricet:latest' already available.")
+        result["image_built"] = True
+    else:
+        print_fn(
+            "  Building Docker image 'ricet:latest' (this may take 10-20 minutes)..."
+        )
+        if build_ricet_image():
+            print_fn("  Docker image built successfully.")
+            result["image_built"] = True
+        else:
+            print_fn(
+                "  WARNING: Docker image build failed. "
+                "You can retry later with: docker build -t ricet:latest docker/"
+            )
+            return result
+
+    # Step 3: Pre-install project dependencies inside the container
+    print_fn("  Installing project dependencies inside Docker container...")
+    if prepare_docker_environment(project_path):
+        print_fn("  Dependencies installed in container.")
+        result["deps_installed"] = True
+    else:
+        print_fn("  Some dependencies could not be installed (non-fatal).")
+
+    # Step 4: Smoke test
+    print_fn("  Running Docker smoke test...")
+    if test_docker_setup():
+        print_fn("  Docker setup verified - overnight mode is ready!")
+        result["test_passed"] = True
+    else:
+        print_fn(
+            "  WARNING: Docker smoke test failed. "
+            "Overnight mode may not work correctly."
+        )
+
+    return result

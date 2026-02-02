@@ -55,6 +55,273 @@ def check_infrastructure() -> dict:
 # ---------------------------------------------------------------------------
 
 
+RICET_DOCKER_IMAGE = "ricet:latest"
+
+# ---------------------------------------------------------------------------
+# OS-specific Docker installation instructions
+# ---------------------------------------------------------------------------
+
+_DOCKER_INSTALL_INSTRUCTIONS: dict[str, str] = {
+    "Linux": (
+        "Install Docker on Linux:\n"
+        "  curl -fsSL https://get.docker.com | sh\n"
+        "  sudo usermod -aG docker $USER\n"
+        "  # Log out and log back in, then run: docker run hello-world"
+    ),
+    "Darwin": (
+        "Install Docker on macOS:\n"
+        "  1. Download Docker Desktop from https://www.docker.com/products/docker-desktop/\n"
+        "  2. Open the .dmg and drag Docker to Applications\n"
+        "  3. Launch Docker Desktop and wait for the whale icon to appear"
+    ),
+    "Windows": (
+        "Install Docker on Windows:\n"
+        "  1. Install WSL2: wsl --install\n"
+        "  2. Download Docker Desktop from https://www.docker.com/products/docker-desktop/\n"
+        "  3. During install, ensure 'Use WSL 2 based engine' is checked\n"
+        "  4. Open Docker Desktop, then use a WSL2 terminal"
+    ),
+}
+
+
+def get_docker_install_instructions() -> str:
+    """Return Docker installation instructions for the current OS.
+
+    Returns:
+        Human-readable installation instructions string.
+    """
+    import platform
+
+    system = platform.system()
+    return _DOCKER_INSTALL_INSTRUCTIONS.get(
+        system,
+        (
+            "Install Docker:\n"
+            "  Visit https://docs.docker.com/get-docker/ for instructions.\n"
+        ),
+    )
+
+
+def ensure_docker_ready() -> dict:
+    """Validate that Docker is installed, the daemon is running, and the ricet image exists.
+
+    Returns:
+        dict with keys:
+            "docker_installed" (bool) - docker binary found on PATH
+            "daemon_running" (bool)   - docker daemon is responsive
+            "image_available" (bool)  - ricet:latest image exists locally
+            "ready" (bool)            - all three checks passed
+            "error" (str)             - human-readable error if not ready
+            "install_instructions" (str) - OS-specific install guide (if not installed)
+    """
+    result: dict = {
+        "docker_installed": False,
+        "daemon_running": False,
+        "image_available": False,
+        "ready": False,
+        "error": "",
+        "install_instructions": "",
+    }
+
+    # 1. Check binary
+    if shutil.which("docker") is None:
+        result["error"] = "Docker is not installed."
+        result["install_instructions"] = get_docker_install_instructions()
+        return result
+    result["docker_installed"] = True
+
+    # 2. Check daemon
+    try:
+        proc = subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if proc.returncode != 0:
+            result["error"] = (
+                "Docker is installed but the daemon is not running.\n"
+                "Start it with: sudo systemctl start docker (Linux)\n"
+                "Or launch Docker Desktop (macOS / Windows)."
+            )
+            return result
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        result["error"] = "Could not communicate with the Docker daemon."
+        return result
+    result["daemon_running"] = True
+
+    # 3. Check ricet image
+    try:
+        proc = subprocess.run(
+            ["docker", "image", "inspect", RICET_DOCKER_IMAGE],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        result["image_available"] = proc.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        result["image_available"] = False
+
+    if not result["image_available"]:
+        result["error"] = (
+            f"Docker image '{RICET_DOCKER_IMAGE}' not found locally. "
+            "It will be built automatically during 'ricet init' or you can build it "
+            "manually: docker build -t ricet:latest docker/"
+        )
+    else:
+        result["ready"] = True
+
+    return result
+
+
+def build_ricet_image(dockerfile_dir: Optional[Path] = None) -> bool:
+    """Build the ricet Docker image from the project's docker/ directory.
+
+    Args:
+        dockerfile_dir: Directory containing the Dockerfile. If None,
+                        auto-detects from the package layout.
+
+    Returns:
+        True on success.
+    """
+    if dockerfile_dir is None:
+        dockerfile_dir = Path(__file__).parent.parent / "docker"
+
+    dockerfile = dockerfile_dir / "Dockerfile"
+    if not dockerfile.exists():
+        logger.error("Dockerfile not found at %s", dockerfile)
+        return False
+
+    logger.info(
+        "Building Docker image %s from %s ...", RICET_DOCKER_IMAGE, dockerfile_dir
+    )
+    try:
+        proc = subprocess.run(
+            [
+                "docker",
+                "build",
+                "-t",
+                RICET_DOCKER_IMAGE,
+                "-f",
+                str(dockerfile),
+                str(dockerfile_dir.parent),  # context = project root
+            ],
+            timeout=1200,
+        )
+        if proc.returncode != 0:
+            logger.error("docker build failed (exit %d)", proc.returncode)
+            return False
+        return True
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+        logger.error("docker build error: %s", exc)
+        return False
+
+
+def prepare_docker_environment(project_path: Path) -> bool:
+    """Pre-install all project dependencies inside the Docker container.
+
+    Reads requirements.txt, environment.yml, and pyproject.toml from the
+    project to install packages into a running (or ephemeral) container so
+    that overnight runs have everything pre-cached.
+
+    Args:
+        project_path: Absolute path to the project on the host.
+
+    Returns:
+        True if preparation succeeded (or no extra deps were needed).
+    """
+    project_path = project_path.resolve()
+
+    # Determine which install commands to run inside the container
+    install_cmds: list[str] = []
+
+    req_file = project_path / "requirements.txt"
+    if req_file.exists():
+        install_cmds.append("pip install --no-cache-dir -r /workspace/requirements.txt")
+
+    pyproject = project_path / "pyproject.toml"
+    if pyproject.exists():
+        install_cmds.append(
+            "pip install --no-cache-dir -e /workspace 2>/dev/null || true"
+        )
+
+    env_yml = project_path / "environment.yml"
+    if env_yml.exists():
+        install_cmds.append(
+            "conda env update -n base -f /workspace/environment.yml 2>/dev/null || true"
+        )
+
+    if not install_cmds:
+        logger.info("No dependency files found; Docker environment is ready as-is.")
+        return True
+
+    combined = " && ".join(install_cmds)
+    logger.info("Installing project dependencies inside Docker container...")
+
+    try:
+        proc = subprocess.run(
+            [
+                "docker",
+                "run",
+                "--rm",
+                "-v",
+                f"{project_path}:/workspace:ro",
+                RICET_DOCKER_IMAGE,
+                "bash",
+                "-c",
+                combined,
+            ],
+            timeout=600,
+        )
+        if proc.returncode != 0:
+            logger.warning(
+                "Some dependency installation steps failed (exit %d). "
+                "Overnight mode may still work for tasks that don't need those packages.",
+                proc.returncode,
+            )
+            return False
+        return True
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+        logger.error("prepare_docker_environment error: %s", exc)
+        return False
+
+
+def test_docker_setup() -> bool:
+    """Run a quick smoke test to verify the Docker environment works.
+
+    Executes a trivial Python + Node.js check inside the ricet container.
+
+    Returns:
+        True if the smoke test passed.
+    """
+    try:
+        proc = subprocess.run(
+            [
+                "docker",
+                "run",
+                "--rm",
+                RICET_DOCKER_IMAGE,
+                "bash",
+                "-c",
+                "python3 -c \"import typer; print('python-ok')\" && node -e \"console.log('node-ok')\"",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if (
+            proc.returncode == 0
+            and "python-ok" in proc.stdout
+            and "node-ok" in proc.stdout
+        ):
+            return True
+        logger.warning("Docker smoke test output unexpected: %s", proc.stdout)
+        return False
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+        logger.error("Docker smoke test failed: %s", exc)
+        return False
+
+
 class DockerManager:
     """Manage Docker images and containers."""
 

@@ -148,6 +148,48 @@ def suggest_purchase(
     return suggestion
 
 
+def run_falsification_after_major_change(
+    change_description: str,
+    *,
+    project_path: Path | None = None,
+    dangerously_skip_permissions: bool = False,
+) -> dict:
+    """Trigger a falsification checkpoint after a major change during interactive sessions.
+
+    This is called by the Master agent (or any orchestration code) when a significant
+    change has occurred -- e.g., new feature implemented, large refactor, new results
+    generated. It delegates to the falsification checkpoint in core.agents.
+
+    Args:
+        change_description: What changed and why.
+        project_path: Project root for file checks.
+        dangerously_skip_permissions: Skip permission checks.
+
+    Returns:
+        Dict with passed (bool), issues (list[str]), severity (str).
+    """
+    from core.agents import FalsificationCheckpoint, run_falsification_checkpoint
+
+    result = run_falsification_checkpoint(
+        FalsificationCheckpoint.AFTER_MAJOR_CHANGE,
+        change_description,
+        project_root=project_path,
+        dangerously_skip_permissions=dangerously_skip_permissions,
+    )
+
+    audit_log(
+        f"FALSIFICATION_CHECKPOINT: after_major_change "
+        f"passed={result.passed} issues={len(result.issues)} severity={result.severity}"
+    )
+
+    return {
+        "passed": result.passed,
+        "issues": result.issues,
+        "severity": result.severity,
+        "output": result.output,
+    }
+
+
 def get_default_maintenance_routines() -> list[dict]:
     """Return the default daily maintenance routines for a ricet project."""
     return [
@@ -174,6 +216,12 @@ def get_default_maintenance_routines() -> list[dict]:
             "description": "Run verification on recent outputs",
             "schedule": "daily",
             "command": "ricet verify",
+        },
+        {
+            "name": "falsification-pass",
+            "description": "Run falsifier checkpoint on recent results and code changes",
+            "schedule": "daily",
+            "command": "ricet falsify",
         },
         {
             "name": "claude-md-review",

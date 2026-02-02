@@ -6,7 +6,7 @@ Step-by-step guides for setting up and using ricet.
 
 | # | Tutorial | Description | Time |
 |---|----------|-------------|------|
-| 1 | [Getting API Keys](getting-api-keys.md) | Obtain all required and optional API keys | 15 min |
+| 1 | [Authentication & Credentials](getting-api-keys.md) | Authenticate via Claude subscription and obtain optional credentials | 15 min |
 | 2 | [Docker Setup](docker-setup.md) | Install Docker and run the tool in a container | 20 min |
 | 3 | [First Project](first-project.md) | Create your first research project end-to-end | 30 min |
 
@@ -51,7 +51,7 @@ output line               # Lines without $ are expected output
 Placeholders look like this:
 
 ```
-<YOUR_API_KEY>            # Replace with your actual value (remove the angle brackets)
+<YOUR_CREDENTIAL>         # Replace with your actual value (remove the angle brackets)
 ```
 
 Blocks marked with **Troubleshooting** contain solutions to common problems.

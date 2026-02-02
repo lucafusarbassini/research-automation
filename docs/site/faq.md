@@ -35,7 +35,7 @@ The tool itself is written in Python 3.11+. The agent system can work with any l
 - Python 3.11 or newer
 - Node.js 20 or newer (for Claude Code CLI)
 - Git
-- An Anthropic API key
+- A Claude subscription (Pro or Team) -- authenticate via `claude auth login`
 
 ### Can I use it without Docker?
 
@@ -63,14 +63,19 @@ The core Python modules work on Windows. Some shell scripts (`scripts/*.sh`) and
 ricet init my-project
 ```
 
-This runs an interactive wizard that asks for your goal, project type, and constraints, then scaffolds the full project directory.
+This runs an interactive wizard that auto-detects your system (GPU, conda, Docker), sets up claude-flow, walks you through notification and credential configuration, creates the project structure from templates, optionally creates a conda environment with inferred packages, and initializes a GitHub repository. The project goal is written to `knowledge/GOAL.md` after init -- the wizard does not ask for it as a one-liner.
 
 ### What happens during `ricet start`?
 
-1. A session record is created in `state/sessions/`.
-2. The pre-task hook loads knowledge and logs the start.
-3. Claude Code launches with the project's agent prompts.
-4. The Master agent follows the Progressive Instruction Protocol: Orient, Explore, Plan, Execute, Validate.
+1. Syncs with remote (`git pull --rebase`) for collaborative workflows.
+2. Validates that `knowledge/GOAL.md` has at least 200 characters of real content. Opens your `$EDITOR` if insufficient.
+3. Infers and installs Python packages based on your goal description.
+4. Starts the mobile server if enabled in settings.
+5. Re-indexes linked repositories for cross-repo RAG search.
+6. Creates a session record in `state/sessions/`.
+7. Suggests next research steps based on your goal and progress.
+8. Launches Claude Code with a tracked session UUID.
+9. The Master agent follows the Progressive Instruction Protocol: Orient, Explore, Plan, Execute, Validate.
 
 ### Is overnight mode safe?
 
@@ -212,11 +217,12 @@ Yes. All autonomous actions are recorded in `state/audit.log` with ISO timestamp
 
 ### The system routes tasks to the wrong agent
 
-Agent routing is keyword-based. If tasks are misrouted, either:
+Agent routing uses intelligent Opus-powered semantic analysis. If tasks are misrouted:
 
 1. Be more explicit in your request ("As the Coder agent, implement...").
-2. Edit the `ROUTING_KEYWORDS` dict in `core/agents.py`.
-3. Modify the agent prompts in `.claude/agents/` to better define boundaries.
+2. Ensure Claude Opus is available (check that `RICET_NO_CLAUDE` is not set).
+3. As a last resort, adjust the `ROUTING_KEYWORDS` fallback dict in `core/agents.py`.
+4. Modify the agent prompts in `.claude/agents/` to better define boundaries.
 
 ### Overnight mode stops unexpectedly
 
@@ -243,3 +249,23 @@ bash scripts/setup_claude_flow.sh
 ```
 
 If claude-flow is unavailable, the system silently falls back to local implementations. No functionality is lost.
+
+### Mobile server does not start
+
+- Ensure `openssl` is installed (required for TLS certificate generation)
+- Check that port 8777 is not already in use: `lsof -i :8777`
+- Verify mobile access is enabled: check `config/settings.yml` for `features.mobile: true`
+- Start manually with: `ricet mobile serve`
+
+### Cannot connect to mobile server from phone
+
+- Both devices must be on the same network (or use an SSH tunnel / VPN)
+- Check firewall: `sudo ufw allow 8777/tcp`
+- The self-signed certificate will show a browser warning -- verify the fingerprint with `ricet mobile connect-info` before accepting
+- Ensure the bearer token is included in the `Authorization` header or URL parameter
+
+### Mobile PWA shows "offline"
+
+- The PWA service worker caches the app shell but API calls require a live connection
+- Check that the server is running: `ricet mobile status`
+- Verify network connectivity between phone and server

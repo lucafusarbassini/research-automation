@@ -2,6 +2,7 @@
 
 from core.model_router import (
     DEFAULT_MODELS,
+    RouterConfig,
     TaskComplexity,
     classify_task_complexity,
     get_fallback_model,
@@ -58,7 +59,10 @@ def test_route_medium_to_sonnet():
 
 
 def test_route_low_budget_prefers_haiku():
-    model = route_to_model("debug the complex issue", budget_remaining_pct=10.0)
+    cfg = RouterConfig(confirmation_callback=lambda _: True)
+    model = route_to_model(
+        "debug the complex issue", budget_remaining_pct=10.0, config=cfg
+    )
     assert model.name == DEFAULT_MODELS["claude-haiku"].name
 
 
@@ -128,8 +132,9 @@ def test_route_to_model_via_bridge():
 def test_route_to_model_bridge_respects_budget():
     mock_bridge = MagicMock()
     mock_bridge.route_model.return_value = {"model": "claude-opus-4-5-20251101"}
+    cfg = RouterConfig(confirmation_callback=lambda _: True)
     with patch("core.model_router._get_bridge", return_value=mock_bridge):
-        model = route_to_model("complex task", budget_remaining_pct=5.0)
+        model = route_to_model("complex task", budget_remaining_pct=5.0, config=cfg)
         assert model.name == DEFAULT_MODELS["claude-haiku"].name
 
 

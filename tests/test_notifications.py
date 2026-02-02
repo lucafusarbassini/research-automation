@@ -18,7 +18,6 @@ from core.notifications import (
     send_slack,
 )
 
-
 # ---------------------------------------------------------------------------
 # NotificationConfig
 # ---------------------------------------------------------------------------
@@ -121,7 +120,9 @@ def test_send_email_success(mock_throttle, mock_smtp):
     server.send_message.assert_called_once()
 
 
-@patch("core.notifications.smtplib.SMTP", side_effect=ConnectionRefusedError("no server"))
+@patch(
+    "core.notifications.smtplib.SMTP", side_effect=ConnectionRefusedError("no server")
+)
 @patch("core.notifications._check_throttle", return_value=True)
 def test_send_email_connection_error(mock_throttle, mock_smtp):
     cfg = NotificationConfig(
@@ -146,7 +147,10 @@ def test_send_email_attachment_missing_file():
     cfg = NotificationConfig(
         email_to="dest@example.com", smtp_user="u@e.com", smtp_password="p"
     )
-    assert send_email_with_attachment("subj", "body", Path("/nonexistent.pdf"), cfg) is False
+    assert (
+        send_email_with_attachment("subj", "body", Path("/nonexistent.pdf"), cfg)
+        is False
+    )
 
 
 @patch("core.notifications.smtplib.SMTP")
@@ -200,7 +204,9 @@ def test_send_slack_success(mock_throttle, mock_urlopen):
 
 @patch("core.notifications.subprocess.run", side_effect=FileNotFoundError)
 def test_send_desktop_no_notifysend(mock_run):
-    with patch("core.notifications.NotificationConfig.load", return_value=NotificationConfig()):
+    with patch(
+        "core.notifications.NotificationConfig.load", return_value=NotificationConfig()
+    ):
         with patch("core.notifications._check_throttle", return_value=True):
             assert send_desktop("title", "msg") is False
 

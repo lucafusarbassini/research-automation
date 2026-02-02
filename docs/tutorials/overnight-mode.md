@@ -10,6 +10,7 @@ notifications when done.
 **Prerequisites:**
 - A project created with `ricet init` ([Tutorial 3](first-project.md))
 - A well-defined `state/TODO.md` with clear, specific tasks
+- **Docker installed and running** ([Tutorial 2](docker-setup.md)) -- required for safety
 - Optional: Slack webhook for notifications ([Tutorial 1](getting-api-keys.md))
 
 ---
@@ -47,8 +48,11 @@ state, picks the next task, and works on it. The `--dangerously-skip-permissions
 flag allows Claude to read/write files and run commands without asking for
 confirmation on each action.
 
-> **Important:** Overnight mode runs with elevated permissions inside the
-> project directory. Review the safety section below before your first run.
+> **Important:** Overnight mode **requires Docker** and always runs inside a
+> container by default. This ensures that even with elevated permissions,
+> Claude cannot damage your host system. The Docker requirement is enforced
+> automatically -- if Docker is not installed or running, overnight mode will
+> refuse to start and guide you through installation.
 
 ---
 
@@ -106,10 +110,19 @@ TODO list. Each task should be:
 
 ### Using the CLI
 
+Overnight mode automatically runs inside a Docker container for safety. Just
+run:
+
 ```bash
 $ cd ~/projects/my-first-project
 $ ricet overnight --iterations 20
 ```
+
+This will:
+1. Check that Docker is installed and running
+2. Build the `ricet:latest` Docker image if needed
+3. Launch the overnight run inside the container
+4. Mount your project directory so results are saved to your host
 
 Options:
 
@@ -117,13 +130,24 @@ Options:
 |------|---------|-------------|
 | `--task-file` | `state/TODO.md` | Path to the task file |
 | `--iterations` | 20 | Maximum number of iterations |
+| `--no-docker` | off | **Advanced users only:** bypass Docker (unsafe) |
+
+> **Note:** The `--no-docker` flag is for advanced users who understand the
+> risks. It will prompt for confirmation and warn that Claude will have
+> unrestricted access to your host system.
 
 ### Using the shell script directly
 
-For more control, use the enhanced script:
+The enhanced script also enforces Docker by default:
 
 ```bash
 $ bash scripts/overnight-enhanced.sh 20 state/TODO.md
+```
+
+To bypass Docker (advanced users only):
+
+```bash
+$ bash scripts/overnight-enhanced.sh 20 state/TODO.md --no-docker
 ```
 
 ### Running in the background
@@ -151,7 +175,11 @@ $ ricet overnight --iterations 30
 > **Screenshot:** Terminal showing tmux with the overnight mode running,
 > displaying iteration progress and task completion messages.
 
-### Running in Docker
+### Docker is automatic
+
+You do **not** need to manually run `docker compose` or `docker run` for
+overnight mode. The `ricet overnight` command handles all Docker operations
+automatically. If you want to run the container manually for other purposes:
 
 ```bash
 $ docker compose -f docker/docker-compose.yml run --rm app \
@@ -210,10 +238,15 @@ Overnight mode uses `--dangerously-skip-permissions`, which means Claude can
 execute any command without asking. This is necessary for unattended operation
 but requires precautions.
 
+**Docker is mandatory for overnight mode.** The `ricet overnight` command will
+refuse to start unless Docker is available. This protects users -- especially
+those from non-technical backgrounds -- from accidentally giving Claude
+unrestricted access to their host system. Advanced users who understand the
+risks can bypass this with `--no-docker`, but this is strongly discouraged.
+
 ### What the Docker container restricts
 
-When running inside Docker (recommended for overnight mode), the container
-provides isolation:
+The container provides isolation automatically (no manual setup needed):
 
 | Resource | Restriction |
 |----------|------------|
@@ -235,7 +268,8 @@ provides isolation:
 
 ### Best practices for safe overnight runs
 
-1. **Use Docker.** The container isolates the environment.
+1. **Docker is enforced automatically.** You do not need to do anything -- the
+   container isolation is set up for you when you run `ricet overnight`.
 2. **Start with fewer iterations.** Try `--iterations 3` first, review results,
    then increase.
 3. **Pin dependencies.** Make sure `requirements.txt` or `conda.yml` is locked
@@ -246,6 +280,8 @@ provides isolation:
    anything you do not want automated.
 6. **Use the DONE signal.** End your TODO with a task that creates `state/DONE`
    so the loop stops when work is complete.
+7. **Never use `--no-docker`** unless you are an advanced user who fully
+   understands that Claude will have unrestricted access to your host system.
 
 ---
 
@@ -432,7 +468,7 @@ $ tail -100 state/sessions/overnight_*.log
 ```
 
 Common causes:
-- `ANTHROPIC_API_KEY` not set or expired
+- Claude authentication expired (re-run `claude auth login`), or `ANTHROPIC_API_KEY` not set (CI/headless fallback)
 - Network issues (if running in Docker, check connectivity)
 - TODO tasks reference files that do not exist yet
 

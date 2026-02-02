@@ -3,7 +3,8 @@
 # =============================================================================
 #
 # Quick start:
-#   1. Run `claude auth login` on the host (or set ANTHROPIC_API_KEY in .env)
+#   1. A Claude subscription (Pro or Team) is required. Run `claude auth login` on the host.
+#      (Optional fallback for CI/headless: set ANTHROPIC_API_KEY in .env)
 #   2. docker compose up
 #   3. Open http://localhost:7681 in your browser
 #
@@ -30,7 +31,7 @@ services:
       - "${TTYD_PORT:-7681}:7681"
 
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}    # Optional fallback for CI/headless; prefer `claude auth login`
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - TTYD_PORT=7681

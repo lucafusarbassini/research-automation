@@ -59,9 +59,7 @@ def generate_tests_for_file(
         import re as _re
 
         # Try to extract fenced code block (```python ... ``` or ``` ... ```)
-        fence_match = _re.search(
-            r"```(?:python)?\s*\n(.*?)```", text, _re.DOTALL
-        )
+        fence_match = _re.search(r"```(?:python)?\s*\n(.*?)```", text, _re.DOTALL)
         if fence_match:
             text = fence_match.group(1).strip()
         elif text.startswith("```"):
@@ -74,7 +72,9 @@ def generate_tests_for_file(
 
         # If no import/def found, the output is likely explanation, not code
         if "import " not in text and "def test_" not in text:
-            logger.warning("Claude output did not contain test code for %s", source_file.name)
+            logger.warning(
+                "Claude output did not contain test code for %s", source_file.name
+            )
             return None
 
         test_path.write_text(text)
