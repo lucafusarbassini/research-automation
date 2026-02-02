@@ -18,6 +18,9 @@ from core.onboarding import (
     collect_credentials,
     create_github_repo,
     detect_system_for_init,
+    ensure_package,
+    infer_packages_from_goal,
+    install_inferred_packages,
     load_settings,
     print_folder_map,
     setup_workspace,
@@ -133,7 +136,11 @@ def init(
     console.print("\n[bold cyan]Step 3b: API credentials[/bold cyan]")
     console.print("  [dim]Press Enter to skip any credential you don't have yet.[/dim]")
 
-    credentials = collect_credentials(answers, prompt_fn=_prompt)
+    credentials = collect_credentials(
+        answers,
+        prompt_fn=_prompt,
+        print_fn=lambda msg: console.print(f"[dim]{msg}[/dim]"),
+    )
     if credentials:
         console.print(f"  [green]{len(credentials)} credential(s) collected[/green]")
     else:
@@ -372,6 +379,26 @@ def start(
                 "then run 'ricet start' again.[/red]"
             )
             raise typer.Exit(1)
+
+    # --- Goal-aware package setup ---
+    inferred = infer_packages_from_goal(goal_content)
+    if inferred:
+        console.print(f"[cyan]Detected project needs: {', '.join(inferred)}[/cyan]")
+        installed, pkg_failed = install_inferred_packages(inferred)
+        if installed:
+            console.print(f"[green]Installed: {', '.join(installed)}[/green]")
+        if pkg_failed:
+            console.print(
+                f"[yellow]Could not install: {', '.join(pkg_failed)} "
+                f"(install manually with pip)[/yellow]"
+            )
+
+    # --- Quick package sanity check ---
+    base_failed = check_and_install_packages()
+    if base_failed:
+        console.print(
+            f"[yellow]Missing base packages: {', '.join(base_failed)}[/yellow]"
+        )
 
     if session_name is None:
         session_name = datetime.now().strftime("%Y%m%d_%H%M%S")

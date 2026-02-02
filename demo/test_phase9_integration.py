@@ -43,6 +43,8 @@ class TestCliInit:
             patch("cli.main.write_env_file"),
             patch("cli.main.write_env_example"),
             patch("cli.main.print_folder_map", return_value=["test"]),
+            patch("cli.main.infer_packages_from_goal", return_value=[]),
+            patch("cli.main.install_inferred_packages", return_value=([], [])),
             patch("cli.main.create_github_repo", return_value=""),
             patch("cli.main.shutil.copytree"),
             patch("cli.main.subprocess.run"),

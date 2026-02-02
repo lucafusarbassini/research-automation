@@ -576,26 +576,141 @@ def write_goal_file(project_path: Path, answers: OnboardingAnswers) -> None:
     goal_file.write_text(content)
 
 
+# Each credential: (env_var, short_description, how_to_get_url, category)
+# Categories: "core", "publishing", "ml", "cloud", "comms"
+CREDENTIAL_REGISTRY: list[tuple[str, str, str, str]] = [
+    # --- Core (always ask) ---
+    (
+        "ANTHROPIC_API_KEY",
+        "Anthropic API key (skip if you used 'claude auth login')",
+        "https://console.anthropic.com/ → Settings → API Keys → Create Key",
+        "core",
+    ),
+    (
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "GitHub Personal Access Token (repo + workflow scopes)",
+        "https://github.com/settings/tokens?type=beta → Generate new token",
+        "core",
+    ),
+    (
+        "OPENAI_API_KEY",
+        "OpenAI API key (for embeddings & fallback models)",
+        "https://platform.openai.com/api-keys → Create new secret key",
+        "core",
+    ),
+    (
+        "GOOGLE_API_KEY",
+        "Google / Gemini API key",
+        "https://aistudio.google.com/apikey → Create API key",
+        "core",
+    ),
+    # --- ML / Experiment tracking ---
+    (
+        "HUGGINGFACE_TOKEN",
+        "HuggingFace access token (models & datasets)",
+        "https://huggingface.co/settings/tokens → New token (read access)",
+        "ml",
+    ),
+    (
+        "WANDB_API_KEY",
+        "Weights & Biases API key (experiment tracking)",
+        "https://wandb.ai/authorize → copy key",
+        "ml",
+    ),
+    # --- Publishing ---
+    (
+        "MEDIUM_TOKEN",
+        "Medium integration token (publishing)",
+        "https://medium.com/me/settings/security → Integration tokens → Get token",
+        "publishing",
+    ),
+    (
+        "LINKEDIN_CLIENT_ID",
+        "LinkedIn app Client ID",
+        "https://www.linkedin.com/developers/apps → Create App → Auth tab",
+        "publishing",
+    ),
+    (
+        "LINKEDIN_CLIENT_SECRET",
+        "LinkedIn app Client Secret",
+        "(same page as Client ID above)",
+        "publishing",
+    ),
+    (
+        "LINKEDIN_ACCESS_TOKEN",
+        "LinkedIn OAuth2 access token",
+        "(generate via OAuth2 flow in LinkedIn developer portal)",
+        "publishing",
+    ),
+    # --- Cloud / Infrastructure ---
+    (
+        "AWS_ACCESS_KEY_ID",
+        "AWS access key ID (for cloud compute/storage)",
+        "https://console.aws.amazon.com/iam → Users → Security credentials",
+        "cloud",
+    ),
+    (
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS secret access key",
+        "(same page as AWS access key above)",
+        "cloud",
+    ),
+    (
+        "NOTION_API_KEY",
+        "Notion integration token (project boards)",
+        "https://www.notion.so/my-integrations → New integration → copy secret",
+        "cloud",
+    ),
+    # --- Communication (conditional) ---
+    (
+        "SLACK_BOT_TOKEN",
+        "Slack bot token",
+        "https://api.slack.com/apps → Create App → OAuth & Permissions → Bot Token",
+        "slack",
+    ),
+    (
+        "SLACK_WEBHOOK_URL",
+        "Slack incoming webhook URL",
+        "https://api.slack.com/apps → Incoming Webhooks → Add New Webhook",
+        "slack",
+    ),
+    (
+        "SMTP_HOST",
+        "SMTP host (e.g. smtp.gmail.com)",
+        "Check your email provider's SMTP settings",
+        "email",
+    ),
+    (
+        "SMTP_PORT",
+        "SMTP port (usually 587)",
+        "(same as SMTP host settings)",
+        "email",
+    ),
+    (
+        "SMTP_USER",
+        "SMTP username (usually your email address)",
+        "(your email login)",
+        "email",
+    ),
+    (
+        "SMTP_PASSWORD",
+        "SMTP password or app password",
+        "For Gmail: https://myaccount.google.com/apppasswords",
+        "email",
+    ),
+]
+
+# Legacy aliases for backwards compatibility
 CREDENTIALS_ALWAYS = [
-    ("ANTHROPIC_API_KEY", "Anthropic API key"),
-    ("GITHUB_PERSONAL_ACCESS_TOKEN", "GitHub token (for MCP)"),
-    ("HUGGINGFACE_TOKEN", "HuggingFace access token"),
-    ("WANDB_API_KEY", "Weights & Biases API key"),
-    ("GOOGLE_API_KEY", "Google / Gemini API key"),
-    ("MEDIUM_TOKEN", "Medium publishing token"),
-    ("LINKEDIN_TOKEN", "LinkedIn publishing token"),
+    (var, desc)
+    for var, desc, _url, cat in CREDENTIAL_REGISTRY
+    if cat in ("core", "ml", "publishing", "cloud")
 ]
-
 CREDENTIALS_SLACK = [
-    ("SLACK_BOT_TOKEN", "Slack bot token"),
-    ("SLACK_WEBHOOK_URL", "Slack webhook URL"),
+    (var, desc) for var, desc, _url, cat in CREDENTIAL_REGISTRY if cat == "slack"
 ]
-
 CREDENTIALS_EMAIL = [
-    ("SMTP_HOST", "SMTP host"),
-    ("SMTP_PORT", "SMTP port"),
-    ("SMTP_USER", "SMTP username"),
-    ("SMTP_PASSWORD", "SMTP password"),
+    (var, desc) for var, desc, _url, cat in CREDENTIAL_REGISTRY if cat == "email"
 ]
 
 
@@ -603,12 +718,17 @@ def collect_credentials(
     answers: OnboardingAnswers,
     *,
     prompt_fn=None,
+    print_fn=None,
 ) -> dict[str, str]:
     """Collect API credentials interactively (Enter to skip any).
+
+    Each credential is prompted one at a time with a URL showing where to
+    get it, so the flow is self-contained and guided.
 
     Args:
         answers: Onboarding answers (used for notification method).
         prompt_fn: Callable(prompt, default) -> str.
+        print_fn: Callable(message) -> None for guidance output.
 
     Returns:
         Dict of env var name to value (only non-empty entries).
@@ -617,25 +737,26 @@ def collect_credentials(
         prompt_fn = (
             lambda prompt, default="": input(f"{prompt} [{default}]: ") or default
         )
+    if print_fn is None:
+        print_fn = print
 
     credentials: dict[str, str] = {}
 
-    for var, description in CREDENTIALS_ALWAYS:
+    # Determine which categories to ask
+    active_cats = {"core", "ml", "publishing", "cloud"}
+    if answers.notification_method == "slack":
+        active_cats.add("slack")
+    if answers.notification_method == "email":
+        active_cats.add("email")
+
+    for var, description, how_to_url, category in CREDENTIAL_REGISTRY:
+        if category not in active_cats:
+            continue
+        # Show guidance before each prompt
+        print_fn(f"  Get it: {how_to_url}")
         value = prompt_fn(f"{description} ({var})", "").strip()
         if value:
             credentials[var] = value
-
-    if answers.notification_method == "slack":
-        for var, description in CREDENTIALS_SLACK:
-            value = prompt_fn(f"{description} ({var})", "").strip()
-            if value:
-                credentials[var] = value
-
-    if answers.notification_method == "email":
-        for var, description in CREDENTIALS_EMAIL:
-            value = prompt_fn(f"{description} ({var})", "").strip()
-            if value:
-                credentials[var] = value
 
     return credentials
 
@@ -670,8 +791,10 @@ def write_env_example(project_path: Path) -> Path:
     env_example_path = project_path / "secrets" / ".env.example"
     env_example_path.parent.mkdir(parents=True, exist_ok=True)
 
-    all_vars = CREDENTIALS_ALWAYS + CREDENTIALS_SLACK + CREDENTIALS_EMAIL
-    lines = [f"# {desc}\n{var}=" for var, desc in all_vars]
+    lines = [
+        f"# {desc}\n# How to get: {url}\n{var}="
+        for var, desc, url, _cat in CREDENTIAL_REGISTRY
+    ]
     env_example_path.write_text("\n\n".join(lines) + "\n")
     logger.info("Example env written to %s", env_example_path)
     return env_example_path
@@ -729,6 +852,218 @@ def check_and_install_packages(
             except (FileNotFoundError, subprocess.TimeoutExpired):
                 failed.append(pip_name)
     return failed
+
+
+# Mapping of keyword patterns in GOAL.md to pip packages
+GOAL_PACKAGE_MAP: list[tuple[list[str], list[str]]] = [
+    # (keywords, packages_to_install)
+    (
+        ["machine learning", "ml", "neural", "deep learning", "training", "model"],
+        ["numpy", "scipy", "scikit-learn", "matplotlib"],
+    ),
+    (
+        ["torch", "pytorch", "transformer", "attention", "gpu"],
+        ["torch", "torchvision"],
+    ),
+    (
+        ["tensorflow", "keras"],
+        ["tensorflow"],
+    ),
+    (
+        ["data analysis", "dataset", "csv", "dataframe", "pandas", "tabular"],
+        ["pandas", "numpy", "matplotlib"],
+    ),
+    (
+        ["statistics", "statistical", "hypothesis", "p-value", "regression"],
+        ["scipy", "statsmodels", "numpy"],
+    ),
+    (
+        ["visualization", "plot", "figure", "chart", "graph"],
+        ["matplotlib", "seaborn"],
+    ),
+    (
+        ["nlp", "natural language", "text", "tokeniz", "language model", "llm"],
+        ["transformers", "tokenizers"],
+    ),
+    (
+        ["image", "vision", "computer vision", "cnn", "segmentation"],
+        ["pillow", "opencv-python"],
+    ),
+    (
+        ["jupyter", "notebook", "ipynb"],
+        ["jupyter", "ipykernel"],
+    ),
+    (
+        ["huggingface", "hugging face"],
+        ["transformers", "datasets", "huggingface_hub"],
+    ),
+    (
+        ["wandb", "weights and biases", "experiment tracking"],
+        ["wandb"],
+    ),
+    (
+        ["bioinformatics", "genomics", "sequence", "protein"],
+        ["biopython", "numpy", "pandas"],
+    ),
+]
+
+
+def infer_packages_from_goal(goal_content: str) -> list[str]:
+    """Infer Python packages needed based on GOAL.md content.
+
+    Scans the goal text for domain keywords and returns a deduplicated
+    list of pip package names that should be installed.
+
+    Args:
+        goal_content: Text content of GOAL.md.
+
+    Returns:
+        List of pip package names (deduplicated, sorted).
+    """
+    goal_lower = goal_content.lower()
+    packages: set[str] = set()
+
+    for keywords, pkgs in GOAL_PACKAGE_MAP:
+        if any(kw in goal_lower for kw in keywords):
+            packages.update(pkgs)
+
+    return sorted(packages)
+
+
+def install_inferred_packages(
+    packages: list[str],
+    *,
+    run_cmd=None,
+) -> tuple[list[str], list[str]]:
+    """Install a list of pip packages, returning (installed, failed).
+
+    Args:
+        packages: List of pip package names.
+        run_cmd: Optional callable(cmd) -> subprocess.CompletedProcess.
+
+    Returns:
+        Tuple of (successfully_installed, failed_to_install).
+    """
+    import importlib
+
+    if run_cmd is None:
+
+        def run_cmd(cmd: str) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                cmd.split(),
+                capture_output=True,
+                timeout=300,
+            )
+
+    installed: list[str] = []
+    failed: list[str] = []
+
+    for pkg in packages:
+        # Normalize import name: opencv-python → cv2, pillow → PIL, etc.
+        import_map = {
+            "opencv-python": "cv2",
+            "pillow": "PIL",
+            "scikit-learn": "sklearn",
+            "python-dotenv": "dotenv",
+            "pyyaml": "yaml",
+            "huggingface_hub": "huggingface_hub",
+            "biopython": "Bio",
+        }
+        import_name = import_map.get(pkg, pkg.replace("-", "_"))
+
+        try:
+            importlib.import_module(import_name)
+            # Already installed
+            continue
+        except ImportError:
+            pass
+
+        logger.info("Installing inferred package: %s", pkg)
+        try:
+            result = run_cmd(f"pip install {pkg}")
+            if result.returncode == 0:
+                installed.append(pkg)
+            else:
+                failed.append(pkg)
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            failed.append(pkg)
+
+    return installed, failed
+
+
+def ensure_package(
+    pip_name: str,
+    import_name: str | None = None,
+    *,
+    run_cmd=None,
+) -> bool:
+    """Ensure a Python package is importable, installing it on demand if missing.
+
+    Designed to be called at any point during a session — not just at startup.
+    Agents can call this when they discover they need a package.
+
+    Args:
+        pip_name: The pip package name (e.g. "pandas").
+        import_name: The Python import name if different (e.g. "cv2" for
+                     "opencv-python"). If None, derives from pip_name.
+        run_cmd: Optional callable(cmd) -> subprocess.CompletedProcess.
+
+    Returns:
+        True if the package is importable after this call.
+    """
+    import importlib
+
+    if import_name is None:
+        _import_map = {
+            "opencv-python": "cv2",
+            "pillow": "PIL",
+            "scikit-learn": "sklearn",
+            "python-dotenv": "dotenv",
+            "pyyaml": "yaml",
+            "biopython": "Bio",
+        }
+        import_name = _import_map.get(pip_name, pip_name.replace("-", "_"))
+
+    try:
+        importlib.import_module(import_name)
+        return True
+    except ImportError:
+        pass
+
+    if run_cmd is None:
+
+        def run_cmd(cmd: str) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                cmd.split(),
+                capture_output=True,
+                timeout=300,
+            )
+
+    logger.info("Runtime install: %s", pip_name)
+    try:
+        result = run_cmd(f"pip install {pip_name}")
+        if result.returncode == 0:
+            # Clear import caches
+            importlib.invalidate_caches()
+            try:
+                importlib.import_module(import_name)
+                return True
+            except ImportError:
+                pass
+        # Retry with force
+        result = run_cmd(f"pip install --force-reinstall {pip_name}")
+        if result.returncode == 0:
+            importlib.invalidate_caches()
+            try:
+                importlib.import_module(import_name)
+                return True
+            except ImportError:
+                pass
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    logger.warning("Failed to install %s", pip_name)
+    return False
 
 
 def validate_goal_content(content: str, min_chars: int = 200) -> bool:

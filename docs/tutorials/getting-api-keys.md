@@ -14,10 +14,16 @@ environments. Everything else is optional and can be added later.
 1. [Claude Authentication (required)](#1-claude-authentication-required)
 2. [GitHub SSH Key (required for git push)](#2-github-ssh-key-required-for-git-push)
 3. [OpenAI API Key (optional)](#3-openai-api-key-optional)
-4. [Slack Webhook (optional)](#4-slack-incoming-webhook-optional)
-5. [Medium API Token (optional)](#5-medium-api-token-optional)
-6. [LinkedIn API Token (optional)](#6-linkedin-api-token-optional)
-7. [Storing Your Keys Safely](#7-storing-your-keys-safely)
+4. [Google / Gemini API Key (optional)](#4-google--gemini-api-key-optional)
+5. [HuggingFace Token (optional)](#5-huggingface-token-optional)
+6. [Weights & Biases API Key (optional)](#6-weights--biases-api-key-optional)
+7. [Slack Webhook (optional)](#7-slack-incoming-webhook-optional)
+8. [Medium API Token (optional)](#8-medium-api-token-optional)
+9. [LinkedIn API Token (optional)](#9-linkedin-api-token-optional)
+10. [Notion API Key (optional)](#10-notion-api-key-optional)
+11. [AWS Credentials (optional)](#11-aws-credentials-optional)
+12. [Email / SMTP (optional)](#12-email--smtp-optional)
+13. [Storing Your Keys Safely](#13-storing-your-keys-safely)
 
 ---
 
@@ -179,7 +185,83 @@ $ export OPENAI_API_KEY="sk-..."
 
 ---
 
-## 4. Slack Incoming Webhook (optional)
+## 4. Google / Gemini API Key (optional)
+
+Used for Google Gemini models, Google Search, and various Google Cloud MCPs.
+
+### Steps
+
+1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+2. Log in with your Google account.
+3. Click **Create API key**.
+4. Select or create a Google Cloud project.
+5. Copy the key.
+
+```bash
+$ export GOOGLE_API_KEY="AIza..."
+```
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "API key not valid" | Ensure the key is for the correct project. Regenerate if needed. |
+| Quota errors | Check quotas at console.cloud.google.com. |
+
+---
+
+## 5. HuggingFace Token (optional)
+
+Used by the ML pipeline (tier 3 MCP) for downloading models, datasets, and
+pushing results to HuggingFace Hub.
+
+### Steps
+
+1. Go to [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens).
+2. Log in or sign up.
+3. Click **New token**.
+4. Name it `ricet`, select **Read** access (or Write if you plan to push models).
+5. Copy the token.
+
+```bash
+$ export HUGGINGFACE_TOKEN="hf_..."
+```
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "Unauthorized" when downloading | Verify token has Read access. Some models require accepting a license on the model page first. |
+| Push fails | Regenerate with Write access. |
+
+---
+
+## 6. Weights & Biases API Key (optional)
+
+Used for experiment tracking, run logging, and hyperparameter sweep dashboards.
+
+### Steps
+
+1. Go to [wandb.ai/authorize](https://wandb.ai/authorize).
+2. Log in or sign up.
+3. Copy the API key shown on the page.
+
+```bash
+$ export WANDB_API_KEY="..."
+```
+
+Alternatively, run `wandb login` interactively.
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "Invalid API key" | Go to wandb.ai/authorize and copy the key again. |
+| Wrong project/entity | Set `WANDB_PROJECT` and `WANDB_ENTITY` environment variables. |
+
+---
+
+## 7. Slack Incoming Webhook (optional)
 
 A Slack webhook lets ricet send you notifications (task complete,
 errors, overnight run summary) to a Slack channel.
@@ -220,7 +302,7 @@ Check your Slack channel -- you should see the test message.
 
 ---
 
-## 5. Medium API Token (optional)
+## 8. Medium API Token (optional)
 
 Used by the social media module (`core/social_media.py`) to publish blog posts
 about your research directly to Medium.
@@ -248,7 +330,7 @@ $ export MEDIUM_TOKEN="..."
 
 ---
 
-## 6. LinkedIn API Token (optional)
+## 9. LinkedIn API Token (optional)
 
 Used by the social media module to share research updates on LinkedIn.
 LinkedIn's API requires an OAuth2 application.
@@ -281,7 +363,91 @@ $ export LINKEDIN_ACCESS_TOKEN="..."
 
 ---
 
-## 7. Storing Your Keys Safely
+## 10. Notion API Key (optional)
+
+Used by the Notion MCP (tier 8) for project boards, documentation sync, and
+knowledge base integration.
+
+### Steps
+
+1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations).
+2. Click **New integration**.
+3. Name it `ricet`, select your workspace.
+4. Copy the **Internal Integration Secret**.
+5. In Notion, share the pages you want accessible with your integration.
+
+```bash
+$ export NOTION_API_KEY="ntn_..."
+```
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "Object not found" | Share the target page with your integration in Notion. |
+| "Unauthorized" | Check the secret is correct and the integration is active. |
+
+---
+
+## 11. AWS Credentials (optional)
+
+Used by the AWS MCP (tier 7) for cloud compute, S3 storage, and SageMaker
+training jobs.
+
+### Steps
+
+1. Go to [console.aws.amazon.com/iam](https://console.aws.amazon.com/iam/).
+2. Navigate to **Users** → your user → **Security credentials**.
+3. Click **Create access key**.
+4. Select "Command Line Interface (CLI)".
+5. Copy both the Access Key ID and Secret Access Key.
+
+```bash
+$ export AWS_ACCESS_KEY_ID="AKIA..."
+$ export AWS_SECRET_ACCESS_KEY="..."
+```
+
+Alternatively, run `aws configure` if you have the AWS CLI installed.
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "InvalidClientTokenId" | Verify the access key is active in IAM console. |
+| Permission denied | Attach appropriate IAM policies to your user. |
+
+---
+
+## 12. Email / SMTP (optional)
+
+Used by the notification system for email alerts on task completion, errors,
+and overnight run summaries.
+
+### Steps (Gmail example)
+
+1. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+2. Select **Mail** and your device, then click **Generate**.
+3. Copy the 16-character app password.
+
+```bash
+$ export SMTP_HOST="smtp.gmail.com"
+$ export SMTP_PORT="587"
+$ export SMTP_USER="you@gmail.com"
+$ export SMTP_PASSWORD="xxxx xxxx xxxx xxxx"
+```
+
+For other providers, check their SMTP settings documentation.
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "Authentication failed" | Use an app password, not your regular password. Enable 2FA first. |
+| "Connection refused" | Check host and port. Common: smtp.gmail.com:587, smtp.outlook.com:587. |
+
+---
+
+## 13. Storing Your Keys Safely
 
 Never commit API keys to git. ricet uses two mechanisms for safe
 key storage.
@@ -347,11 +513,18 @@ rotate them immediately.
 | Claude Auth (browser login) | Yes | `claude auth login` | `~/.claude/` |
 | Anthropic API Key (fallback) | CI/headless only | console.anthropic.com | `ANTHROPIC_API_KEY` |
 | GitHub SSH Key | For git push | ssh-keygen locally | N/A (file-based) |
-| GitHub Token | For API features | github.com/settings/tokens | `GITHUB_TOKEN` |
+| GitHub Token | For API features | github.com/settings/tokens | `GITHUB_PERSONAL_ACCESS_TOKEN` |
 | OpenAI API Key | No | platform.openai.com | `OPENAI_API_KEY` |
-| Slack Webhook | No | api.slack.com/apps | `NOTIFICATION_WEBHOOK` |
+| Google / Gemini API Key | No | aistudio.google.com/apikey | `GOOGLE_API_KEY` |
+| HuggingFace Token | No | huggingface.co/settings/tokens | `HUGGINGFACE_TOKEN` |
+| Weights & Biases Key | No | wandb.ai/authorize | `WANDB_API_KEY` |
+| Slack Webhook | No | api.slack.com/apps | `SLACK_WEBHOOK_URL` |
+| Slack Bot Token | No | api.slack.com/apps | `SLACK_BOT_TOKEN` |
 | Medium Token | No | medium.com settings | `MEDIUM_TOKEN` |
-| LinkedIn Token | No | linkedin.com/developers | `LINKEDIN_ACCESS_TOKEN` |
+| LinkedIn Credentials | No | linkedin.com/developers | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_ACCESS_TOKEN` |
+| Notion API Key | No | notion.so/my-integrations | `NOTION_API_KEY` |
+| AWS Credentials | No | console.aws.amazon.com/iam | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| SMTP (Email) | No | Your email provider | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` |
 
 ---
 

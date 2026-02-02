@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 
 from core.onboarding import (
+    CREDENTIAL_REGISTRY,
     FOLDER_READMES,
     WORKSPACE_DIRS,
     OnboardingAnswers,
@@ -15,6 +16,9 @@ from core.onboarding import (
     collect_credentials,
     create_github_repo,
     detect_system_for_init,
+    ensure_package,
+    infer_packages_from_goal,
+    install_inferred_packages,
     load_settings,
     print_folder_map,
     setup_claude_web_access,
@@ -428,7 +432,9 @@ def test_validate_goal_content_empty():
 def test_collect_credentials_skip_all():
     """When all prompts return empty, credentials dict is empty."""
     answers = OnboardingAnswers(notification_method="none")
-    creds = collect_credentials(answers, prompt_fn=lambda p, d="": "")
+    creds = collect_credentials(
+        answers, prompt_fn=lambda p, d="": "", print_fn=lambda m: None
+    )
     assert creds == {}
 
 
@@ -446,7 +452,7 @@ def test_collect_credentials_some_filled():
         return ""
 
     answers = OnboardingAnswers(notification_method="none")
-    creds = collect_credentials(answers, prompt_fn=_prompt)
+    creds = collect_credentials(answers, prompt_fn=_prompt, print_fn=lambda m: None)
     assert creds["ANTHROPIC_API_KEY"] == "sk-ant-test"
     assert creds["GITHUB_PERSONAL_ACCESS_TOKEN"] == "ghp_test"
     assert len(creds) == 2
@@ -461,8 +467,22 @@ def test_collect_credentials_slack():
         return ""
 
     answers = OnboardingAnswers(notification_method="slack")
-    creds = collect_credentials(answers, prompt_fn=_prompt)
+    creds = collect_credentials(answers, prompt_fn=_prompt, print_fn=lambda m: None)
     assert creds.get("SLACK_BOT_TOKEN") == "xoxb-test"
+
+
+def test_collect_credentials_shows_guidance():
+    """print_fn is called with guidance URL for each credential."""
+    printed = []
+    answers = OnboardingAnswers(notification_method="none")
+    creds = collect_credentials(
+        answers,
+        prompt_fn=lambda p, d="": "",
+        print_fn=lambda m: printed.append(m),
+    )
+    # Should have printed guidance for each core/ml/publishing/cloud credential
+    assert len(printed) > 0
+    assert any("http" in line for line in printed)
 
 
 def test_write_env_file(tmp_path: Path):
@@ -488,3 +508,68 @@ def test_check_and_install_packages_all_present():
     failed = check_and_install_packages(install=False)
     # typer, rich, yaml are already installed in test env
     assert isinstance(failed, list)
+
+
+def test_infer_packages_from_goal_ml():
+    """ML-related keywords trigger numpy, scipy, etc."""
+    goal = "We train a deep learning model using transformers on GPU."
+    packages = infer_packages_from_goal(goal)
+    assert "numpy" in packages
+    assert "torch" in packages
+
+
+def test_infer_packages_from_goal_data():
+    """Data analysis keywords trigger pandas."""
+    goal = "Perform data analysis on CSV datasets with statistical tests."
+    packages = infer_packages_from_goal(goal)
+    assert "pandas" in packages
+    assert "scipy" in packages
+
+
+def test_infer_packages_from_goal_empty():
+    """Empty goal returns no packages."""
+    assert infer_packages_from_goal("") == []
+    assert infer_packages_from_goal("# Goal\n\nTBD\n") == []
+
+
+def test_infer_packages_from_goal_bio():
+    """Bioinformatics keywords trigger biopython."""
+    goal = "Analyze protein sequences and genomics data."
+    packages = infer_packages_from_goal(goal)
+    assert "biopython" in packages
+
+
+def test_install_inferred_packages_already_present():
+    """Packages already importable are skipped (not re-installed)."""
+    installed, failed = install_inferred_packages(["yaml"])
+    # yaml (pyyaml) is already in the test env, so should be skipped
+    assert "yaml" not in installed
+    assert "yaml" not in failed
+
+
+def test_ensure_package_already_present():
+    """ensure_package returns True for packages already importable."""
+    assert ensure_package("pyyaml", "yaml") is True
+
+
+def test_ensure_package_not_found():
+    """ensure_package returns False when install fails."""
+
+    class FailResult:
+        returncode = 1
+
+    result = ensure_package(
+        "nonexistent-pkg-xyz-12345",
+        "nonexistent_pkg_xyz_12345",
+        run_cmd=lambda cmd: FailResult(),
+    )
+    assert result is False
+
+
+def test_credential_registry_has_urls():
+    """Every credential in the registry has a non-empty how-to URL."""
+    for var, desc, url, cat in CREDENTIAL_REGISTRY:
+        assert var, "Empty env var name"
+        assert desc, f"Empty description for {var}"
+        assert url, f"Empty URL for {var}"
+        assert cat, f"Empty category for {var}"
