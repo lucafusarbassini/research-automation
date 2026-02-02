@@ -209,6 +209,37 @@ def generate_citation_key(author: str, year: str) -> str:
     return f"{last}{year}"
 
 
+def search_paperboat(query: str, *, run_cmd=None) -> list[dict]:
+    """Search PaperBoat for recent cross-discipline papers.
+
+    PaperBoat scans thousands of journals daily. This function uses
+    Claude to query PaperBoat's public interface and extract results.
+
+    Args:
+        query: Research topic to search.
+        run_cmd: Optional callable for testing.
+
+    Returns:
+        List of paper dicts with title, authors, year, abstract, url.
+    """
+    from core.claude_helper import call_claude_json
+
+    prompt = (
+        "Search PaperBoat (https://paperboatch.com/) for recent academic papers "
+        f'matching: "{query}"\n\n'
+        "PaperBoat is a cross-discipline paper discovery service that updates daily. "
+        "Return a JSON array of up to 5 papers with fields: "
+        '{"title": "...", "authors": "...", "year": "...", "abstract": "1-2 sentences", '
+        '"url": "https://..."}\n'
+        "If you cannot access PaperBoat, use your knowledge of recent papers instead. "
+        "Reply with JSON array only."
+    )
+    result = call_claude_json(prompt, run_cmd=run_cmd)
+    if result and isinstance(result, list):
+        return [p for p in result if isinstance(p, dict) and p.get("title")]
+    return []
+
+
 def search_and_cite(
     query: str,
     bib_file: Path | None = None,

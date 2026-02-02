@@ -306,7 +306,7 @@ def _execute_agent_task_legacy(
 
     # Add thinking budget for models that support it
     if model_config.supports_thinking and thinking_mode in ("extended", "ultrathink"):
-        budget = "16000" if thinking_mode == "ultrathink" else "8000"
+        budget = "128000" if thinking_mode == "ultrathink" else "32000"
         cmd.extend(["--thinking-budget", budget])
     if dangerously_skip_permissions:
         cmd.insert(1, "--dangerously-skip-permissions")

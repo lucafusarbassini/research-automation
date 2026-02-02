@@ -499,7 +499,6 @@ def start(
     import os
     import uuid as _uuid
 
-    from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
     from core.collaboration import sync_before_start as _sync_before
 
     # --- Collaborative sync ---
@@ -578,18 +577,9 @@ def start(
     # Generate a proper UUID for Claude Code (it requires valid UUIDs)
     session_uuid = str(_uuid.uuid4())
 
-    session_dir = Path("state/sessions")
-    session_dir.mkdir(parents=True, exist_ok=True)
+    from core.session import create_session
 
-    session_file = session_dir / f"{session_name}.json"
-    session_data = {
-        "name": session_name,
-        "uuid": session_uuid,
-        "started": datetime.now().isoformat(),
-        "status": "active",
-        "token_estimate": 0,
-    }
-    session_file.write_text(json.dumps(session_data, indent=2))
+    session = create_session(session_name)
 
     # Load project settings
     settings = load_settings(Path.cwd())
@@ -612,14 +602,6 @@ def start(
             "[dim]Web dashboard enabled. Run 'ricet website preview' in another terminal.[/dim]"
         )
 
-    # Save claude-flow session state
-    try:
-        bridge = _get_bridge()
-        bridge.start_session(session_name)
-        console.print(f"[green]claude-flow session: {session_name}[/green]")
-    except ClaudeFlowUnavailable:
-        pass
-
     # Reindex linked repos for cross-repo RAG
     try:
         from core.cross_repo import reindex_all
@@ -633,6 +615,28 @@ def start(
     console.print(
         f"[green]Session started: {session_name} ({session_uuid[:8]}...)[/green]"
     )
+
+    # Suggest next steps based on GOAL.md and PROGRESS.md
+    from core.prompt_suggestions import suggest_next_steps
+
+    progress_file = Path("state/PROGRESS.md")
+    progress_lines = []
+    if progress_file.exists():
+        progress_lines = [
+            line.strip()
+            for line in progress_file.read_text().splitlines()
+            if line.strip() and not line.startswith("#")
+        ]
+    suggestions = suggest_next_steps(
+        current_task=session_name,
+        progress=progress_lines,
+        goal=goal_content,
+    )
+    if suggestions:
+        console.print("\n[bold cyan]Suggested next steps:[/bold cyan]")
+        for i, step in enumerate(suggestions, 1):
+            console.print(f"  {i}. {step}")
+        console.print()
 
     # Launch Claude Code with a valid UUID session
     subprocess.run(["claude", "--session-id", session_uuid])
@@ -657,6 +661,22 @@ def overnight(
     if not task_file.exists():
         console.print(f"[red]Error: {task_file} not found[/red]")
         raise typer.Exit(1)
+
+    # --- Goal fidelity check at the start of overnight ---
+    from core.verification import check_goal_fidelity
+
+    fidelity = check_goal_fidelity(Path.cwd())
+    fidelity_score = fidelity.get("score", 50)
+    if fidelity.get("error"):
+        console.print(f"[yellow]Fidelity check: {fidelity['error']}[/yellow]")
+    else:
+        console.print(f"[bold]Goal fidelity score: {fidelity_score}/100[/bold]")
+        if fidelity_score < 30:
+            console.print("[red]WARNING: Goal alignment is very low![/red]")
+            for area in fidelity.get("drift_areas", []):
+                console.print(f"  [red]- Drift: {area}[/red]")
+            for rec in fidelity.get("recommendations", []):
+                console.print(f"  [yellow]- Recommendation: {rec}[/yellow]")
 
     tasks = task_file.read_text()
 
@@ -706,9 +726,23 @@ def overnight(
     except ClaudeFlowUnavailable:
         pass
 
-    # Fallback: raw claude -p loop with agent routing
-    from core.agents import get_agent_prompt, route_task
+    # Fallback: agent-based execution with plan-execute-iterate
+    from core.agents import (
+        AgentType,
+        execute_agent_task,
+        get_agent_prompt,
+        plan_execute_iterate,
+        route_task,
+    )
     from core.model_router import route_to_model
+    from core.prompt_suggestions import suggest_decomposition
+
+    # Decompose the task into subtasks before iterating
+    subtasks = suggest_decomposition(tasks)
+    if subtasks:
+        console.print("[cyan]Task decomposition:[/cyan]")
+        for i, st in enumerate(subtasks, 1):
+            console.print(f"  {i}. {st}")
 
     overnight_model = route_to_model(tasks)
     agent_type = route_task(tasks)
@@ -716,58 +750,70 @@ def overnight(
     enriched_tasks = (
         f"{agent_prompt}\n\n## Tasks\n\n{tasks}" if agent_prompt else tasks
     )
-    for i in range(iterations):
-        # Resource-aware scheduling
-        snap = monitor_resources()
-        decision = make_resource_decision(snap)
-        if not decision["can_proceed"]:
-            console.print(f"[red]Low resources (disk: {snap.disk_free_gb:.1f}GB). Pausing.[/red]")
-            break
-        if decision["should_checkpoint"]:
-            console.print(f"[yellow]High memory usage ({snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB). Checkpointing.[/yellow]")
-            auto_commit("ricet overnight: resource checkpoint")
-        if decision.get("should_cleanup"):
-            cleanup_old_checkpoints()
 
-        console.print(f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan] "
-                      f"[dim](CPU: {snap.cpu_percent:.0f}%, RAM: {snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB, "
-                      f"Disk: {snap.disk_free_gb:.0f}GB free)[/dim]")
-
-        result = subprocess.run(
-            [
-                "claude",
-                "--dangerously-skip-permissions",
-                "-p",
-                enriched_tasks,
-                "--model",
-                overnight_model.name,
-            ],
-            capture_output=True,
-            text=True,
+    # Use plan_execute_iterate for complex multi-subtask work
+    if len(subtasks) > 3:
+        console.print("[cyan]Using plan-execute-iterate strategy for complex task[/cyan]")
+        pipeline_results = plan_execute_iterate(
+            enriched_tasks,
+            max_iterations=min(iterations, 5),
+            dangerously_skip_permissions=True,
         )
+        for pr in pipeline_results:
+            status_label = "[green]OK[/green]" if pr.status == "success" else "[red]FAIL[/red]"
+            console.print(f"  [{pr.agent.value}] {status_label} {pr.task[:80]}")
+    else:
+        for i in range(iterations):
+            # Resource-aware scheduling
+            snap = monitor_resources()
+            decision = make_resource_decision(snap)
+            if not decision["can_proceed"]:
+                console.print(f"[red]Low resources (disk: {snap.disk_free_gb:.1f}GB). Pausing.[/red]")
+                break
+            if decision["should_checkpoint"]:
+                console.print(f"[yellow]High memory usage ({snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB). Checkpointing.[/yellow]")
+                auto_commit("ricet overnight: resource checkpoint")
+            if decision.get("should_cleanup"):
+                cleanup_old_checkpoints()
 
-        if result.returncode != 0:
-            console.print(f"[red]Error in iteration {i + 1}[/red]")
-            console.print(result.stderr)
+            console.print(f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan] "
+                          f"[dim](CPU: {snap.cpu_percent:.0f}%, RAM: {snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB, "
+                          f"Disk: {snap.disk_free_gb:.0f}GB free)[/dim]")
 
-        # Auto-trigger falsifier verification after each iteration
-        from core.agents import execute_agent_task, AgentType
-        console.print("[yellow]Running falsifier verification...[/yellow]")
-        falsifier_task = (
-            f"Falsify and validate the results from the latest iteration. "
-            f"Check for: data leakage, statistical validity, confounders, "
-            f"reproducibility issues. Original task: {tasks}"
-        )
-        falsifier_result = execute_agent_task(AgentType.FALSIFIER, falsifier_task)
-        if falsifier_result.status == "success":
-            console.print(f"[green]Falsifier: {falsifier_result.output[:200]}[/green]")
-        else:
-            console.print(f"[yellow]Falsifier flagged issues: {falsifier_result.output[:200]}[/yellow]")
+            result = subprocess.run(
+                [
+                    "claude",
+                    "--dangerously-skip-permissions",
+                    "-p",
+                    enriched_tasks,
+                    "--model",
+                    overnight_model.name,
+                ],
+                capture_output=True,
+                text=True,
+            )
 
-        # Check for completion signal
-        if Path("state/DONE").exists():
-            console.print("[green]Task completed![/green]")
-            break
+            if result.returncode != 0:
+                console.print(f"[red]Error in iteration {i + 1}[/red]")
+                console.print(result.stderr)
+
+            # Auto-trigger falsifier verification after each iteration
+            console.print("[yellow]Running falsifier verification...[/yellow]")
+            falsifier_task = (
+                f"Falsify and validate the results from the latest iteration. "
+                f"Check for: data leakage, statistical validity, confounders, "
+                f"reproducibility issues. Original task: {tasks}"
+            )
+            falsifier_result = execute_agent_task(AgentType.FALSIFIER, falsifier_task)
+            if falsifier_result.status == "success":
+                console.print(f"[green]Falsifier: {falsifier_result.output[:200]}[/green]")
+            else:
+                console.print(f"[yellow]Falsifier flagged issues: {falsifier_result.output[:200]}[/yellow]")
+
+            # Check for completion signal
+            if Path("state/DONE").exists():
+                console.print("[green]Task completed![/green]")
+                break
 
     auto_commit("ricet overnight: completed run")
     console.print("[bold]Overnight mode finished[/bold]")
@@ -803,14 +849,15 @@ def status():
 @app.command()
 def list_sessions():
     """List all sessions."""
-    session_dir = Path("state/sessions")
-    if not session_dir.exists():
+    from core.session import list_sessions as _list_sessions
+
+    sessions = _list_sessions()
+    if not sessions:
         console.print("No sessions found")
         return
 
-    for f in sorted(session_dir.glob("*.json")):
-        data = json.loads(f.read_text())
-        console.print(f"  {data['name']} - {data['status']} ({data['started'][:10]})")
+    for s in sessions:
+        console.print(f"  {s.name} - {s.status} ({s.started[:10]})")
 
 
 @app.command()
@@ -845,33 +892,96 @@ def agents():
 
 @app.command()
 def memory(
-    query: str = typer.Argument(help="Search query for vector memory"),
-    top_k: int = typer.Option(5, help="Number of results"),
+    action: str = typer.Argument(help="Action: search, log-decision, export, import, stats"),
+    query: str = typer.Argument("", help="Search query or text (for search / log-decision)"),
+    top_k: int = typer.Option(5, help="Number of results (for search)"),
+    file: Path = typer.Option(None, "--file", "-f", help="File path (for import)"),
 ):
-    """Search claude-flow vector memory."""
-    from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
+    """Manage project knowledge: search, log decisions, export/import, stats."""
+    if action == "search":
+        if not query:
+            console.print("[red]Provide a search query.[/red]")
+            raise typer.Exit(1)
+        from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
-    try:
-        bridge = _get_bridge()
-        result = bridge.query_memory(query, top_k=top_k)
-        hits = result.get("results", [])
-        if hits:
-            console.print(f"[bold]Memory results ({len(hits)}):[/bold]")
-            for hit in hits:
-                score = hit.get("score", "?")
-                text = hit.get("text", "")[:100]
-                console.print(f"  [{score}] {text}")
+        try:
+            bridge = _get_bridge()
+            result = bridge.query_memory(query, top_k=top_k)
+            hits = result.get("results", [])
+            if hits:
+                console.print(f"[bold]Memory results ({len(hits)}):[/bold]")
+                for hit in hits:
+                    score = hit.get("score", "?")
+                    text = hit.get("text", "")[:100]
+                    console.print(f"  [{score}] {text}")
+            else:
+                console.print("No matches found")
+        except ClaudeFlowUnavailable:
+            console.print(
+                "[yellow]claude-flow not available. Using keyword search.[/yellow]"
+            )
+            from core.knowledge import search_knowledge
+
+            results = search_knowledge(query)
+            for r in results[:top_k]:
+                console.print(f"  {r}")
+
+    elif action == "log-decision":
+        if not query:
+            console.print("[red]Provide decision text.[/red]")
+            raise typer.Exit(1)
+        from core.knowledge import log_decision
+
+        # Split on " -- " to separate decision from rationale, or use full text
+        if " -- " in query:
+            decision, rationale = query.split(" -- ", 1)
         else:
-            console.print("No matches found")
-    except ClaudeFlowUnavailable:
-        console.print(
-            "[yellow]claude-flow not available. Using keyword search.[/yellow]"
-        )
-        from core.knowledge import search_knowledge
+            decision = query
+            rationale = "Recorded via CLI"
+        log_decision(decision, rationale)
+        console.print(f"[green]Decision logged: {decision}[/green]")
 
-        results = search_knowledge(query)
-        for r in results[:top_k]:
-            console.print(f"  {r}")
+    elif action == "export":
+        from core.knowledge import export_knowledge
+        from core.onboarding import load_settings
+
+        settings = load_settings(Path.cwd())
+        project_name = settings.get("project_name", Path.cwd().name)
+        try:
+            output = export_knowledge(project_name)
+            console.print(f"[green]Knowledge exported to {output}[/green]")
+        except FileNotFoundError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1)
+
+    elif action == "import":
+        if file is None:
+            console.print("[red]Provide --file/-f path for import.[/red]")
+            raise typer.Exit(1)
+        from core.knowledge import import_knowledge
+
+        try:
+            count = import_knowledge(file)
+            console.print(f"[green]Imported {count} entries from {file}[/green]")
+        except FileNotFoundError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1)
+
+    elif action == "stats":
+        from core.knowledge import get_encyclopedia_stats
+
+        stats = get_encyclopedia_stats()
+        if stats:
+            console.print("[bold]Encyclopedia stats:[/bold]")
+            for section, count in stats.items():
+                console.print(f"  {section}: {count} entries")
+        else:
+            console.print("[yellow]No encyclopedia found or empty.[/yellow]")
+
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: search, log-decision, export, import, stats")
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -896,6 +1006,146 @@ def metrics():
         if snap.cpu_percent > 0:
             console.print(f"  CPU: {snap.cpu_percent}%")
         console.print(f"  Disk free: {snap.disk_free_gb} GB")
+
+
+@app.command()
+def auto(
+    action: str = typer.Argument(help="Action: add-routine, list-routines, monitor"),
+    name: str = typer.Option("", "--name", "-n", help="Routine name (for add-routine)"),
+    description: str = typer.Option("", "--desc", "-d", help="Routine description"),
+    schedule: str = typer.Option("daily", "--schedule", "-s", help="Schedule: daily, hourly, weekly"),
+    command: str = typer.Option("", "--command", "-c", help="Command to run (for add-routine)"),
+    topic: str = typer.Option("", "--topic", "-t", help="Topic to monitor (for monitor)"),
+):
+    """Manage autonomous routines: scheduled tasks and topic monitoring."""
+    from core.autonomous import ScheduledRoutine, add_routine, list_routines, monitor_topic
+
+    if action == "add-routine":
+        if not name:
+            console.print("[red]Provide --name/-n for the routine.[/red]")
+            raise typer.Exit(1)
+        if not command:
+            console.print("[red]Provide --command/-c for the routine.[/red]")
+            raise typer.Exit(1)
+        routine = ScheduledRoutine(
+            name=name,
+            description=description or name,
+            schedule=schedule,
+            command=command,
+        )
+        add_routine(routine)
+        console.print(f"[green]Routine added: {name} ({schedule})[/green]")
+
+    elif action == "list-routines":
+        routines = list_routines()
+        if routines:
+            console.print("[bold]Scheduled routines:[/bold]")
+            for r in routines:
+                enabled = "[green]enabled[/green]" if r.enabled else "[dim]disabled[/dim]"
+                console.print(f"  {r.name} ({r.schedule}) {enabled} - {r.description}")
+        else:
+            console.print("No routines configured.")
+
+    elif action == "monitor":
+        if not topic:
+            console.print("[red]Provide --topic/-t for monitoring.[/red]")
+            raise typer.Exit(1)
+        spec = monitor_topic(topic)
+        console.print(f"[green]Monitoring '{topic}' via {', '.join(spec['sources'])}[/green]")
+        console.print(f"  Status: {spec['status']}")
+
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: add-routine, list-routines, monitor")
+        raise typer.Exit(1)
+
+
+@app.command()
+def repro(
+    action: str = typer.Argument(help="Action: log, list, show, hash"),
+    run_id: str = typer.Option("", "--run-id", "-r", help="Run ID (for log/show)"),
+    command_str: str = typer.Option("", "--command", "-c", help="Command that was run (for log)"),
+    path: Path = typer.Option(None, "--path", "-p", help="Path to hash (for hash)"),
+    notes: str = typer.Option("", "--notes", "-n", help="Notes for the run (for log)"),
+):
+    """Reproducibility tracking: log runs, list history, show details, hash datasets."""
+    from core.reproducibility import RunLog, compute_dataset_hash, list_runs, load_run, log_run
+
+    if action == "log":
+        if not run_id:
+            run_id = datetime.now().strftime("run-%Y%m%d-%H%M%S")
+        if not command_str:
+            console.print("[red]Provide --command/-c for the run command.[/red]")
+            raise typer.Exit(1)
+        # Capture current git hash if available
+        git_hash = ""
+        try:
+            proc = subprocess.run(
+                ["git", "rev-parse", "HEAD"], capture_output=True, text=True
+            )
+            if proc.returncode == 0:
+                git_hash = proc.stdout.strip()
+        except Exception:
+            pass
+        run = RunLog(
+            run_id=run_id,
+            command=command_str,
+            git_hash=git_hash,
+            notes=notes,
+            status="completed",
+        )
+        saved = log_run(run)
+        console.print(f"[green]Run logged: {run_id} -> {saved}[/green]")
+
+    elif action == "list":
+        runs = list_runs()
+        if runs:
+            console.print("[bold]Experiment runs:[/bold]")
+            for r in runs:
+                console.print(
+                    f"  {r.run_id} [{r.status}] {r.command[:60]} ({r.started[:10]})"
+                )
+        else:
+            console.print("No runs recorded yet.")
+
+    elif action == "show":
+        if not run_id:
+            console.print("[red]Provide --run-id/-r to show.[/red]")
+            raise typer.Exit(1)
+        run = load_run(run_id)
+        if run:
+            console.print(f"[bold]Run: {run.run_id}[/bold]")
+            console.print(f"  Command:  {run.command}")
+            console.print(f"  Status:   {run.status}")
+            console.print(f"  Started:  {run.started}")
+            console.print(f"  Ended:    {run.ended or 'N/A'}")
+            console.print(f"  Git hash: {run.git_hash or 'N/A'}")
+            if run.parameters:
+                console.print(f"  Params:   {json.dumps(run.parameters)}")
+            if run.metrics:
+                console.print(f"  Metrics:  {json.dumps(run.metrics)}")
+            if run.artifacts:
+                console.print(f"  Artifacts: {', '.join(run.artifacts)}")
+            if run.notes:
+                console.print(f"  Notes:    {run.notes}")
+        else:
+            console.print(f"[red]Run not found: {run_id}[/red]")
+
+    elif action == "hash":
+        if path is None:
+            console.print("[red]Provide --path/-p to hash.[/red]")
+            raise typer.Exit(1)
+        if not path.exists():
+            console.print(f"[red]Path not found: {path}[/red]")
+            raise typer.Exit(1)
+        digest = compute_dataset_hash(path)
+        console.print(f"[bold]SHA-256:[/bold] {digest}")
+        console.print(f"  Path: {path}")
+
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: log, list, show, hash")
+        raise typer.Exit(1)
 
 
 @app.command(name="mcp-search")
@@ -1692,6 +1942,131 @@ def cite(
         auto_commit(f"ricet cite: added {len(results)} references for '{query[:50]}'")
     else:
         console.print("[yellow]No results found (Claude may be unavailable).[/yellow]")
+
+
+@app.command()
+def discover(
+    query: str = typer.Argument(help="Research topic to search on PaperBoat"),
+    add_bib: bool = typer.Option(False, "--cite", help="Auto-add results to references.bib"),
+    max_results: int = typer.Option(5, "--max", "-n", help="Max papers to return"),
+):
+    """Search PaperBoat (paperboatch.com) for recent cross-discipline papers."""
+    from core.paper import add_citation, generate_citation_key, list_citations, search_paperboat
+
+    console.print(f"[bold]Searching PaperBoat for: {query}[/bold]")
+    papers = search_paperboat(query)
+
+    if not papers:
+        console.print("[yellow]No results found (Claude may be unavailable).[/yellow]")
+        return
+
+    for i, p in enumerate(papers[:max_results], 1):
+        console.print(f"\n  [bold]{i}. {p.get('title', 'Untitled')}[/bold]")
+        console.print(f"     Authors: {p.get('authors', 'Unknown')}")
+        console.print(f"     Year: {p.get('year', '?')}")
+        console.print(f"     Abstract: {p.get('abstract', '')[:200]}")
+        if p.get("url"):
+            console.print(f"     URL: {p['url']}")
+
+    if add_bib:
+        bib_file = Path("paper/references.bib")
+        existing = list_citations(bib_file) if bib_file.exists() else []
+        added = 0
+        for p in papers[:max_results]:
+            key = generate_citation_key(
+                p.get("authors", "Unknown"),
+                p.get("year", "2024"),
+            )
+            if key in existing:
+                key = f"{key}b"
+                if key in existing:
+                    continue
+            add_citation(
+                key=key,
+                entry_type="article",
+                author=p.get("authors", ""),
+                title=p.get("title", ""),
+                year=p.get("year", ""),
+                url=p.get("url", ""),
+                bib_file=bib_file,
+            )
+            existing.append(key)
+            added += 1
+            console.print(f"  [green]+[/green] Added to bib: {key}")
+        if added:
+            auto_commit(f"ricet discover: added {added} PaperBoat references for '{query[:50]}'")
+
+
+@app.command(name="sync-learnings")
+def sync_learnings(
+    source_project: Path = typer.Argument(help="Path to the source project to transfer from"),
+):
+    """Transfer encyclopedia entries and meta-rules from another project."""
+    from core.knowledge import sync_learnings_to_project
+
+    target = Path.cwd()
+
+    if not source_project.exists():
+        console.print(f"[red]Source project not found: {source_project}[/red]")
+        raise typer.Exit(1)
+
+    src_enc = source_project / "knowledge" / "ENCYCLOPEDIA.md"
+    if not src_enc.exists():
+        console.print(f"[yellow]No ENCYCLOPEDIA.md in source project: {source_project}[/yellow]")
+
+    console.print(f"[bold]Syncing learnings from: {source_project}[/bold]")
+    result = sync_learnings_to_project(source_project, target)
+
+    enc_count = result.get("encyclopedia_transferred", 0)
+    rules_count = result.get("rules_transferred", 0)
+
+    if enc_count or rules_count:
+        console.print(f"  [green]Encyclopedia entries transferred: {enc_count}[/green]")
+        console.print(f"  [green]Meta-rules transferred: {rules_count}[/green]")
+        auto_commit(f"ricet sync-learnings: transferred {enc_count} entries, {rules_count} rules")
+    else:
+        console.print("[dim]No new entries to transfer (all duplicates or empty source).[/dim]")
+
+
+@app.command()
+def fidelity():
+    """Check whether current work aligns with GOAL.md."""
+    from core.verification import check_goal_fidelity
+
+    console.print("[bold]Checking goal fidelity...[/bold]")
+    result = check_goal_fidelity(Path.cwd())
+
+    if result.get("error"):
+        console.print(f"[red]{result['error']}[/red]")
+        raise typer.Exit(1)
+
+    score = result.get("score", 0)
+
+    # Color the score
+    if score >= 70:
+        console.print(f"\n[bold green]Fidelity Score: {score}/100[/bold green]")
+    elif score >= 40:
+        console.print(f"\n[bold yellow]Fidelity Score: {score}/100[/bold yellow]")
+    else:
+        console.print(f"\n[bold red]Fidelity Score: {score}/100[/bold red]")
+
+    aligned = result.get("aligned_areas", [])
+    if aligned:
+        console.print("\n[bold]Aligned areas:[/bold]")
+        for area in aligned:
+            console.print(f"  [green]+ {area}[/green]")
+
+    drift = result.get("drift_areas", [])
+    if drift:
+        console.print("\n[bold]Drift areas:[/bold]")
+        for area in drift:
+            console.print(f"  [red]- {area}[/red]")
+
+    recs = result.get("recommendations", [])
+    if recs:
+        console.print("\n[bold]Recommendations:[/bold]")
+        for i, rec in enumerate(recs, 1):
+            console.print(f"  {i}. {rec}")
 
 
 if __name__ == "__main__":

@@ -258,6 +258,83 @@ def import_knowledge(
     return count
 
 
+def sync_learnings_to_project(source_project: Path, target_project: Path) -> dict:
+    """Transfer encyclopedia entries and meta-rules from source to target project.
+
+    Reads source project's knowledge/ENCYCLOPEDIA.md and knowledge/CHEATSHEET.md,
+    deduplicates against target's existing entries, and appends new ones.
+
+    Returns dict with counts: {"encyclopedia_transferred": int, "rules_transferred": int}
+    """
+    result = {"encyclopedia_transferred": 0, "rules_transferred": 0}
+
+    # --- Encyclopedia transfer ---
+    src_enc = source_project / "knowledge" / "ENCYCLOPEDIA.md"
+    tgt_enc = target_project / "knowledge" / "ENCYCLOPEDIA.md"
+
+    if src_enc.exists():
+        src_content = src_enc.read_text()
+        tgt_content = tgt_enc.read_text() if tgt_enc.exists() else ""
+
+        # Split source into entries by "## " section headers
+        # Extract individual bullet entries (lines starting with "- [")
+        src_entries = [
+            line.strip()
+            for line in src_content.splitlines()
+            if line.strip().startswith("- [")
+        ]
+        tgt_lines_set = set(tgt_content.splitlines())
+
+        new_entries = []
+        for entry in src_entries:
+            # Check for duplicate by exact match or matching content after timestamp
+            if entry not in tgt_lines_set and entry.strip() not in tgt_content:
+                new_entries.append(entry)
+
+        if new_entries and tgt_enc.exists():
+            # Append new entries to the "Tricks" section (general catch-all)
+            for entry in new_entries:
+                append_learning(
+                    "Tricks",
+                    entry.lstrip("- ").lstrip(),
+                    encyclopedia_path=tgt_enc,
+                )
+            result["encyclopedia_transferred"] = len(new_entries)
+
+    # --- Cheatsheet / meta-rules transfer ---
+    src_cheat = source_project / "knowledge" / "CHEATSHEET.md"
+    tgt_cheat = target_project / "knowledge" / "CHEATSHEET.md"
+
+    if src_cheat.exists():
+        src_rules = src_cheat.read_text()
+        tgt_rules = tgt_cheat.read_text() if tgt_cheat.exists() else ""
+
+        # Split rules by "---" separators or "## " headers
+        import re as _re
+
+        src_blocks = _re.split(r"\n---\n|\n## ", src_rules)
+        tgt_blocks_text = tgt_rules
+
+        new_rules = []
+        for block in src_blocks:
+            block = block.strip()
+            if not block:
+                continue
+            # Use the first line as the dedup key
+            first_line = block.splitlines()[0].strip() if block.splitlines() else ""
+            if first_line and first_line not in tgt_blocks_text:
+                new_rules.append(block)
+
+        if new_rules:
+            tgt_cheat.parent.mkdir(parents=True, exist_ok=True)
+            with open(tgt_cheat, "a") as f:
+                for rule in new_rules:
+                    f.write(f"\n---\n{rule}\n")
+            result["rules_transferred"] = len(new_rules)
+
+    return result
+
+
 def get_encyclopedia_stats(
     encyclopedia_path: Path = ENCYCLOPEDIA_PATH,
 ) -> dict:

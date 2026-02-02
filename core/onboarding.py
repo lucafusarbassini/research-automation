@@ -604,6 +604,24 @@ CREDENTIAL_REGISTRY: list[tuple[str, str, str, str]] = [
         "https://aistudio.google.com/apikey → Create API key",
         "core",
     ),
+    (
+        "GAMMA_API_KEY",
+        "Gamma (AI presentations/slides)",
+        "Get from https://gamma.app/developers",
+        "core",
+    ),
+    (
+        "CANVA_API_KEY",
+        "Canva (design automation)",
+        "Get from https://www.canva.com/developers/",
+        "core",
+    ),
+    (
+        "GOOGLE_DRIVE_CREDENTIALS",
+        "Google Drive access",
+        "Get from Google Cloud Console → APIs & Services → Credentials",
+        "core",
+    ),
     # --- ML / Experiment tracking ---
     (
         "HUGGINGFACE_TOKEN",

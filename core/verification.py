@@ -288,6 +288,36 @@ def auto_verify_response(response: str, context: dict) -> str:
 # ---------------------------------------------------------------------------
 
 
+def check_goal_fidelity(project_path: Path, *, run_cmd=None) -> dict:
+    """Check whether current work aligns with GOAL.md.
+
+    Reads GOAL.md, PROGRESS.md, and TODO.md, then asks Claude to assess
+    alignment. Returns dict with score (0-100), drift_areas, recommendations.
+    """
+    from core.claude_helper import call_claude_json
+
+    goal = (project_path / "knowledge" / "GOAL.md").read_text() if (project_path / "knowledge" / "GOAL.md").exists() else ""
+    progress = (project_path / "state" / "PROGRESS.md").read_text() if (project_path / "state" / "PROGRESS.md").exists() else ""
+    todo = (project_path / "state" / "TODO.md").read_text() if (project_path / "state" / "TODO.md").exists() else ""
+
+    if not goal.strip():
+        return {"score": 0, "error": "No GOAL.md found"}
+
+    prompt = (
+        "You are a research fidelity auditor. Compare the project's current progress "
+        "and TODO list against its stated goal. Assess alignment.\n\n"
+        f"GOAL:\n{goal[:2000]}\n\n"
+        f"PROGRESS:\n{progress[:2000]}\n\n"
+        f"TODO:\n{todo[:1000]}\n\n"
+        'Reply as JSON: {"score": 0-100, "drift_areas": ["..."], '
+        '"recommendations": ["..."], "aligned_areas": ["..."]}'
+    )
+    result = call_claude_json(prompt, run_cmd=run_cmd)
+    if result and isinstance(result, dict):
+        return result
+    return {"score": 50, "drift_areas": ["Unable to assess (Claude unavailable)"], "recommendations": []}
+
+
 def verify_text(text: str, project_path: str = "") -> dict:
     """Run all verifiers on *text* and return a summary dict.
 

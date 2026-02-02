@@ -122,6 +122,11 @@
     "mcps": {
       "vercel-mcp": {"source": "community"},
       "gamma-mcp": {"source": "community"},
+      "nano-banana": {
+        "command": "npx",
+        "args": ["-y", "nanana-app/mcp-server-nano-banana"],
+        "purpose": "AI image/figure generation via Google Gemini"
+      },
       "stripe-mcp": {"source": "community"},
       "notion-mcp": {"source": "notion-community/notion-mcp"}
     }
