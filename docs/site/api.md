@@ -585,9 +585,89 @@ Append an entry to `state/audit.log`.
 
 ---
 
-## `core.cross_repo` -- Cross-Repository Coordination
+## `core.auto_commit` -- Auto-Commit & Push
 
-Linking repos, coordinated commits, and permission management.
+Automatic git commit and push after state-modifying operations.
+
+### Functions
+
+#### `auto_commit(message: str, *, push: bool | None = None, cwd: Path | None = None, run_cmd=None) -> bool`
+
+Commit all changes and optionally push. Controlled by environment variables:
+
+- `RICET_AUTO_COMMIT` (default `"true"`) -- master switch
+- `AUTO_PUSH` (default `"true"`) -- push after commit
+
+Returns `True` if a commit was made, `False` otherwise (no changes, not a git repo, or disabled).
+
+---
+
+## `core.claude_helper` -- Claude CLI Helper
+
+Shared helper for calling the Claude CLI from core modules.
+
+### Functions
+
+#### `call_claude(prompt: str, *, timeout: int = 30, run_cmd=None) -> str | None`
+
+Call `claude -p <prompt> --output-format json` and return the response text. Returns `None` on failure, timeout, or when disabled.
+
+#### `call_claude_json(prompt: str, **kwargs) -> dict | list | None`
+
+Call Claude and parse the response as JSON. Strips markdown code fences before parsing. Returns `None` if parsing fails.
+
+### Configuration
+
+- `RICET_NO_CLAUDE=true` -- Disable all Claude CLI calls
+- Auto-disabled during pytest (`PYTEST_CURRENT_TEST` detection)
+
+---
+
+## `core.adopt` -- Repository Adoption
+
+Transform existing repositories into ricet projects.
+
+### Functions
+
+#### `adopt_repo(source: str, *, project_name: str | None = None, target_path: Path | None = None, fork: bool = True, run_cmd=None) -> Path`
+
+Adopt a repository from a GitHub URL or local path:
+
+1. URL + fork: `gh repo fork --clone` (falls back to `git clone`)
+2. URL + no fork: `git clone`
+3. Local path: work in place
+
+Overlays ricet structure, pre-fills GOAL.md from README, registers in `~/.ricet/projects.json`, and auto-commits.
+
+---
+
+## `core.collaboration` -- Collaborative Research
+
+Multi-user synchronization and merge helpers.
+
+### Functions
+
+#### `sync_before_start(*, cwd: Path | None = None, run_cmd=None) -> bool`
+
+Run `git pull --rebase` to sync with remote before starting a session. Returns `True` on success.
+
+#### `get_user_id(*, run_cmd=None) -> str`
+
+Get current user identity from `git config user.email`, falling back to hostname.
+
+#### `merge_encyclopedia(ours_path: Path, theirs_text: str) -> str`
+
+Merge encyclopedia content by deduplicating lines.
+
+#### `merge_state_file(ours_path: Path, theirs_text: str) -> str`
+
+Merge state files by appending non-duplicate non-empty lines.
+
+---
+
+## `core.cross_repo` -- Cross-Repository Coordination & RAG
+
+Linking repos, coordinated commits, permission management, and cross-repo RAG indexing.
 
 ### `LinkedRepo`
 
@@ -603,21 +683,29 @@ class LinkedRepo:
 
 ### Functions
 
-#### `link_repo(name: str, path: str, permissions: list[str] = ["read"]) -> LinkedRepo`
+#### `link_repository(name: str, path: str, permissions: list[str] = ["read"]) -> LinkedRepo`
 
 Link an external repository with specified permissions.
 
-#### `unlink_repo(name: str) -> bool`
-
-Remove a linked repository.
-
-#### `list_linked_repos() -> list[LinkedRepo]`
-
-List all linked repositories.
-
-#### `coordinated_commit(message: str, repos: list[str]) -> dict[str, bool]`
+#### `coordinated_commit(message: str, repo_names: list[str]) -> dict[str, bool]`
 
 Commit to multiple linked repos with the same message. Delegates to claude-flow `multi_repo_sync` when available. Returns a dict mapping repo names to success status.
+
+#### `index_linked_repo(repo: LinkedRepo) -> int`
+
+Walk a linked repo and index text files (.py, .md, .txt, .tex, .rst, .yml, .yaml, .json) into HNSW vector memory or local JSON. Returns the number of files indexed.
+
+#### `search_all_linked(query: str, top_k: int = 10) -> list[dict]`
+
+Search across all linked repo indexes. Uses HNSW semantic search when available, otherwise keyword search on local JSON. Returns dicts with `text`, `path`, `source` keys.
+
+#### `reindex_all() -> dict[str, int]`
+
+Re-index all linked repositories. Returns a dict mapping repo name to file count.
+
+#### `enforce_permission_boundaries(repo_name: str, action: str) -> bool`
+
+Check if an action (`read`, `write`, `commit`) is permitted on a linked repo.
 
 ---
 

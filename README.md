@@ -111,6 +111,48 @@ Requests are automatically routed to the most cost-effective model:
 
 Headless browser sessions for web scraping, screenshot capture, and PDF generation. Delegates to a Puppeteer MCP server when available; falls back to lightweight HTTP tools otherwise.
 
+### Auto-Commit & Push
+
+Every state-modifying CLI command (`init`, `start`, `config`, `overnight`, `paper`, `verify`, `debug`, etc.) automatically commits and pushes changes. Controlled by environment variables:
+
+```bash
+export RICET_AUTO_COMMIT=true   # default: true
+export AUTO_PUSH=true           # default: true
+```
+
+### Claude-Powered Routing
+
+Seven core modules (agents, model router, auto-debug, doability, prompt suggestions, verification, onboarding) now try the Claude CLI for intelligent decisions before falling back to keyword heuristics. This improves task routing accuracy, fix suggestions, and complexity classification. Disable in tests or CI with `RICET_NO_CLAUDE=true`.
+
+### Adopt Existing Repos
+
+Transform any existing GitHub repository into a ricet project:
+
+```bash
+ricet adopt https://github.com/user/repo          # fork + clone + scaffold
+ricet adopt https://github.com/user/repo --no-fork # clone only
+ricet adopt /path/to/local/repo                    # scaffold in place
+```
+
+The command forks the repo (keeping the original intact), overlays the ricet workspace structure, pre-fills `GOAL.md` from the README, and registers the project.
+
+### Collaborative Research
+
+Multiple researchers can use ricet on the same repository. On `ricet start`, the system pulls the latest changes before beginning. Encyclopedia entries include user identity for attribution. Merge conflicts are minimized via `.gitattributes merge=union` on append-only files.
+
+### Cross-Repository RAG
+
+Link external repositories so agents can search across all your code while only editing the current project:
+
+```bash
+ricet link /path/to/other-repo --name my-lib   # index for search
+ricet link /path/to/data-pipeline               # auto-named from path
+ricet reindex                                    # re-index all linked repos
+ricet unlink my-lib                              # remove
+```
+
+Linked repos are indexed into HNSW vector memory (with JSON fallback) and searched automatically during `ricet memory` queries. Permission boundaries ensure linked repos are read-only.
+
 ### Cross-Repository Coordination
 
 Link multiple repositories, run coordinated commits, and enforce permission boundaries across projects -- useful for mono-repo experiments that span data pipelines and model code.
@@ -221,6 +263,10 @@ GITHUB_TOKEN=ghp_...
 | `ricet memory <query>` | Semantic search across vector memory |
 | `ricet agents` | Show active swarm agent status |
 | `ricet metrics` | Display token usage, cost, and system resource stats |
+| `ricet adopt <source>` | Adopt an existing repo as a ricet project (fork + scaffold) |
+| `ricet link <path>` | Link a repository for cross-repo RAG search |
+| `ricet unlink <name>` | Remove a linked repository |
+| `ricet reindex` | Re-index all linked repositories |
 | `ricet list-sessions` | List all past and active sessions |
 | `ricet --version` | Print version |
 
@@ -241,8 +287,12 @@ research-automation/
 |   |-- auto_debug.py           #   Auto-debug loop
 |   |-- autonomous.py           #   Overnight autonomous runner
 |   |-- browser.py              #   Headless browser integration
+|   |-- auto_commit.py          #   Auto-commit & push after operations
 |   |-- claude_flow.py          #   claude-flow bridge (swarm, memory, metrics)
-|   |-- cross_repo.py           #   Multi-repo coordination
+|   |-- claude_helper.py        #   Shared Claude CLI helper for intelligent fallbacks
+|   |-- collaboration.py        #   Multi-user sync, merge, user identity
+|   |-- cross_repo.py           #   Multi-repo coordination & RAG indexing
+|   |-- adopt.py                #   Transform existing repos into ricet projects
 |   |-- knowledge.py            #   Encyclopedia & keyword search
 |   |-- mcps.py                 #   MCP discovery & management (70+ integrations)
 |   |-- meta_rules.py           #   Automatic meta-rule capture

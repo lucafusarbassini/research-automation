@@ -22,7 +22,7 @@ ricet uses a hierarchical agent system where a Master agent routes tasks to six 
 
 ### Task Routing
 
-Tasks are routed based on keyword matching. The Master agent analyzes your request and dispatches it to the best-fit sub-agent. For example:
+Tasks are routed using Claude CLI intelligence (with keyword fallback). The Master agent analyzes your request and dispatches it to the best-fit sub-agent. For example:
 
 - "Search for papers on attention mechanisms" routes to **Researcher**
 - "Implement a data loader for the CSV files" routes to **Coder**
@@ -358,10 +358,19 @@ This information is written to the project encyclopedia during initialization an
 
 ### Linking Repos
 
-```python
-from core.cross_repo import link_repo
+Via CLI:
 
-link_repo("data-pipeline", "/path/to/data-pipeline", permissions=["read", "write"])
+```bash
+ricet link /path/to/data-pipeline --name data
+ricet link /path/to/shared-lib
+```
+
+Or programmatically:
+
+```python
+from core.cross_repo import link_repository
+
+link_repository("data-pipeline", "/path/to/data-pipeline", permissions=["read", "write"])
 ```
 
 ### Coordinated Commits
@@ -371,12 +380,182 @@ Push the same commit message across linked repos:
 ```python
 from core.cross_repo import coordinated_commit
 
-coordinated_commit("Sync shared schema v2", repos=["data-pipeline", "analysis"])
+coordinated_commit("Sync shared schema v2", repo_names=["data-pipeline", "analysis"])
+```
+
+### RAG Indexing
+
+Linked repos are automatically indexed for search:
+
+```python
+from core.cross_repo import index_linked_repo, search_all_linked, reindex_all
+
+# Index a single repo
+index_linked_repo(repo)
+
+# Search across all linked repos
+results = search_all_linked("attention mechanism")
+
+# Re-index everything
+reindex_all()
 ```
 
 ### Permission Boundaries
 
-Each linked repo has explicit permission grants. Cross-repo actions require matching permissions, preventing unauthorized modifications.
+Each linked repo has explicit permission grants. Cross-repo actions require matching permissions, preventing unauthorized modifications. Linked repos default to read-only.
+
+---
+
+## Auto-Commit & Push
+
+Every state-modifying CLI command automatically commits and pushes changes to git. This ensures your work is always versioned and backed up.
+
+### Configuration
+
+Control via environment variables:
+
+```bash
+export RICET_AUTO_COMMIT=true   # Enable/disable (default: true)
+export AUTO_PUSH=true           # Push after commit (default: true)
+```
+
+### Covered Commands
+
+Auto-commit runs after: `init`, `start`, `config`, `overnight`, `paper build`, `verify`, `debug`, `projects register`, `worktree add`, `worktree remove`. Read-only commands (`status`, `agents`, `memory`, `metrics`) are excluded.
+
+---
+
+## Claude-Powered Intelligence
+
+Seven core modules use the Claude CLI for intelligent decisions before falling back to keyword heuristics:
+
+| Module | Function | What Claude Decides |
+|--------|----------|-------------------|
+| `agents` | `route_task` | Best agent type for a task |
+| `model_router` | `classify_task_complexity` | Simple / medium / complex / critical |
+| `auto_debug` | `suggest_fix` | One-sentence fix for an error |
+| `doability` | `assess_doability` | Feasibility assessment with scores |
+| `prompt_suggestions` | `suggest_next_steps` | Next 3-5 research steps |
+| `verification` | `_extract_factual_sentences` | Claims with confidence scores |
+| `onboarding` | `install_inferred_packages` | Alternative packages on failure |
+
+### Disabling Claude Calls
+
+Set `RICET_NO_CLAUDE=true` to disable Claude CLI calls (useful for CI or offline work). All functions fall back gracefully to keyword heuristics.
+
+---
+
+## Adopt Existing Repositories
+
+Transform any existing GitHub repo into a ricet project with one command:
+
+```bash
+# Fork + clone + scaffold (recommended -- keeps original intact)
+ricet adopt https://github.com/user/repo
+
+# Clone without forking
+ricet adopt https://github.com/user/repo --no-fork
+
+# Scaffold a local directory in place
+ricet adopt /path/to/local/repo
+
+# Custom name and target directory
+ricet adopt https://github.com/user/repo --name my-project --path ~/research
+```
+
+### What Adopt Does
+
+1. **Forks** the repo via `gh repo fork --clone` (preserves the original).
+2. **Overlays** the ricet workspace structure: `knowledge/`, `state/`, `config/`, `paper/`.
+3. **Pre-fills** `knowledge/GOAL.md` from the repository README.
+4. **Registers** the project in `~/.ricet/projects.json`.
+5. **Auto-commits** the scaffolding changes.
+
+### When to Use
+
+- Bringing an old research repo under ricet management.
+- Starting a new contribution to an open-source project.
+- Setting up a collaborator's fork with ricet tooling.
+
+---
+
+## Collaborative Research
+
+Multiple researchers can work on the same ricet repository without conflicts.
+
+### How It Works
+
+1. **Sync on start**: `ricet start` runs `git pull --rebase` before beginning the session.
+2. **User attribution**: Every encyclopedia entry includes the user's git email.
+3. **Merge-friendly files**: `.gitattributes` uses `merge=union` for append-only files (`ENCYCLOPEDIA.md`, `PROGRESS.md`), which auto-merges without conflicts.
+
+### Setup
+
+Collaboration works automatically. Just ensure both researchers have push access to the repository and run `ricet start` at the beginning of each session.
+
+---
+
+## Cross-Repository RAG
+
+Link external repositories so agents can search across all your code while only writing to the current project.
+
+### Linking Repos
+
+```bash
+# Link a repository for RAG search (read-only by default)
+ricet link /path/to/other-repo --name my-lib
+
+# Auto-named from directory name
+ricet link /path/to/data-pipeline
+
+# Re-index all linked repos
+ricet reindex
+
+# Remove a linked repo
+ricet unlink my-lib
+```
+
+### How Indexing Works
+
+Linked repos are walked recursively. Files with extensions `.py`, `.md`, `.txt`, `.tex`, `.rst`, `.yml`, `.yaml`, `.json` are indexed. Hidden directories, `node_modules`, and `.git` are skipped.
+
+When claude-flow is available, files are stored in HNSW vector memory for semantic search. Otherwise, a local JSON index is created under `state/linked_indexes/`.
+
+### Searching
+
+Cross-repo results are automatically included when you search knowledge:
+
+```bash
+ricet memory "attention mechanism implementation"
+```
+
+Results from linked repos are tagged with their source name (e.g. `[my-lib] def attention(...)`).
+
+### Permission Boundaries
+
+Linked repos default to `["read"]` permissions. The permission system prevents any write operations to linked repos, ensuring you can search but never accidentally modify external code.
+
+### Connecting Repos During Setup
+
+When initializing a new project, you can link repos immediately after:
+
+```bash
+ricet init my-project
+cd my-project
+ricet link ~/code/shared-utils --name utils
+ricet link ~/code/data-pipeline --name data
+ricet start   # linked repos are re-indexed on every start
+```
+
+### Connecting Repos Later
+
+You can link and unlink repos at any time during active development:
+
+```bash
+# In your existing project directory
+ricet link /path/to/new-dependency
+ricet reindex   # manual re-index (also happens on ricet start)
+```
 
 ---
 

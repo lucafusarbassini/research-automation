@@ -173,6 +173,42 @@ Token usage is tracked throughout. At 50%, 75%, and 90% of the session budget, y
 
 ---
 
+## Alternative: Adopt an Existing Repository
+
+Already have a repo? Use `ricet adopt` instead of `ricet init`:
+
+```bash
+# Fork a GitHub repo and scaffold it as a ricet project
+ricet adopt https://github.com/user/existing-repo
+
+# Or scaffold a local directory in place
+ricet adopt /path/to/my-code
+```
+
+This overlays the ricet workspace structure without disturbing existing code, pre-fills the goal from README, and registers the project.
+
+---
+
+## Step 8: Link Related Repositories
+
+If you work across multiple repos, link them for cross-repository search:
+
+```bash
+# Link repos for RAG-powered search
+ricet link ~/code/shared-library --name shared
+ricet link ~/code/data-pipeline
+
+# Agents can now search across all linked repos
+ricet memory "data preprocessing pipeline"
+
+# Re-index after external changes
+ricet reindex
+```
+
+Linked repos are read-only -- agents search them for context but only write to the current project.
+
+---
+
 ## Next Steps
 
 - Read [Features](features.md) for a complete overview of all capabilities.

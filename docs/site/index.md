@@ -60,6 +60,11 @@ See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough
 - **3-Tier Model Routing** -- Automatic model selection (Haiku/Sonnet/Opus) based on task complexity, with budget-aware fallback.
 - **Progressive Instructions** -- Five-phase protocol: Orient, Explore, Plan, Execute, Validate.
 - **Cross-Repository Coordination** -- Link multiple repos, coordinate commits, and enforce permission boundaries.
+- **Adopt Existing Repos** -- Transform any GitHub repo into a ricet project with `ricet adopt`, including fork, scaffold, and GOAL pre-fill from README.
+- **Cross-Repo RAG** -- Link external repositories with `ricet link` so agents can search across all your code while only editing the current project.
+- **Auto-Commit & Push** -- Every state-modifying command automatically commits and pushes, controlled by environment variables.
+- **Collaborative Research** -- Multiple researchers on the same repo with auto-sync, user attribution, and merge-friendly append-only files.
+- **Claude-Powered Intelligence** -- Seven core modules use Claude CLI for intelligent routing, debugging, and suggestions with keyword fallback.
 
 Explore all features in the [Features](features.md) page.
 
