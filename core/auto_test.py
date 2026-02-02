@@ -46,23 +46,37 @@ def generate_tests_for_file(
         "Generate comprehensive pytest tests for the following Python module. "
         "Include: happy path tests, edge cases, error handling. "
         "Use unittest.mock for external dependencies. "
-        "Only output valid Python code, no markdown fences.\n\n"
+        "IMPORTANT: Output ONLY the Python code inside a single ```python code block. "
+        "No explanation before or after the code block.\n\n"
         f"# File: {source_file.name}\n\n"
         f"{source_text[:8000]}"
     )
 
     result = call_claude(prompt, run_cmd=run_cmd, timeout=90)
     if result and result.strip():
-        # Strip markdown fences if Claude wraps output
+        # Extract code from markdown fences if present
         text = result.strip()
-        if text.startswith("```"):
+        import re as _re
+
+        # Try to extract fenced code block (```python ... ``` or ``` ... ```)
+        fence_match = _re.search(
+            r"```(?:python)?\s*\n(.*?)```", text, _re.DOTALL
+        )
+        if fence_match:
+            text = fence_match.group(1).strip()
+        elif text.startswith("```"):
             lines = text.splitlines()
-            # Remove first and last fence lines
             if lines[0].startswith("```"):
                 lines = lines[1:]
             if lines and lines[-1].strip() == "```":
                 lines = lines[:-1]
             text = "\n".join(lines)
+
+        # If no import/def found, the output is likely explanation, not code
+        if "import " not in text and "def test_" not in text:
+            logger.warning("Claude output did not contain test code for %s", source_file.name)
+            return None
+
         test_path.write_text(text)
         logger.info("Generated tests: %s", test_path)
         return test_path
