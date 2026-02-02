@@ -46,7 +46,11 @@ def adopt_repo(
                 **kwargs,
             )
 
-    is_url = source.startswith("http://") or source.startswith("https://") or source.startswith("git@")
+    is_url = (
+        source.startswith("http://")
+        or source.startswith("https://")
+        or source.startswith("git@")
+    )
 
     if project_name is None:
         # Derive from last path component
@@ -59,9 +63,22 @@ def adopt_repo(
         project_dir = base / project_name
 
         if fork:
-            r = run_cmd(["gh", "repo", "fork", source, "--clone", "--clone-dir", str(project_dir)])
+            r = run_cmd(
+                [
+                    "gh",
+                    "repo",
+                    "fork",
+                    source,
+                    "--clone",
+                    "--clone-dir",
+                    str(project_dir),
+                ]
+            )
             if r.returncode != 0:
-                logger.warning("gh repo fork failed, falling back to git clone: %s", r.stderr.strip())
+                logger.warning(
+                    "gh repo fork failed, falling back to git clone: %s",
+                    r.stderr.strip(),
+                )
                 r = run_cmd(["git", "clone", source, str(project_dir)])
                 if r.returncode != 0:
                     raise RuntimeError(f"git clone failed: {r.stderr.strip()}")
@@ -86,7 +103,11 @@ def adopt_repo(
     # Auto-commit the scaffolding
     from core.auto_commit import auto_commit
 
-    auto_commit(f"ricet adopt: scaffolded project {project_name}", cwd=project_dir, run_cmd=run_cmd)
+    auto_commit(
+        f"ricet adopt: scaffolded project {project_name}",
+        cwd=project_dir,
+        run_cmd=run_cmd,
+    )
 
     return project_dir
 
@@ -205,10 +226,12 @@ def _register_project(name: str, path: Path) -> None:
     for p in projects:
         p["active"] = False
 
-    projects.append({
-        "name": name,
-        "path": str(path),
-        "active": True,
-    })
+    projects.append(
+        {
+            "name": name,
+            "path": str(path),
+            "active": True,
+        }
+    )
 
     projects_file.write_text(json.dumps(projects, indent=2))

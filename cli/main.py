@@ -10,6 +10,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from core.auto_commit import auto_commit
 from core.onboarding import (
     OnboardingAnswers,
     auto_install_claude_flow,
@@ -30,8 +31,6 @@ from core.onboarding import (
     write_goal_file,
     write_settings,
 )
-
-from core.auto_commit import auto_commit
 
 __version__ = "0.2.0"
 
@@ -464,6 +463,7 @@ def start(
     # Reindex linked repos for cross-repo RAG
     try:
         from core.cross_repo import reindex_all
+
         reindex_all()
     except Exception:
         pass
@@ -1071,7 +1071,7 @@ def link(
 
     # Index it immediately
     try:
-        from core.cross_repo import index_linked_repo, LinkedRepo
+        from core.cross_repo import LinkedRepo, index_linked_repo
 
         repo = LinkedRepo(name=repo_name, path=repo_path)
         count = index_linked_repo(repo)
@@ -1087,7 +1087,11 @@ def unlink(
     name: str = typer.Argument(help="Name of the linked repo to remove"),
 ):
     """Remove a linked repository from cross-repo RAG."""
-    from core.cross_repo import _load_linked_repos, _save_linked_repos, LINKED_REPOS_FILE
+    from core.cross_repo import (
+        LINKED_REPOS_FILE,
+        _load_linked_repos,
+        _save_linked_repos,
+    )
 
     repos = _load_linked_repos()
     original_len = len(repos)

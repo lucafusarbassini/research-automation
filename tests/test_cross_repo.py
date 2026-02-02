@@ -160,7 +160,11 @@ def test_search_all_linked(tmp_path: Path, monkeypatch):
 
     entries = [
         {"path": "main.py", "text": "def hello(): return 'world'", "repo": "lib"},
-        {"path": "README.md", "text": "This is a machine learning library", "repo": "lib"},
+        {
+            "path": "README.md",
+            "text": "This is a machine learning library",
+            "repo": "lib",
+        },
     ]
     (index_dir / "lib.json").write_text(_json.dumps(entries))
 

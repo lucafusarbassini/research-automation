@@ -43,6 +43,7 @@ def append_learning(
     # Include user_id for collaborative tracking
     try:
         from core.collaboration import get_user_id
+
         user_id = get_user_id()
         formatted_entry = f"\n- [{timestamp}] ({user_id}) {entry}"
     except Exception:
@@ -156,6 +157,7 @@ def search_knowledge(
     if query:
         try:
             from core.cross_repo import search_all_linked
+
             linked_results = search_all_linked(query)
             for hit in linked_results:
                 text = hit.get("text", "").strip()

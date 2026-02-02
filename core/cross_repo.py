@@ -204,11 +204,13 @@ def index_linked_repo(repo: LinkedRepo) -> int:
         try:
             text = fpath.read_text(errors="replace")[:5000]
             if text.strip():
-                entries.append({
-                    "path": str(fpath.relative_to(repo_path)),
-                    "text": text,
-                    "repo": repo.name,
-                })
+                entries.append(
+                    {
+                        "path": str(fpath.relative_to(repo_path)),
+                        "text": text,
+                        "repo": repo.name,
+                    }
+                )
                 count += 1
         except OSError:
             continue
@@ -264,12 +266,14 @@ def search_all_linked(
             namespace = f"linked-{repo.name}"
             cf_result = bridge.query_memory(query, top_k=top_k, namespace=namespace)
             for hit in cf_result.get("results", []):
-                results.append({
-                    "text": hit.get("text", ""),
-                    "path": hit.get("metadata", {}).get("path", ""),
-                    "source": repo.name,
-                    "score": hit.get("score", 0),
-                })
+                results.append(
+                    {
+                        "text": hit.get("text", ""),
+                        "path": hit.get("metadata", {}).get("path", ""),
+                        "source": repo.name,
+                        "score": hit.get("score", 0),
+                    }
+                )
         # Sort by score descending
         results.sort(key=lambda r: r.get("score", 0), reverse=True)
         return results[:top_k]
@@ -291,11 +295,13 @@ def search_all_linked(
             for entry in entries:
                 text = entry.get("text", "")
                 if query_lower in text.lower():
-                    results.append({
-                        "text": text[:500],
-                        "path": entry.get("path", ""),
-                        "source": repo.name,
-                    })
+                    results.append(
+                        {
+                            "text": text[:500],
+                            "path": entry.get("path", ""),
+                            "source": repo.name,
+                        }
+                    )
         except (json.JSONDecodeError, OSError):
             continue
 

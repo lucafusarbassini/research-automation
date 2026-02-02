@@ -83,8 +83,10 @@ def auto_commit(
         return False
 
     # Push
-    should_push = push if push is not None else (
-        os.environ.get("AUTO_PUSH", "true").lower() in ("true", "1", "yes")
+    should_push = (
+        push
+        if push is not None
+        else (os.environ.get("AUTO_PUSH", "true").lower() in ("true", "1", "yes"))
     )
     if should_push:
         try:

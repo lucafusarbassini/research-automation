@@ -21,7 +21,9 @@ class TestAdoptLocal:
         # Create a minimal "existing repo"
         source_dir = tmp_path / "my-repo"
         source_dir.mkdir()
-        (source_dir / "README.md").write_text("# My Repo\n\nA cool project about NLP.\n")
+        (source_dir / "README.md").write_text(
+            "# My Repo\n\nA cool project about NLP.\n"
+        )
         (source_dir / ".git").mkdir()  # Fake git dir
 
         calls = []
