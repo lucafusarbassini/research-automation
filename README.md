@@ -267,6 +267,7 @@ GITHUB_TOKEN=ghp_...
 | `ricet link <path>` | Link a repository for cross-repo RAG search |
 | `ricet unlink <name>` | Remove a linked repository |
 | `ricet reindex` | Re-index all linked repositories |
+| `ricet docs` | Auto-update project docs from source code |
 | `ricet list-sessions` | List all past and active sessions |
 | `ricet --version` | Print version |
 

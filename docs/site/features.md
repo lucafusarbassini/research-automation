@@ -559,6 +559,41 @@ ricet reindex   # manual re-index (also happens on ricet start)
 
 ---
 
+## Auto-Documentation
+
+When you develop new code in a ricet project, documentation can update automatically.
+
+### Manual Trigger
+
+```bash
+ricet docs           # scan project, update docs/API.md, README.md, docs/MODULES.md
+ricet docs --force   # run even if RICET_AUTO_DOCS is not set
+```
+
+### Automatic Mode
+
+Set `RICET_AUTO_DOCS=true` to have documentation update after every state-modifying ricet command (via the auto-commit hook) and after every Claude task (via the post-task shell hook).
+
+What gets generated:
+
+| File | Content |
+|------|---------|
+| `docs/API.md` | API reference with function signatures and docstrings |
+| `docs/MODULES.md` | Table of all modules with public item counts |
+| `README.md` | Missing CLI commands appended to the command table |
+
+Existing content is never overwritten -- only new modules and commands are appended. The system scans `src/`, `lib/`, `core/`, `app/` and any top-level directories containing `.py` files.
+
+### How It Works
+
+1. AST-parses every `.py` file in source directories.
+2. Extracts public functions and classes (skips `_private` names).
+3. Compares against existing `docs/API.md` and `README.md`.
+4. Appends markdown stubs for anything missing.
+5. Regenerates `docs/MODULES.md` as a full index.
+
+---
+
 ## Autonomous Routines
 
 Schedule recurring tasks:
