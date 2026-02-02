@@ -756,30 +756,33 @@ CREDENTIAL_REGISTRY: list[tuple[str, str, str, str]] = [
         "cloud",
     ),
     # --- Optional integrations (separate prompt group) ---
+    # These services have FREE MCP servers -- prefer MCPs over API keys.
     (
         "GAMMA_API_KEY",
-        "Gamma API key [PAID, requires Pro plan ~$15/mo] (AI presentations)",
-        "https://developers.gamma.app/docs/get-access → requires Gamma Pro subscription.\n"
-        "  Skip unless you specifically need programmatic slide generation.",
+        "Gamma API key [PAID, requires Pro ~$15/mo] (AI presentations)",
+        "PREFER FREE MCP: run 'ricet mcp-search gamma' to install the Gamma MCP (no key).\n"
+        "  API key only needed for programmatic access outside MCP.\n"
+        "  https://developers.gamma.app/docs/get-access → requires Gamma Pro subscription.",
         "integrations",
     ),
     (
         "CANVA_API_KEY",
-        "Canva Connect API key [PAID, requires Canva Pro $13/mo] (design automation)",
-        "Note: Canva also has a FREE MCP connector in Claude Desktop (no key needed).\n"
-        "  For API access: https://www.canva.com/developers/ → requires Canva Pro plan.\n"
-        "  Skip unless you need programmatic design generation.",
+        "Canva Connect API key [PAID, requires Canva Pro $13/mo]",
+        "PREFER FREE MCP: Canva has a FREE MCP server (no API key needed!).\n"
+        "  Setup: https://www.canva.dev/docs/apps/mcp-server/ (runs locally, zero auth).\n"
+        "  Or in Claude Desktop: Settings → Connectors → Canva (OAuth, no key).\n"
+        "  API key only for: https://www.canva.com/developers/ → Canva Pro required.",
         "integrations",
     ),
     (
         "GOOGLE_DRIVE_CREDENTIALS",
-        "Google Drive OAuth JSON path [FREE but complex setup] (file sync)",
-        "Requires Google Cloud project + OAuth2 credentials (not a simple API key!):\n"
+        "Google Drive OAuth JSON path [FREE but complex setup]",
+        "PREFER FREE MCP: run 'ricet mcp-search google drive' to find Drive MCPs.\n"
+        "  Manual setup requires OAuth2 credentials (NOT a simple API key!):\n"
         "  1. https://console.cloud.google.com/ → Create project\n"
         "  2. Enable 'Google Drive API'\n"
         "  3. APIs & Services → Credentials → Create OAuth client ID (Desktop app)\n"
-        "  4. Download JSON → enter the file path here.\n"
-        "  Skip unless you need Drive integration.",
+        "  4. Download JSON → enter the file path here.",
         "integrations",
     ),
     # --- Communication: Slack (conditional) ---

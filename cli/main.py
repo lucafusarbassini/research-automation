@@ -127,6 +127,29 @@ def init(
             "  [yellow]claude-flow not available (optional, install Node.js + npm)[/yellow]"
         )
 
+    # --- Step 2b: Ensure Claude auth ---
+    console.print("\n[bold cyan]Step 2b: Checking Claude authentication...[/bold cyan]")
+    try:
+        auth_result = subprocess.run(
+            ["claude", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if auth_result.returncode == 0:
+            console.print("  [green]Claude CLI available[/green]")
+            console.print("  [dim]If not yet logged in, run: claude auth login[/dim]")
+        else:
+            console.print(
+                "  [yellow]Claude CLI not responding. Run: claude auth login[/yellow]"
+            )
+    except FileNotFoundError:
+        console.print(
+            "  [yellow]Claude CLI not found. Install: https://docs.anthropic.com/en/docs/claude-code[/yellow]"
+        )
+    except subprocess.TimeoutExpired:
+        console.print("  [yellow]Claude CLI timed out[/yellow]")
+
     # --- Step 3: Streamlined questionnaire ---
     console.print("\n[bold cyan]Step 3: Project configuration[/bold cyan]")
 
