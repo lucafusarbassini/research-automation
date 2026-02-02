@@ -1118,5 +1118,44 @@ def reindex():
     console.print("[green]Done.[/green]")
 
 
+@app.command()
+def docs(
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Run even if RICET_AUTO_DOCS is not set"
+    ),
+):
+    """Auto-update project documentation from source code.
+
+    Scans Python source directories, then:
+    - Appends missing module stubs to docs/API.md
+    - Adds missing CLI commands to README.md
+    - Regenerates docs/MODULES.md index
+
+    Enable automatic mode with: export RICET_AUTO_DOCS=true
+    """
+    from core.auto_docs import auto_update_docs
+
+    console.print("[bold]Scanning project for documentation gaps...[/bold]")
+    result = auto_update_docs(force=True if force else None)
+
+    api = result.get("api_added", 0)
+    cli = result.get("cli_added", 0)
+    idx = result.get("modules_indexed", 0)
+
+    if api or cli:
+        console.print(f"[green]Updated docs:[/green]")
+        if api:
+            console.print(f"  API stubs added to docs/API.md: {api}")
+        if cli:
+            console.print(f"  CLI commands added to README.md: {cli}")
+        if idx:
+            console.print(f"  Module index updated: {idx} modules")
+        auto_commit("ricet docs: auto-updated documentation")
+    else:
+        console.print("[dim]Documentation is up to date. No gaps found.[/dim]")
+        if idx:
+            console.print(f"  Module index refreshed: {idx} modules")
+
+
 if __name__ == "__main__":
     app()
