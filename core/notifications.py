@@ -2,10 +2,14 @@
 
 import json
 import logging
+import mimetypes
 import smtplib
 import subprocess
 import time
 from dataclasses import dataclass, field
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Optional
@@ -147,6 +151,75 @@ def send_email(
         return True
     except Exception as e:
         logger.error("Failed to send email: %s", e)
+        return False
+
+
+def send_email_with_attachment(
+    subject: str,
+    body: str,
+    attachment_path: Path,
+    config: Optional[NotificationConfig] = None,
+) -> bool:
+    """Send an email with a file attachment.
+
+    Args:
+        subject: Email subject.
+        body: Email body text.
+        attachment_path: Path to the file to attach.
+        config: Notification config.
+
+    Returns:
+        True if sent successfully.
+    """
+    if config is None:
+        config = NotificationConfig.load()
+
+    if not config.email_to or not config.smtp_user:
+        logger.debug("Email not configured")
+        return False
+
+    attachment_path = Path(attachment_path)
+    if not attachment_path.exists():
+        logger.error("Attachment not found: %s", attachment_path)
+        return False
+
+    try:
+        msg = MIMEMultipart()
+        msg["Subject"] = subject
+        msg["From"] = config.email_from or config.smtp_user
+        msg["To"] = config.email_to
+
+        msg.attach(MIMEText(body, "plain"))
+
+        ctype, _ = mimetypes.guess_type(str(attachment_path))
+        if ctype is None:
+            ctype = "application/octet-stream"
+        maintype, subtype = ctype.split("/", 1)
+
+        with open(attachment_path, "rb") as f:
+            part = MIMEBase(maintype, subtype)
+            part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header(
+            "Content-Disposition",
+            "attachment",
+            filename=attachment_path.name,
+        )
+        msg.attach(part)
+
+        with smtplib.SMTP(config.smtp_host, config.smtp_port) as server:
+            server.starttls()
+            server.login(config.smtp_user, config.smtp_password)
+            server.send_message(msg)
+
+        logger.info(
+            "Email with attachment sent to %s (%s)",
+            config.email_to,
+            attachment_path.name,
+        )
+        return True
+    except Exception as e:
+        logger.error("Failed to send email with attachment: %s", e)
         return False
 
 
