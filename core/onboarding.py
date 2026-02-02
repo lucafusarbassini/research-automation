@@ -886,7 +886,9 @@ def check_and_install_packages(
                 result = run_cmd(f"{pip_prefix} install {pip_name}")
                 if result.returncode != 0:
                     # Retry with force
-                    result = run_cmd(f"{pip_prefix} install --force-reinstall {pip_name}")
+                    result = run_cmd(
+                        f"{pip_prefix} install --force-reinstall {pip_name}"
+                    )
                     if result.returncode != 0:
                         failed.append(pip_name)
             except (FileNotFoundError, subprocess.TimeoutExpired):

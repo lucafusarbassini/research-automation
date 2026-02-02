@@ -3,7 +3,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from core.onboarding import generate_goal_milestones, _generate_milestones_keywords
+from core.onboarding import _generate_milestones_keywords, generate_goal_milestones
 
 
 def test_infer_topics_from_goal_with_claude():
@@ -11,8 +11,14 @@ def test_infer_topics_from_goal_with_claude():
     from cli.main import _infer_topics_from_goal
 
     with patch("core.claude_helper.call_claude_json") as mock_claude:
-        mock_claude.return_value = ["deep-learning", "computer-vision", "protein-folding"]
-        topics = _infer_topics_from_goal("A project about deep learning and computer vision")
+        mock_claude.return_value = [
+            "deep-learning",
+            "computer-vision",
+            "protein-folding",
+        ]
+        topics = _infer_topics_from_goal(
+            "A project about deep learning and computer vision"
+        )
         assert "deep-learning" in topics
         assert "computer-vision" in topics
         assert "ricet" in topics

@@ -213,7 +213,7 @@ def search_mcp_catalog(need: str, *, run_cmd=None) -> dict | None:
 
     prompt = (
         "You are an MCP server expert. The user needs an MCP server for:\n\n"
-        f"  \"{need}\"\n\n"
+        f'  "{need}"\n\n'
         "Below is a catalog of available MCP servers. Pick the BEST match.\n"
         "Reply with a JSON object (no markdown fences):\n"
         '{"name": "server-name", "repo": "owner/repo or npm package", '
@@ -221,7 +221,7 @@ def search_mcp_catalog(need: str, *, run_cmd=None) -> dict | None:
         '"needs_key": true/false, '
         '"key_name": "ENV_VAR name if needed", '
         '"key_instructions": "1-2 sentence instructions for getting the key"}\n'
-        "If no good match exists, reply: {\"name\": null}\n\n"
+        'If no good match exists, reply: {"name": null}\n\n'
         "--- CATALOG ---\n"
         f"{catalog_text}"
     )

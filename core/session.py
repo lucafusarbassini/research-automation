@@ -104,7 +104,11 @@ def close_session(session: Session) -> None:
         pass
 
     # Scan session progress for operational rules
-    from core.meta_rules import detect_operational_rule, classify_rule_type, append_to_cheatsheet
+    from core.meta_rules import (
+        append_to_cheatsheet,
+        classify_rule_type,
+        detect_operational_rule,
+    )
 
     progress_file = STATE_DIR / "PROGRESS.md"
     if progress_file.exists():

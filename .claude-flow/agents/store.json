@@ -587,6 +587,20 @@
       "createdAt": "2026-02-02T09:31:08.614Z",
       "model": "haiku",
       "modelRoutedBy": "router"
+    },
+    "agent-1770024851179-plcibn": {
+      "agentId": "agent-1770024851179-plcibn",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "echo hello world"
+      },
+      "createdAt": "2026-02-02T09:34:11.182Z",
+      "model": "haiku",
+      "modelRoutedBy": "router"
     }
   },
   "version": "3.0.0"

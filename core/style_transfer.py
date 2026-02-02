@@ -212,7 +212,9 @@ def rewrite_in_reference_style(
     """
     source_profile = analyze_paper_style(source_text)
     target_profile = analyze_paper_style(reference_text)
-    transformation_prompt = generate_transformation_prompt(source_profile, target_profile)
+    transformation_prompt = generate_transformation_prompt(
+        source_profile, target_profile
+    )
 
     full_prompt = (
         f"{transformation_prompt}\n\n"

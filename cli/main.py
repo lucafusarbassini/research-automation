@@ -179,10 +179,16 @@ def init(
     write_env_example(project_path)
 
     # Create isolated Python environment
-    from core.environment import create_project_env, populate_encyclopedia_env, discover_system
+    from core.environment import (
+        create_project_env,
+        discover_system,
+        populate_encyclopedia_env,
+    )
 
     env_info = create_project_env(project_name, project_path)
-    console.print(f"  [green]Python environment: {env_info['type']} ({env_info['name']})[/green]")
+    console.print(
+        f"  [green]Python environment: {env_info['type']} ({env_info['name']})[/green]"
+    )
 
     # Store env info in settings
     settings_path = project_path / "config" / "settings.yml"
@@ -191,7 +197,9 @@ def init(
 
         _settings = yaml.safe_load(settings_path.read_text()) or {}
         _settings["environment"] = env_info
-        settings_path.write_text(yaml.dump(_settings, default_flow_style=False, sort_keys=False))
+        settings_path.write_text(
+            yaml.dump(_settings, default_flow_style=False, sort_keys=False)
+        )
 
     # Populate encyclopedia with environment details
     sys_info_obj = discover_system()
@@ -352,13 +360,9 @@ def _configure_github_repo_from_goal(
             )
 
     try:
-        owner_repo = "/".join(
-            repo_url.rstrip("/").split("/")[-2:]
-        ).replace(".git", "")
+        owner_repo = "/".join(repo_url.rstrip("/").split("/")[-2:]).replace(".git", "")
 
-        run_cmd(
-            ["gh", "repo", "edit", owner_repo, "--description", description]
-        )
+        run_cmd(["gh", "repo", "edit", owner_repo, "--description", description])
 
         if topics:
             topic_args: list[str] = []
@@ -652,7 +656,11 @@ def overnight(
     Uses claude-flow swarm orchestration when available, falls back to raw claude -p loop.
     """
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
-    from core.resources import cleanup_old_checkpoints, make_resource_decision, monitor_resources
+    from core.resources import (
+        cleanup_old_checkpoints,
+        make_resource_decision,
+        monitor_resources,
+    )
 
     console.print("[bold yellow]Starting overnight mode[/bold yellow]")
     console.print(f"Task file: {task_file}")
@@ -690,21 +698,28 @@ def overnight(
             snap = monitor_resources()
             decision = make_resource_decision(snap)
             if not decision["can_proceed"]:
-                console.print(f"[red]Low resources (disk: {snap.disk_free_gb:.1f}GB). Pausing.[/red]")
+                console.print(
+                    f"[red]Low resources (disk: {snap.disk_free_gb:.1f}GB). Pausing.[/red]"
+                )
                 break
             if decision["should_checkpoint"]:
-                console.print(f"[yellow]High memory usage ({snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB). Checkpointing.[/yellow]")
+                console.print(
+                    f"[yellow]High memory usage ({snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB). Checkpointing.[/yellow]"
+                )
                 auto_commit("ricet overnight: resource checkpoint")
             if decision.get("should_cleanup"):
                 cleanup_old_checkpoints()
 
-            console.print(f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan] "
-                          f"[dim](CPU: {snap.cpu_percent:.0f}%, RAM: {snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB, "
-                          f"Disk: {snap.disk_free_gb:.0f}GB free)[/dim]")
+            console.print(
+                f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan] "
+                f"[dim](CPU: {snap.cpu_percent:.0f}%, RAM: {snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB, "
+                f"Disk: {snap.disk_free_gb:.0f}GB free)[/dim]"
+            )
             bridge.run_swarm(swarm_tasks, topology="hierarchical")
 
             # Auto-trigger falsifier verification after each iteration
-            from core.agents import execute_agent_task, AgentType
+            from core.agents import AgentType, execute_agent_task
+
             console.print("[yellow]Running falsifier verification...[/yellow]")
             falsifier_task = (
                 f"Falsify and validate the results from the latest iteration. "
@@ -713,9 +728,13 @@ def overnight(
             )
             falsifier_result = execute_agent_task(AgentType.FALSIFIER, falsifier_task)
             if falsifier_result.status == "success":
-                console.print(f"[green]Falsifier: {falsifier_result.output[:200]}[/green]")
+                console.print(
+                    f"[green]Falsifier: {falsifier_result.output[:200]}[/green]"
+                )
             else:
-                console.print(f"[yellow]Falsifier flagged issues: {falsifier_result.output[:200]}[/yellow]")
+                console.print(
+                    f"[yellow]Falsifier flagged issues: {falsifier_result.output[:200]}[/yellow]"
+                )
 
             if Path("state/DONE").exists():
                 console.print("[green]Task completed![/green]")
@@ -747,20 +766,22 @@ def overnight(
     overnight_model = route_to_model(tasks)
     agent_type = route_task(tasks)
     agent_prompt = get_agent_prompt(agent_type)
-    enriched_tasks = (
-        f"{agent_prompt}\n\n## Tasks\n\n{tasks}" if agent_prompt else tasks
-    )
+    enriched_tasks = f"{agent_prompt}\n\n## Tasks\n\n{tasks}" if agent_prompt else tasks
 
     # Use plan_execute_iterate for complex multi-subtask work
     if len(subtasks) > 3:
-        console.print("[cyan]Using plan-execute-iterate strategy for complex task[/cyan]")
+        console.print(
+            "[cyan]Using plan-execute-iterate strategy for complex task[/cyan]"
+        )
         pipeline_results = plan_execute_iterate(
             enriched_tasks,
             max_iterations=min(iterations, 5),
             dangerously_skip_permissions=True,
         )
         for pr in pipeline_results:
-            status_label = "[green]OK[/green]" if pr.status == "success" else "[red]FAIL[/red]"
+            status_label = (
+                "[green]OK[/green]" if pr.status == "success" else "[red]FAIL[/red]"
+            )
             console.print(f"  [{pr.agent.value}] {status_label} {pr.task[:80]}")
     else:
         for i in range(iterations):
@@ -768,17 +789,23 @@ def overnight(
             snap = monitor_resources()
             decision = make_resource_decision(snap)
             if not decision["can_proceed"]:
-                console.print(f"[red]Low resources (disk: {snap.disk_free_gb:.1f}GB). Pausing.[/red]")
+                console.print(
+                    f"[red]Low resources (disk: {snap.disk_free_gb:.1f}GB). Pausing.[/red]"
+                )
                 break
             if decision["should_checkpoint"]:
-                console.print(f"[yellow]High memory usage ({snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB). Checkpointing.[/yellow]")
+                console.print(
+                    f"[yellow]High memory usage ({snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB). Checkpointing.[/yellow]"
+                )
                 auto_commit("ricet overnight: resource checkpoint")
             if decision.get("should_cleanup"):
                 cleanup_old_checkpoints()
 
-            console.print(f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan] "
-                          f"[dim](CPU: {snap.cpu_percent:.0f}%, RAM: {snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB, "
-                          f"Disk: {snap.disk_free_gb:.0f}GB free)[/dim]")
+            console.print(
+                f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan] "
+                f"[dim](CPU: {snap.cpu_percent:.0f}%, RAM: {snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB, "
+                f"Disk: {snap.disk_free_gb:.0f}GB free)[/dim]"
+            )
 
             result = subprocess.run(
                 [
@@ -806,9 +833,13 @@ def overnight(
             )
             falsifier_result = execute_agent_task(AgentType.FALSIFIER, falsifier_task)
             if falsifier_result.status == "success":
-                console.print(f"[green]Falsifier: {falsifier_result.output[:200]}[/green]")
+                console.print(
+                    f"[green]Falsifier: {falsifier_result.output[:200]}[/green]"
+                )
             else:
-                console.print(f"[yellow]Falsifier flagged issues: {falsifier_result.output[:200]}[/yellow]")
+                console.print(
+                    f"[yellow]Falsifier flagged issues: {falsifier_result.output[:200]}[/yellow]"
+                )
 
             # Check for completion signal
             if Path("state/DONE").exists():
@@ -892,8 +923,12 @@ def agents():
 
 @app.command()
 def memory(
-    action: str = typer.Argument(help="Action: search, log-decision, export, import, stats"),
-    query: str = typer.Argument("", help="Search query or text (for search / log-decision)"),
+    action: str = typer.Argument(
+        help="Action: search, log-decision, export, import, stats"
+    ),
+    query: str = typer.Argument(
+        "", help="Search query or text (for search / log-decision)"
+    ),
     top_k: int = typer.Option(5, help="Number of results (for search)"),
     file: Path = typer.Option(None, "--file", "-f", help="File path (for import)"),
 ):
@@ -1013,12 +1048,23 @@ def auto(
     action: str = typer.Argument(help="Action: add-routine, list-routines, monitor"),
     name: str = typer.Option("", "--name", "-n", help="Routine name (for add-routine)"),
     description: str = typer.Option("", "--desc", "-d", help="Routine description"),
-    schedule: str = typer.Option("daily", "--schedule", "-s", help="Schedule: daily, hourly, weekly"),
-    command: str = typer.Option("", "--command", "-c", help="Command to run (for add-routine)"),
-    topic: str = typer.Option("", "--topic", "-t", help="Topic to monitor (for monitor)"),
+    schedule: str = typer.Option(
+        "daily", "--schedule", "-s", help="Schedule: daily, hourly, weekly"
+    ),
+    command: str = typer.Option(
+        "", "--command", "-c", help="Command to run (for add-routine)"
+    ),
+    topic: str = typer.Option(
+        "", "--topic", "-t", help="Topic to monitor (for monitor)"
+    ),
 ):
     """Manage autonomous routines: scheduled tasks and topic monitoring."""
-    from core.autonomous import ScheduledRoutine, add_routine, list_routines, monitor_topic
+    from core.autonomous import (
+        ScheduledRoutine,
+        add_routine,
+        list_routines,
+        monitor_topic,
+    )
 
     if action == "add-routine":
         if not name:
@@ -1041,7 +1087,9 @@ def auto(
         if routines:
             console.print("[bold]Scheduled routines:[/bold]")
             for r in routines:
-                enabled = "[green]enabled[/green]" if r.enabled else "[dim]disabled[/dim]"
+                enabled = (
+                    "[green]enabled[/green]" if r.enabled else "[dim]disabled[/dim]"
+                )
                 console.print(f"  {r.name} ({r.schedule}) {enabled} - {r.description}")
         else:
             console.print("No routines configured.")
@@ -1051,7 +1099,9 @@ def auto(
             console.print("[red]Provide --topic/-t for monitoring.[/red]")
             raise typer.Exit(1)
         spec = monitor_topic(topic)
-        console.print(f"[green]Monitoring '{topic}' via {', '.join(spec['sources'])}[/green]")
+        console.print(
+            f"[green]Monitoring '{topic}' via {', '.join(spec['sources'])}[/green]"
+        )
         console.print(f"  Status: {spec['status']}")
 
     else:
@@ -1064,12 +1114,20 @@ def auto(
 def repro(
     action: str = typer.Argument(help="Action: log, list, show, hash"),
     run_id: str = typer.Option("", "--run-id", "-r", help="Run ID (for log/show)"),
-    command_str: str = typer.Option("", "--command", "-c", help="Command that was run (for log)"),
+    command_str: str = typer.Option(
+        "", "--command", "-c", help="Command that was run (for log)"
+    ),
     path: Path = typer.Option(None, "--path", "-p", help="Path to hash (for hash)"),
     notes: str = typer.Option("", "--notes", "-n", help="Notes for the run (for log)"),
 ):
     """Reproducibility tracking: log runs, list history, show details, hash datasets."""
-    from core.reproducibility import RunLog, compute_dataset_hash, list_runs, load_run, log_run
+    from core.reproducibility import (
+        RunLog,
+        compute_dataset_hash,
+        list_runs,
+        load_run,
+        log_run,
+    )
 
     if action == "log":
         if not run_id:
@@ -1151,7 +1209,9 @@ def repro(
 @app.command(name="mcp-search")
 def mcp_search(
     need: str = typer.Argument(help="What you need (e.g. 'access PubMed papers')"),
-    install: bool = typer.Option(False, "--install", "-i", help="Auto-install the match"),
+    install: bool = typer.Option(
+        False, "--install", "-i", help="Auto-install the match"
+    ),
 ):
     """Search the MCP catalog for a server matching your need.
 
@@ -1170,8 +1230,12 @@ def mcp_search(
 
 @app.command()
 def paper(
-    action: str = typer.Argument(help="Action: build, update, modernize, check, adapt-style"),
-    reference: Path = typer.Option(None, "--reference", help="Path to reference paper for adapt-style"),
+    action: str = typer.Argument(
+        help="Action: build, update, modernize, check, adapt-style"
+    ),
+    reference: Path = typer.Option(
+        None, "--reference", help="Path to reference paper for adapt-style"
+    ),
 ):
     """Paper pipeline commands."""
     from core.paper import check_figure_references, clean_paper, compile_paper
@@ -1265,12 +1329,16 @@ def paper(
             out_path.write_text(result["rewritten"])
             console.print(f"\n[green]Adapted text written to {out_path}[/green]")
             if result["plagiarism_flags"]:
-                console.print(f"[yellow]Plagiarism flags: {len(result['plagiarism_flags'])}[/yellow]")
+                console.print(
+                    f"[yellow]Plagiarism flags: {len(result['plagiarism_flags'])}[/yellow]"
+                )
                 for flag in result["plagiarism_flags"]:
                     console.print(f"  - n-gram overlap: \"{flag['ngram']}\"")
             auto_commit("ricet paper: adapted style from reference")
         else:
-            console.print(f"\n[yellow]Rewrite skipped: {result.get('error', 'unknown')}[/yellow]")
+            console.print(
+                f"\n[yellow]Rewrite skipped: {result.get('error', 'unknown')}[/yellow]"
+            )
 
     else:
         console.print(f"[red]Unknown action: {action}[/red]")
@@ -1712,9 +1780,15 @@ def docs(
 @app.command(name="two-repo")
 def two_repo(
     action: str = typer.Argument(help="Action: init, status, promote, sync, diff"),
-    files: str = typer.Option("", "--files", "-f", help="Comma-separated file paths (for promote)"),
-    message: str = typer.Option("Promote files", "--message", "-m", help="Commit message (for promote)"),
-    shared: str = typer.Option("", "--shared", help="Comma-separated shared paths (for sync)"),
+    files: str = typer.Option(
+        "", "--files", "-f", help="Comma-separated file paths (for promote)"
+    ),
+    message: str = typer.Option(
+        "Promote files", "--message", "-m", help="Commit message (for promote)"
+    ),
+    shared: str = typer.Option(
+        "", "--shared", help="Comma-separated shared paths (for sync)"
+    ),
 ):
     """Manage two-repo structure (experiments/ vs clean/)."""
     from core.two_repo import TwoRepoManager
@@ -1733,12 +1807,16 @@ def two_repo(
     elif action == "status":
         st = mgr.get_status()
         for name, info in st.items():
-            dirty = "[yellow]dirty[/yellow]" if info["dirty"] else "[green]clean[/green]"
+            dirty = (
+                "[yellow]dirty[/yellow]" if info["dirty"] else "[green]clean[/green]"
+            )
             console.print(f"  {name}: branch={info['branch']} {dirty}")
 
     elif action == "promote":
         if not files:
-            console.print("[red]Provide --files/-f with comma-separated paths to promote.[/red]")
+            console.print(
+                "[red]Provide --files/-f with comma-separated paths to promote.[/red]"
+            )
             raise typer.Exit(1)
         file_list = [f.strip() for f in files.split(",") if f.strip()]
         console.print(f"[bold]Promoting {len(file_list)} file(s) to clean/...[/bold]")
@@ -1747,7 +1825,9 @@ def two_repo(
             auto_commit(f"ricet two-repo: promoted {len(file_list)} files")
             console.print("[green]Files promoted and committed in clean/.[/green]")
         else:
-            console.print("[red]Promote failed. Check that source files exist in experiments/.[/red]")
+            console.print(
+                "[red]Promote failed. Check that source files exist in experiments/.[/red]"
+            )
             raise typer.Exit(1)
 
     elif action == "sync":
@@ -1756,7 +1836,9 @@ def two_repo(
         ok = mgr.sync_shared(shared_files)
         if ok:
             auto_commit("ricet two-repo: synced shared files")
-            console.print("[green]Shared files synced from experiments/ to clean/.[/green]")
+            console.print(
+                "[green]Shared files synced from experiments/ to clean/.[/green]"
+            )
         else:
             console.print("[red]Sync failed. Check that source paths exist.[/red]")
             raise typer.Exit(1)
@@ -1778,14 +1860,18 @@ def two_repo(
 @app.command()
 def browse(
     url: str = typer.Argument(help="URL to fetch and extract text from"),
-    screenshot: str = typer.Option("", "--screenshot", "-s", help="Save screenshot to this path"),
+    screenshot: str = typer.Option(
+        "", "--screenshot", "-s", help="Save screenshot to this path"
+    ),
 ):
     """Fetch a URL and extract its text content (useful for literature review)."""
     from core.browser import BrowserSession
 
     session = BrowserSession()
     if not session.is_available():
-        console.print("[red]No browser backend available (need curl, wget, or Puppeteer).[/red]")
+        console.print(
+            "[red]No browser backend available (need curl, wget, or Puppeteer).[/red]"
+        )
         raise typer.Exit(1)
 
     console.print(f"[bold]Fetching:[/bold] {url}")
@@ -1809,13 +1895,26 @@ def browse(
 
 @app.command()
 def infra(
-    action: str = typer.Argument(help="Action: check, docker-build, docker-run, cicd, secrets"),
-    tag: str = typer.Option("", "--tag", "-t", help="Docker image tag (for docker-build/docker-run)"),
-    dockerfile: Path = typer.Option(Path("Dockerfile"), "--dockerfile", help="Dockerfile path"),
-    template: str = typer.Option("python", "--template", help="CI/CD template (python, node)"),
+    action: str = typer.Argument(
+        help="Action: check, docker-build, docker-run, cicd, secrets"
+    ),
+    tag: str = typer.Option(
+        "", "--tag", "-t", help="Docker image tag (for docker-build/docker-run)"
+    ),
+    dockerfile: Path = typer.Option(
+        Path("Dockerfile"), "--dockerfile", help="Dockerfile path"
+    ),
+    template: str = typer.Option(
+        "python", "--template", help="CI/CD template (python, node)"
+    ),
 ):
     """Manage infrastructure, Docker, CI/CD, and secrets."""
-    from core.devops import DockerManager, check_infrastructure, rotate_secrets, setup_ci_cd
+    from core.devops import (
+        DockerManager,
+        check_infrastructure,
+        rotate_secrets,
+        setup_ci_cd,
+    )
 
     if action == "check":
         console.print("[bold]Infrastructure check:[/bold]")
@@ -1868,7 +1967,9 @@ def infra(
         console.print("[bold]Scanning for secrets to rotate...[/bold]")
         findings = rotate_secrets(Path.cwd())
         if findings:
-            console.print(f"[yellow]Found {len(findings)} potential secret(s):[/yellow]")
+            console.print(
+                f"[yellow]Found {len(findings)} potential secret(s):[/yellow]"
+            )
             for finding in findings:
                 console.print(f"  - {finding}")
         else:
@@ -1883,7 +1984,9 @@ def infra(
 @app.command()
 def runbook(
     file: Path = typer.Argument(help="Path to a markdown runbook file"),
-    execute: bool = typer.Option(False, "--execute", "-x", help="Actually execute code blocks (default: dry-run)"),
+    execute: bool = typer.Option(
+        False, "--execute", "-x", help="Actually execute code blocks (default: dry-run)"
+    ),
 ):
     """Parse and optionally execute code blocks from a markdown runbook."""
     from core.markdown_commands import execute_runbook, parse_runbook
@@ -1947,11 +2050,18 @@ def cite(
 @app.command()
 def discover(
     query: str = typer.Argument(help="Research topic to search on PaperBoat"),
-    add_bib: bool = typer.Option(False, "--cite", help="Auto-add results to references.bib"),
+    add_bib: bool = typer.Option(
+        False, "--cite", help="Auto-add results to references.bib"
+    ),
     max_results: int = typer.Option(5, "--max", "-n", help="Max papers to return"),
 ):
     """Search PaperBoat (paperboatch.com) for recent cross-discipline papers."""
-    from core.paper import add_citation, generate_citation_key, list_citations, search_paperboat
+    from core.paper import (
+        add_citation,
+        generate_citation_key,
+        list_citations,
+        search_paperboat,
+    )
 
     console.print(f"[bold]Searching PaperBoat for: {query}[/bold]")
     papers = search_paperboat(query)
@@ -1994,12 +2104,16 @@ def discover(
             added += 1
             console.print(f"  [green]+[/green] Added to bib: {key}")
         if added:
-            auto_commit(f"ricet discover: added {added} PaperBoat references for '{query[:50]}'")
+            auto_commit(
+                f"ricet discover: added {added} PaperBoat references for '{query[:50]}'"
+            )
 
 
 @app.command(name="sync-learnings")
 def sync_learnings(
-    source_project: Path = typer.Argument(help="Path to the source project to transfer from"),
+    source_project: Path = typer.Argument(
+        help="Path to the source project to transfer from"
+    ),
 ):
     """Transfer encyclopedia entries and meta-rules from another project."""
     from core.knowledge import sync_learnings_to_project
@@ -2012,7 +2126,9 @@ def sync_learnings(
 
     src_enc = source_project / "knowledge" / "ENCYCLOPEDIA.md"
     if not src_enc.exists():
-        console.print(f"[yellow]No ENCYCLOPEDIA.md in source project: {source_project}[/yellow]")
+        console.print(
+            f"[yellow]No ENCYCLOPEDIA.md in source project: {source_project}[/yellow]"
+        )
 
     console.print(f"[bold]Syncing learnings from: {source_project}[/bold]")
     result = sync_learnings_to_project(source_project, target)
@@ -2023,9 +2139,13 @@ def sync_learnings(
     if enc_count or rules_count:
         console.print(f"  [green]Encyclopedia entries transferred: {enc_count}[/green]")
         console.print(f"  [green]Meta-rules transferred: {rules_count}[/green]")
-        auto_commit(f"ricet sync-learnings: transferred {enc_count} entries, {rules_count} rules")
+        auto_commit(
+            f"ricet sync-learnings: transferred {enc_count} entries, {rules_count} rules"
+        )
     else:
-        console.print("[dim]No new entries to transfer (all duplicates or empty source).[/dim]")
+        console.print(
+            "[dim]No new entries to transfer (all duplicates or empty source).[/dim]"
+        )
 
 
 @app.command()

@@ -110,7 +110,9 @@ def test_rewrite_in_reference_style_with_claude():
     """When Claude returns rewritten text, result includes it and profiles."""
     source = "We trained the model. We evaluated the results. We compared the outputs."
     reference = "The approach is novel. The method demonstrates strong performance across benchmarks."
-    fake_rewrite = "The model is trained effectively. The results demonstrate clear improvements."
+    fake_rewrite = (
+        "The model is trained effectively. The results demonstrate clear improvements."
+    )
 
     def fake_run_cmd(cmd):
         return MagicMock(returncode=0, stdout=fake_rewrite)
@@ -144,15 +146,21 @@ def test_rewrite_in_reference_style_without_claude():
 def test_rewrite_in_reference_style_plagiarism_check():
     """Plagiarism flags are populated when rewritten text overlaps with reference."""
     source = "We did some original research on various topics."
-    reference = "the model was trained on a large corpus of scientific papers and evaluated"
+    reference = (
+        "the model was trained on a large corpus of scientific papers and evaluated"
+    )
     # Simulate Claude returning text that copies a chunk from the reference
-    copied_chunk = "the model was trained on a large corpus of scientific papers and evaluated"
+    copied_chunk = (
+        "the model was trained on a large corpus of scientific papers and evaluated"
+    )
     fake_rewrite = f"In our study, {copied_chunk} thoroughly."
 
     def fake_run_cmd(cmd):
         return MagicMock(returncode=0, stdout=fake_rewrite)
 
-    result = rewrite_in_reference_style(source, reference, verify=True, run_cmd=fake_run_cmd)
+    result = rewrite_in_reference_style(
+        source, reference, verify=True, run_cmd=fake_run_cmd
+    )
 
     assert result["rewritten"] is not None
     assert len(result["plagiarism_flags"]) > 0

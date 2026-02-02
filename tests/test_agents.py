@@ -193,10 +193,7 @@ def test_get_agent_prompt_project_overrides_template(tmp_path):
 def test_agent_template_prompts_are_nonempty():
     """All agent types have non-empty template prompt files."""
     templates_dir = (
-        Path(__file__).resolve().parent.parent
-        / "templates"
-        / ".claude"
-        / "agents"
+        Path(__file__).resolve().parent.parent / "templates" / ".claude" / "agents"
     )
     for agent_type in AgentType:
         if agent_type == AgentType.MASTER:
@@ -204,9 +201,9 @@ def test_agent_template_prompts_are_nonempty():
         agent_file = templates_dir / f"{agent_type.value}.md"
         assert agent_file.exists(), f"Missing template for {agent_type.value}"
         content = agent_file.read_text()
-        assert len(content.strip()) > 50, (
-            f"Template for {agent_type.value} is too short ({len(content)} chars)"
-        )
+        assert (
+            len(content.strip()) > 50
+        ), f"Template for {agent_type.value} is too short ({len(content)} chars)"
 
 
 def test_get_agent_prompt_missing_agent_returns_empty(tmp_path):

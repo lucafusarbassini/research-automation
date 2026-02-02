@@ -268,7 +268,7 @@ def search_and_cite(
 
     prompt = (
         f"Search for {max_results} relevant academic papers matching this query:\n\n"
-        f"  \"{query}\"\n\n"
+        f'  "{query}"\n\n'
         "For each paper, provide a JSON array of objects with these fields:\n"
         '  {"title": "...", "authors": "LastName, First and ...", '
         '"year": "2024", "journal": "...", "doi": "...", '

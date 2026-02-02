@@ -296,9 +296,21 @@ def check_goal_fidelity(project_path: Path, *, run_cmd=None) -> dict:
     """
     from core.claude_helper import call_claude_json
 
-    goal = (project_path / "knowledge" / "GOAL.md").read_text() if (project_path / "knowledge" / "GOAL.md").exists() else ""
-    progress = (project_path / "state" / "PROGRESS.md").read_text() if (project_path / "state" / "PROGRESS.md").exists() else ""
-    todo = (project_path / "state" / "TODO.md").read_text() if (project_path / "state" / "TODO.md").exists() else ""
+    goal = (
+        (project_path / "knowledge" / "GOAL.md").read_text()
+        if (project_path / "knowledge" / "GOAL.md").exists()
+        else ""
+    )
+    progress = (
+        (project_path / "state" / "PROGRESS.md").read_text()
+        if (project_path / "state" / "PROGRESS.md").exists()
+        else ""
+    )
+    todo = (
+        (project_path / "state" / "TODO.md").read_text()
+        if (project_path / "state" / "TODO.md").exists()
+        else ""
+    )
 
     if not goal.strip():
         return {"score": 0, "error": "No GOAL.md found"}
@@ -315,7 +327,11 @@ def check_goal_fidelity(project_path: Path, *, run_cmd=None) -> dict:
     result = call_claude_json(prompt, run_cmd=run_cmd)
     if result and isinstance(result, dict):
         return result
-    return {"score": 50, "drift_areas": ["Unable to assess (Claude unavailable)"], "recommendations": []}
+    return {
+        "score": 50,
+        "drift_areas": ["Unable to assess (Claude unavailable)"],
+        "recommendations": [],
+    }
 
 
 def verify_text(text: str, project_path: str = "") -> dict:
