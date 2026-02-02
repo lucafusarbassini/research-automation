@@ -1362,6 +1362,136 @@ def ensure_package(
     return False
 
 
+def generate_goal_todos(goal_content: str, *, run_cmd=None) -> str:
+    """Generate goal-specific TODO items from GOAL.md content.
+
+    Calls Claude CLI to produce 8-12 actionable TODO items tailored to the
+    research goal.  Falls back to generic TODO items if Claude is unavailable
+    or the goal text is too short.
+
+    Args:
+        goal_content: Raw text of GOAL.md.
+        run_cmd: Optional callable(cmd: list[str]) -> subprocess.CompletedProcess
+                 override for testing.
+
+    Returns:
+        Markdown string with checkbox TODO items.
+    """
+    generic_fallback = (
+        "- [ ] Literature review and background research\n"
+        "- [ ] Set up data pipeline and preprocessing\n"
+        "- [ ] Implement baseline approach\n"
+        "- [ ] Run initial experiments and validate pipeline\n"
+        "- [ ] Iterate on methodology based on results\n"
+        "- [ ] Run full-scale experiments\n"
+        "- [ ] Analyze results and generate figures\n"
+        "- [ ] Write paper draft\n"
+    )
+
+    if not goal_content or len(goal_content.strip()) < 50:
+        return generic_fallback
+
+    if run_cmd is None:
+
+        def run_cmd(cmd: list[str]) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+    prompt = (
+        "Given this research goal, generate 8-12 specific actionable TODO items "
+        "as a markdown checklist. Be concrete and specific to this goal, not generic. "
+        "Return ONLY the checklist lines, nothing else. Each line must start with "
+        "'- [ ] '.\n\n"
+        f"Goal:\n{goal_content[:3000]}"
+    )
+
+    try:
+        result = run_cmd(["claude", "-p", prompt])
+        if result.returncode != 0:
+            logger.debug("Claude TODO generation failed (exit %d)", result.returncode)
+            return generic_fallback
+
+        output = result.stdout.strip()
+        # Extract only lines that look like checklist items
+        lines = [
+            line.strip()
+            for line in output.splitlines()
+            if line.strip().startswith("- [ ]")
+        ]
+        if len(lines) >= 4:
+            return "\n".join(lines) + "\n"
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        logger.debug("Claude not available for TODO generation: %s", exc)
+
+    return generic_fallback
+
+
+def generate_goal_folders(goal_content: str, *, run_cmd=None) -> list[str]:
+    """Suggest additional project-specific folders based on GOAL.md content.
+
+    Calls Claude CLI to recommend extra directories that suit the research
+    goal (e.g. ``simulations/``, ``datasets/``, ``models/``).  Returns an
+    empty list when Claude is unavailable or the goal text is too short.
+
+    Args:
+        goal_content: Raw text of GOAL.md.
+        run_cmd: Optional callable(cmd: list[str]) -> subprocess.CompletedProcess
+                 override for testing.
+
+    Returns:
+        List of additional folder paths to create (relative to project root).
+    """
+    if not goal_content or len(goal_content.strip()) < 50:
+        return []
+
+    if run_cmd is None:
+
+        def run_cmd(cmd: list[str]) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+    prompt = (
+        "Given this research goal, suggest 3-6 additional project-specific folder "
+        "names that would be useful. Return ONLY folder names, one per line, no "
+        "explanation. Use lowercase with hyphens. Do NOT include standard folders "
+        "like src/, tests/, docs/, config/, reference/, uploads/, state/, secrets/.\n\n"
+        f"Goal:\n{goal_content[:3000]}"
+    )
+
+    try:
+        result = run_cmd(["claude", "-p", prompt])
+        if result.returncode != 0:
+            logger.debug("Claude folder suggestion failed (exit %d)", result.returncode)
+            return []
+
+        output = result.stdout.strip()
+        folders: list[str] = []
+        for line in output.splitlines():
+            cleaned = line.strip().strip("-* ").strip("/")
+            # Basic validation: no spaces, no dots, reasonable length
+            if (
+                cleaned
+                and len(cleaned) < 50
+                and " " not in cleaned
+                and ".." not in cleaned
+                and not cleaned.startswith(".")
+            ):
+                folders.append(cleaned)
+        return folders[:6]
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        logger.debug("Claude not available for folder suggestion: %s", exc)
+
+    return []
+
+
 def validate_goal_content(content: str, min_chars: int = 200) -> bool:
     """Check that GOAL.md has real user content (not just template boilerplate).
 

@@ -306,3 +306,93 @@ def populate_encyclopedia_env(
         content,
     )
     enc_path.write_text(content)
+
+
+def sanitize_env_name(name: str) -> str:
+    """Sanitize a project name for use as a conda environment name.
+
+    Replaces spaces and special characters with hyphens, lowercases,
+    and strips leading/trailing hyphens.
+
+    Args:
+        name: Raw project name.
+
+    Returns:
+        Sanitized environment name (e.g. ``ricet-my-project``).
+    """
+    sanitized = re.sub(r"[^a-zA-Z0-9]+", "-", name).strip("-").lower()
+    return f"ricet-{sanitized}" if sanitized else "ricet-env"
+
+
+def install_packages_in_env(
+    env_name: str,
+    packages: list[str],
+    *,
+    run_cmd=None,
+) -> tuple[list[str], list[str]]:
+    """Install packages into an existing conda/mamba environment.
+
+    Args:
+        env_name: Name of the conda/mamba environment.
+        packages: List of package names to install via pip.
+        run_cmd: Optional callable for testing.
+
+    Returns:
+        Tuple of (installed, failed) package lists.
+    """
+    _run = run_cmd or _default_run
+    installed: list[str] = []
+    failed: list[str] = []
+
+    # Determine which tool to use
+    tool = "mamba" if shutil.which("mamba") else "conda"
+    if not shutil.which(tool):
+        logger.warning("Neither conda nor mamba found; cannot install packages")
+        return [], packages
+
+    for pkg in packages:
+        try:
+            _run([tool, "run", "-n", env_name, "pip", "install", pkg])
+            installed.append(pkg)
+        except Exception:
+            failed.append(pkg)
+
+    return installed, failed
+
+
+def write_environment_yml(
+    project_root: Path,
+    env_name: str,
+    python_version: str = "3.11",
+    packages: list[str] | None = None,
+) -> Path:
+    """Write a conda ``environment.yml`` file to the project root.
+
+    Args:
+        project_root: Project directory.
+        env_name: Conda environment name.
+        python_version: Python version string.
+        packages: Pip packages to list.
+
+    Returns:
+        Path to the written ``environment.yml``.
+    """
+    lines = [
+        f"name: {env_name}",
+        "channels:",
+        "  - defaults",
+        "  - conda-forge",
+        "dependencies:",
+        f"  - python={python_version}",
+        "  - pip",
+    ]
+    if packages:
+        lines.append("  - pip:")
+        for pkg in sorted(packages):
+            lines.append(f"    - {pkg}")
+    lines.append("")
+
+    yml_path = project_root / "environment.yml"
+    yml_path.write_text("\n".join(lines))
+    logger.info("Wrote %s", yml_path)
+    return yml_path

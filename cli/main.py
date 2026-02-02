@@ -23,7 +23,9 @@ from core.onboarding import (
     create_github_repo,
     detect_system_for_init,
     ensure_package,
+    generate_goal_folders,
     generate_goal_milestones,
+    generate_goal_todos,
     infer_packages_from_goal,
     install_inferred_packages,
     load_settings,
@@ -77,6 +79,9 @@ def init(
     project_name: str,
     path: Path = typer.Option(Path.cwd(), help="Where to create project"),
     skip_repo: bool = typer.Option(False, help="Skip GitHub repo creation"),
+    no_env: bool = typer.Option(
+        False, "--no-env", help="Skip conda/mamba environment creation"
+    ),
 ):
     """Initialize a new research project with full onboarding."""
     project_path = path / project_name
@@ -213,13 +218,56 @@ def init(
     from core.environment import (
         create_project_env,
         discover_system,
+        install_packages_in_env,
         populate_encyclopedia_env,
+        sanitize_env_name,
+        write_environment_yml,
     )
 
-    env_info = create_project_env(project_name, project_path)
-    console.print(
-        f"  [green]Python environment: {env_info['type']} ({env_info['name']})[/green]"
-    )
+    env_info: dict = {}
+    if no_env:
+        console.print("  [dim]Skipping environment creation (--no-env)[/dim]")
+    else:
+        env_info = create_project_env(project_name, project_path)
+        console.print(
+            f"  [green]Python environment: {env_info['type']} ({env_info['name']})[/green]"
+        )
+
+        # Infer packages from the project goal and install into the env
+        _goal_for_pkgs = answers.goal if answers.goal else ""
+        _inferred_pkgs: list[str] = []
+        if _goal_for_pkgs and system_info["conda"]:
+            _inferred_pkgs = infer_packages_from_goal(_goal_for_pkgs)
+            if _inferred_pkgs:
+                console.print(
+                    f"  [cyan]Inferred packages: {', '.join(_inferred_pkgs)}[/cyan]"
+                )
+                _installed, _pkg_failed = install_packages_in_env(
+                    env_info["name"], _inferred_pkgs
+                )
+                if _installed:
+                    console.print(
+                        f"  [green]Installed into env: {', '.join(_installed)}[/green]"
+                    )
+                if _pkg_failed:
+                    console.print(
+                        f"  [yellow]Failed to install: {', '.join(_pkg_failed)}[/yellow]"
+                    )
+
+        # Write environment.yml
+        _env_name = sanitize_env_name(project_name)
+        write_environment_yml(
+            project_path,
+            _env_name,
+            packages=_inferred_pkgs if _inferred_pkgs else None,
+        )
+        console.print("  [green]Wrote environment.yml[/green]")
+
+        # Print activation command
+        if env_info.get("type") in ("conda", "mamba"):
+            console.print(
+                f"  [bold]Activate with:[/bold] conda activate {env_info['name']}"
+            )
 
     # Store env info in settings
     settings_path = project_path / "config" / "settings.yml"
@@ -227,33 +275,42 @@ def init(
         import yaml
 
         _settings = yaml.safe_load(settings_path.read_text()) or {}
-        _settings["environment"] = env_info
+        if env_info:
+            _settings["environment"] = env_info
         settings_path.write_text(
             yaml.dump(_settings, default_flow_style=False, sort_keys=False)
         )
 
     # Populate encyclopedia with environment details
     sys_info_obj = discover_system()
-    populate_encyclopedia_env(project_path, env_info, sys_info_obj)
+    if env_info:
+        populate_encyclopedia_env(project_path, env_info, sys_info_obj)
 
     # Create state directories
     (project_path / "state" / "sessions").mkdir(parents=True, exist_ok=True)
 
-    # Generate goal-aware TODO milestones
+    # Generate goal-aware TODO items and project-specific folders
     goal_file_for_todo = project_path / "knowledge" / "GOAL.md"
     _goal_text = goal_file_for_todo.read_text() if goal_file_for_todo.exists() else ""
-    milestones = generate_goal_milestones(_goal_text)
-    todo_content = "# TODO\n\n"
-    if milestones:
-        for m in milestones:
-            todo_content += f"- [ ] {m}\n"
-    else:
-        todo_content += (
-            "- [ ] Edit GOAL.md with detailed project description\n"
-            "- [ ] Set up environment\n"
-            "- [ ] Begin first task\n"
-        )
+
+    # Goal-aware TODO: ask Claude for specific actionable items
+    todo_items = generate_goal_todos(_goal_text)
+    todo_content = "# TODO\n\n" + todo_items
     (project_path / "state" / "TODO.md").write_text(todo_content)
+
+    # Goal-aware folders: ask Claude for project-specific directories
+    extra_folders = generate_goal_folders(_goal_text)
+    for folder_name in extra_folders:
+        folder_path = project_path / folder_name
+        folder_path.mkdir(parents=True, exist_ok=True)
+        gitkeep = folder_path / ".gitkeep"
+        if not gitkeep.exists():
+            gitkeep.write_text("")
+    if extra_folders:
+        console.print(
+            f"  [green]Created {len(extra_folders)} goal-specific "
+            f"folder(s): {', '.join(extra_folders)}[/green]"
+        )
 
     (project_path / "state" / "PROGRESS.md").write_text("# Progress\n\n")
 
@@ -627,9 +684,11 @@ def start(
     # Generate a proper UUID for Claude Code (it requires valid UUIDs)
     session_uuid = str(_uuid.uuid4())
 
-    from core.session import create_session
+    from core.session import create_session, update_session
 
     session = create_session(session_name)
+    session.uuid = session_uuid
+    update_session(session)
 
     # Load project settings
     settings = load_settings(Path.cwd())
@@ -1029,33 +1088,156 @@ def list_sessions():
 
 
 @app.command()
+def resume(
+    session_name: str = typer.Argument(help="Name of the session to resume"),
+):
+    """Resume a previously started session."""
+    import uuid as _uuid
+
+    from core.session import list_sessions as _list_sessions
+    from core.session import load_session, update_session
+
+    session = load_session(session_name)
+    if session is None:
+        console.print(f"[red]Session '{session_name}' not found.[/red]")
+        available = _list_sessions()
+        if available:
+            console.print("[bold]Available sessions:[/bold]")
+            for s in available:
+                console.print(f"  {s.name} - {s.status} ({s.started[:10]})")
+        else:
+            console.print("No sessions exist yet. Use 'ricet start' to create one.")
+        raise typer.Exit(code=1)
+
+    # Use stored UUID or generate a new one
+    session_uuid = session.uuid if session.uuid else str(_uuid.uuid4())
+    if not session.uuid:
+        session.uuid = session_uuid
+        update_session(session)
+
+    # Mark session as active again
+    session.status = "active"
+    update_session(session)
+
+    console.print(
+        f"[green]Resuming session: {session.name} ({session_uuid[:8]}...)[/green]"
+    )
+    subprocess.run(["claude", "--session-id", session_uuid])
+
+
+@app.command()
 def agents():
     """Show swarm agent status."""
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
-    try:
-        bridge = _get_bridge()
-        console.print(f"[bold]claude-flow {bridge.get_version()}[/bold]")
-        status = bridge.get_metrics()
+    # --- 1. Agent Definitions (from .claude/agents/*.md) ---
+    project_root = Path(__file__).resolve().parent.parent
+    agents_dir = project_root / ".claude" / "agents"
+    templates_agents_dir = project_root / "templates" / ".claude" / "agents"
+    definition_names: list[str] = []
+    for search_dir in (agents_dir, templates_agents_dir):
+        if search_dir.is_dir():
+            definition_names = sorted(
+                p.stem for p in search_dir.glob("*.md") if p.is_file()
+            )
+            break
+
+    if definition_names:
+        console.print(f"[bold]Agent Definitions ({len(definition_names)}):[/bold]")
+        console.print(f"  {', '.join(definition_names)}")
+    else:
+        console.print("[dim]No agent definitions found[/dim]")
+
+    console.print()
+
+    # --- 2. Running Agents (from store.json + claude-flow CLI fallback) ---
+    running_agents: list[dict] = []
+
+    # 2a. Read .claude-flow/agents/store.json
+    store_path = project_root / ".claude-flow" / "agents" / "store.json"
+    if store_path.is_file():
+        try:
+            store_data = json.loads(store_path.read_text())
+            for _aid, info in store_data.get("agents", {}).items():
+                running_agents.append(
+                    {
+                        "id": info.get("agentId", _aid),
+                        "type": info.get("agentType", "unknown"),
+                        "status": info.get("status", "unknown"),
+                        "model": info.get("model", ""),
+                        "created": info.get("createdAt", ""),
+                    }
+                )
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.debug("Could not read store.json: %s", exc)
+
+    # 2b. If store.json yielded nothing, try claude-flow CLI
+    if not running_agents:
+        try:
+            proc = subprocess.run(
+                [
+                    "npx",
+                    "@claude-flow/cli@latest",
+                    "agent",
+                    "list",
+                    "--json",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                try:
+                    cli_data = json.loads(proc.stdout)
+                    agents_list = (
+                        cli_data
+                        if isinstance(cli_data, list)
+                        else cli_data.get("agents", [])
+                    )
+                    for info in agents_list:
+                        if isinstance(info, dict):
+                            running_agents.append(
+                                {
+                                    "id": info.get("agentId", info.get("name", "?")),
+                                    "type": info.get("agentType", "unknown"),
+                                    "status": info.get("status", "unknown"),
+                                    "model": info.get("model", ""),
+                                    "created": info.get("createdAt", ""),
+                                }
+                            )
+                except json.JSONDecodeError:
+                    # Plain-text output; show as-is
+                    console.print("[bold]Running Agents (via claude-flow):[/bold]")
+                    console.print(f"  {proc.stdout.strip()}")
+                    return
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.debug("claude-flow agent list failed: %s", exc)
+
+    # --- 3. Display running agents ---
+    if running_agents:
         console.print(
-            f"  Status: {status.get('output', status.get('status', 'connected'))}"
+            f"[bold]Running Agents via claude-flow ({len(running_agents)}):[/bold]"
         )
-        agent_stats = status.get("agents", {})
-        if agent_stats:
-            for name, info in agent_stats.items():
-                console.print(f"  {name}: {info}")
-        else:
-            console.print("  No active swarm agents")
-    except ClaudeFlowUnavailable:
-        console.print("[yellow]claude-flow not available[/yellow]")
+        for ag in running_agents:
+            model_part = f" [{ag['model']}]" if ag.get("model") else ""
+            console.print(f"  {ag['id']} ({ag['type']}) - {ag['status']}{model_part}")
+    else:
+        # Last resort: project-internal agent tracker
+        try:
+            bridge = _get_bridge()
+            console.print(f"[dim]claude-flow {bridge.get_version()} connected[/dim]")
+        except ClaudeFlowUnavailable:
+            pass
+
         from core.agents import get_active_agents_status
 
         active = get_active_agents_status()
         if active:
+            console.print("[bold]Running Agents:[/bold]")
             for a in active:
                 console.print(f"  [{a['agent']}] {a['description']}")
         else:
-            console.print("  No active agents")
+            console.print("  No running agents")
 
 
 @app.command()

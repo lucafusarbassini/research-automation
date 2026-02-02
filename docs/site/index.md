@@ -2,7 +2,7 @@
 
 **Automate scientific research using Claude Code with multi-agent orchestration, overnight autonomous execution, and comprehensive tooling.**
 
-Created by **Luca Fusar Bassini** -- turning the scientific method into software.
+Created by **Luca Fusar Bassini**.
 
 ---
 
@@ -133,7 +133,7 @@ ricet is under active development. The core modules, CLI, Docker setup, template
 
 ## About
 
-ricet is designed and maintained by **Luca Fusar Bassini**, a researcher who got tired of doing the same tedious setup for every project and decided to automate the entire scientific workflow instead. What started as a few helper scripts became a full multi-agent research framework.
+ricet is designed and maintained by **Luca Fusar Bassini**.
 
 ---
 

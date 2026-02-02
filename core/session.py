@@ -25,6 +25,7 @@ class Session:
     name: str
     started: str = field(default_factory=lambda: datetime.now().isoformat())
     status: str = "active"
+    uuid: str = ""
     token_estimate: int = 0
     tasks_completed: int = 0
     tasks_failed: int = 0

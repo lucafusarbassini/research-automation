@@ -2,7 +2,8 @@
 
 When claude-flow is available, it is injected as a tier-0 MCP.
 When the pre-configured tiers don't cover a need, Claude searches the
-full MCP catalog (``defaults/MCP_CATALOG.md``) and suggests an install.
+full MCP catalogs (``defaults/MCP_CATALOG.md`` and
+``defaults/raggable_mcps.md``) and suggests an install.
 """
 
 import json
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 MCP_CONFIG = Path(__file__).parent.parent / "templates/config/mcp-nucleus.json"
 MCP_CATALOG = Path(__file__).parent.parent / "defaults" / "MCP_CATALOG.md"
+RAGGABLE_CATALOG = Path(__file__).parent.parent / "defaults" / "raggable_mcps.md"
 
 
 def load_mcp_config() -> dict:
@@ -184,12 +186,12 @@ def install_mcp(mcp_name: str, source: str) -> bool:
 
 
 def search_mcp_catalog(need: str, *, run_cmd=None) -> dict | None:
-    """Search the MCP catalog for a server matching *need* using Claude.
+    """Search the MCP catalogs for a server matching *need* using Claude.
 
-    Reads ``defaults/MCP_CATALOG.md`` (a 1 300-line curated list of MCP
-    servers scraped from awesome-mcp-servers) and asks Claude to pick the
-    best match, the install command, and what API keys (if any) the user
-    must provide.
+    Reads ``defaults/MCP_CATALOG.md`` (a curated tier list) and
+    ``defaults/raggable_mcps.md`` (a comprehensive 1 300+ server catalog)
+    and asks Claude to pick the best match, the install command, and what
+    API keys (if any) the user must provide.
 
     Args:
         need: Natural-language description of what the user needs
@@ -203,13 +205,18 @@ def search_mcp_catalog(need: str, *, run_cmd=None) -> dict | None:
     """
     from core.claude_helper import call_claude_json
 
-    if not MCP_CATALOG.exists():
-        logger.warning("MCP catalog not found at %s", MCP_CATALOG)
+    # Build combined catalog from both sources.
+    catalog_parts: list[str] = []
+    if MCP_CATALOG.exists():
+        catalog_parts.append(MCP_CATALOG.read_text())
+    if RAGGABLE_CATALOG.exists():
+        catalog_parts.append(RAGGABLE_CATALOG.read_text())
+
+    if not catalog_parts:
+        logger.warning("No MCP catalogs found at %s or %s", MCP_CATALOG, RAGGABLE_CATALOG)
         return None
 
-    # Feed a chunk of the catalog — it's ~1 300 lines so we send it all.
-    # Claude haiku can handle this cheaply.
-    catalog_text = MCP_CATALOG.read_text()
+    catalog_text = "\n\n".join(catalog_parts)
 
     prompt = (
         "You are an MCP server expert. The user needs an MCP server for:\n\n"
@@ -230,12 +237,16 @@ def search_mcp_catalog(need: str, *, run_cmd=None) -> dict | None:
     if result and isinstance(result, dict) and result.get("name"):
         return result
 
-    # Fallback: if Claude is unavailable, use MCPIndex keyword search.
+    # Fallback: if Claude is unavailable, use MCPIndex keyword search
+    # over both the hardcoded defaults and the parsed raggable catalog.
     try:
-        from core.rag_mcp import DEFAULT_ENTRIES, MCPIndex
+        from core.rag_mcp import DEFAULT_ENTRIES, MCPIndex, parse_raggable_catalog
+
+        entries = list(DEFAULT_ENTRIES)
+        entries.extend(parse_raggable_catalog())
 
         index = MCPIndex()
-        index.build_index(DEFAULT_ENTRIES)
+        index.build_index(entries)
         hits = index.search(need, top_k=1)
         if hits:
             entry = hits[0]
