@@ -199,3 +199,82 @@ def save_figure(
     fig.savefig(output_path, bbox_inches="tight", pad_inches=0.02, dpi=300)
     logger.info("Saved figure: %s", output_path)
     return output_path
+
+
+def generate_citation_key(author: str, year: str) -> str:
+    """Generate a BibTeX citation key like 'Smith2024'."""
+    # Take first author's last name, clean it, append year
+    last = author.split(",")[0].split()[-1] if author else "Unknown"
+    last = re.sub(r"[^a-zA-Z]", "", last)
+    return f"{last}{year}"
+
+
+def search_and_cite(
+    query: str,
+    bib_file: Path | None = None,
+    *,
+    max_results: int = 5,
+    run_cmd=None,
+) -> list[dict]:
+    """Search literature via Claude and append results to .bib file.
+
+    Uses Claude to search PubMed/arXiv (via available MCPs or web knowledge),
+    extract metadata, and format as BibTeX entries.
+
+    Args:
+        query: Search query (e.g., "transformer protein folding 2024").
+        bib_file: Path to .bib file (default: paper/references.bib).
+        max_results: Maximum papers to return.
+        run_cmd: Optional callable for testing.
+
+    Returns:
+        List of dicts with keys: key, title, authors, year, doi, bibtex.
+    """
+    from core.claude_helper import call_claude_json
+
+    if bib_file is None:
+        bib_file = Path("paper/references.bib")
+
+    prompt = (
+        f"Search for {max_results} relevant academic papers matching this query:\n\n"
+        f"  \"{query}\"\n\n"
+        "For each paper, provide a JSON array of objects with these fields:\n"
+        '  {"title": "...", "authors": "LastName, First and ...", '
+        '"year": "2024", "journal": "...", "doi": "...", '
+        '"entry_type": "article"}\n\n'
+        "Focus on recent, highly-cited, peer-reviewed papers. "
+        "Reply with the JSON array only, no markdown fences."
+    )
+
+    results = call_claude_json(prompt, run_cmd=run_cmd)
+    if not results or not isinstance(results, list):
+        return []
+
+    added = []
+    for paper in results[:max_results]:
+        if not isinstance(paper, dict) or not paper.get("title"):
+            continue
+        key = generate_citation_key(
+            paper.get("authors", "Unknown"),
+            paper.get("year", "2024"),
+        )
+        # Deduplicate: check if key already in bib
+        existing = list_citations(bib_file) if bib_file.exists() else []
+        if key in existing:
+            key = f"{key}b"  # Simple dedup suffix
+            if key in existing:
+                continue
+
+        add_citation(
+            key=key,
+            entry_type=paper.get("entry_type", "article"),
+            author=paper.get("authors", ""),
+            title=paper.get("title", ""),
+            year=paper.get("year", ""),
+            journal=paper.get("journal", ""),
+            doi=paper.get("doi", ""),
+            bib_file=bib_file,
+        )
+        added.append({"key": key, **paper})
+
+    return added

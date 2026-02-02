@@ -90,6 +90,8 @@ def close_session(session: Session) -> None:
     """Mark session as completed.
 
     Also ends the claude-flow session when available.
+    Scans accumulated progress entries for operational rules and appends them
+    to the cheatsheet.
     """
     session.status = "completed"
     _save_session(session)
@@ -100,6 +102,17 @@ def close_session(session: Session) -> None:
         logger.info("Ended claude-flow session: %s", session.name)
     except ClaudeFlowUnavailable:
         pass
+
+    # Scan session progress for operational rules
+    from core.meta_rules import detect_operational_rule, classify_rule_type, append_to_cheatsheet
+
+    progress_file = STATE_DIR / "PROGRESS.md"
+    if progress_file.exists():
+        for line in progress_file.read_text().splitlines():
+            line = line.strip()
+            if line and detect_operational_rule(line):
+                rule_type = classify_rule_type(line)
+                append_to_cheatsheet(line, rule_type=rule_type)
 
     logger.info("Closed session: %s", session.name)
 

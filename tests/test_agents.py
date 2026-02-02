@@ -83,7 +83,7 @@ def test_execute_agent_task_via_bridge():
     with patch("core.agents._get_bridge", return_value=mock_bridge):
         result = execute_agent_task(AgentType.CODER, "fix the bug")
         assert result.status == "success"
-        assert result.output == "done via claude-flow"
+        assert "done via claude-flow" in result.output
         assert result.tokens_used == 500
         mock_bridge.spawn_agent.assert_called_once_with("coder", "fix the bug")
 

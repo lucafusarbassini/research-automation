@@ -266,14 +266,23 @@ def execute_agent_task(
             tokens_used=cf_result.get("tokens_used", 0),
             ended=datetime.now().isoformat(),
         )
+        # Auto-verify successful agent output
+        from core.verification import auto_verify_response
+        if result.status == "success" and result.output:
+            result.output = auto_verify_response(result.output, {})
         _log_result(result)
         return result
     except ClaudeFlowUnavailable:
         pass
 
-    return _execute_agent_task_legacy(
+    result = _execute_agent_task_legacy(
         agent_type, task, dangerously_skip_permissions=dangerously_skip_permissions
     )
+    # Auto-verify successful agent output (legacy path)
+    from core.verification import auto_verify_response
+    if result.status == "success" and result.output:
+        result.output = auto_verify_response(result.output, {})
+    return result
 
 
 def _execute_agent_task_legacy(
@@ -593,3 +602,9 @@ def _log_result(result: TaskResult) -> None:
 
     with open(PROGRESS_FILE, "a") as f:
         f.write(line)
+
+    # Scan task description for operational rules and append to cheatsheet
+    from core.meta_rules import detect_operational_rule, classify_rule_type, append_to_cheatsheet
+    if detect_operational_rule(result.task):
+        rule_type = classify_rule_type(result.task)
+        append_to_cheatsheet(result.task, rule_type=rule_type)

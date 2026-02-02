@@ -648,6 +648,7 @@ def overnight(
     Uses claude-flow swarm orchestration when available, falls back to raw claude -p loop.
     """
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
+    from core.resources import cleanup_old_checkpoints, make_resource_decision, monitor_resources
 
     console.print("[bold yellow]Starting overnight mode[/bold yellow]")
     console.print(f"Task file: {task_file}")
@@ -665,8 +666,37 @@ def overnight(
         console.print("[cyan]Using claude-flow swarm orchestration[/cyan]")
         swarm_tasks = [{"type": "coder", "task": tasks}]
         for i in range(iterations):
-            console.print(f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan]")
+            # Resource-aware scheduling
+            snap = monitor_resources()
+            decision = make_resource_decision(snap)
+            if not decision["can_proceed"]:
+                console.print(f"[red]Low resources (disk: {snap.disk_free_gb:.1f}GB). Pausing.[/red]")
+                break
+            if decision["should_checkpoint"]:
+                console.print(f"[yellow]High memory usage ({snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB). Checkpointing.[/yellow]")
+                auto_commit("ricet overnight: resource checkpoint")
+            if decision.get("should_cleanup"):
+                cleanup_old_checkpoints()
+
+            console.print(f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan] "
+                          f"[dim](CPU: {snap.cpu_percent:.0f}%, RAM: {snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB, "
+                          f"Disk: {snap.disk_free_gb:.0f}GB free)[/dim]")
             bridge.run_swarm(swarm_tasks, topology="hierarchical")
+
+            # Auto-trigger falsifier verification after each iteration
+            from core.agents import execute_agent_task, AgentType
+            console.print("[yellow]Running falsifier verification...[/yellow]")
+            falsifier_task = (
+                f"Falsify and validate the results from the latest iteration. "
+                f"Check for: data leakage, statistical validity, confounders, "
+                f"reproducibility issues. Original task: {tasks}"
+            )
+            falsifier_result = execute_agent_task(AgentType.FALSIFIER, falsifier_task)
+            if falsifier_result.status == "success":
+                console.print(f"[green]Falsifier: {falsifier_result.output[:200]}[/green]")
+            else:
+                console.print(f"[yellow]Falsifier flagged issues: {falsifier_result.output[:200]}[/yellow]")
+
             if Path("state/DONE").exists():
                 console.print("[green]Task completed![/green]")
                 break
@@ -687,7 +717,21 @@ def overnight(
         f"{agent_prompt}\n\n## Tasks\n\n{tasks}" if agent_prompt else tasks
     )
     for i in range(iterations):
-        console.print(f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan]")
+        # Resource-aware scheduling
+        snap = monitor_resources()
+        decision = make_resource_decision(snap)
+        if not decision["can_proceed"]:
+            console.print(f"[red]Low resources (disk: {snap.disk_free_gb:.1f}GB). Pausing.[/red]")
+            break
+        if decision["should_checkpoint"]:
+            console.print(f"[yellow]High memory usage ({snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB). Checkpointing.[/yellow]")
+            auto_commit("ricet overnight: resource checkpoint")
+        if decision.get("should_cleanup"):
+            cleanup_old_checkpoints()
+
+        console.print(f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan] "
+                      f"[dim](CPU: {snap.cpu_percent:.0f}%, RAM: {snap.ram_used_gb:.1f}/{snap.ram_total_gb:.1f}GB, "
+                      f"Disk: {snap.disk_free_gb:.0f}GB free)[/dim]")
 
         result = subprocess.run(
             [
@@ -705,6 +749,20 @@ def overnight(
         if result.returncode != 0:
             console.print(f"[red]Error in iteration {i + 1}[/red]")
             console.print(result.stderr)
+
+        # Auto-trigger falsifier verification after each iteration
+        from core.agents import execute_agent_task, AgentType
+        console.print("[yellow]Running falsifier verification...[/yellow]")
+        falsifier_task = (
+            f"Falsify and validate the results from the latest iteration. "
+            f"Check for: data leakage, statistical validity, confounders, "
+            f"reproducibility issues. Original task: {tasks}"
+        )
+        falsifier_result = execute_agent_task(AgentType.FALSIFIER, falsifier_task)
+        if falsifier_result.status == "success":
+            console.print(f"[green]Falsifier: {falsifier_result.output[:200]}[/green]")
+        else:
+            console.print(f"[yellow]Falsifier flagged issues: {falsifier_result.output[:200]}[/yellow]")
 
         # Check for completion signal
         if Path("state/DONE").exists():
@@ -1616,6 +1674,24 @@ def runbook(
 
     if execute:
         auto_commit(f"ricet runbook: executed {file.name}")
+
+
+@app.command()
+def cite(
+    query: str = typer.Argument(help="Literature search query"),
+    max_results: int = typer.Option(5, "--max", "-n", help="Max papers to cite"),
+):
+    """Search literature and add citations to references.bib."""
+    from core.paper import search_and_cite
+
+    console.print(f"[bold]Searching: {query}[/bold]")
+    results = search_and_cite(query, max_results=max_results)
+    if results:
+        for r in results:
+            console.print(f"  [green]+[/green] {r['key']}: {r.get('title', '')[:80]}")
+        auto_commit(f"ricet cite: added {len(results)} references for '{query[:50]}'")
+    else:
+        console.print("[yellow]No results found (Claude may be unavailable).[/yellow]")
 
 
 if __name__ == "__main__":

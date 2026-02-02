@@ -503,6 +503,76 @@
       "createdAt": "2026-02-02T08:22:28.327Z",
       "model": "haiku",
       "modelRoutedBy": "router"
+    },
+    "agent-1770021674579-0t1ufp": {
+      "agentId": "agent-1770021674579-0t1ufp",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "echo hello world"
+      },
+      "createdAt": "2026-02-02T08:41:14.582Z",
+      "model": "haiku",
+      "modelRoutedBy": "router"
+    },
+    "agent-1770022150593-rr04iw": {
+      "agentId": "agent-1770022150593-rr04iw",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "echo hello world"
+      },
+      "createdAt": "2026-02-02T08:49:10.596Z",
+      "model": "haiku",
+      "modelRoutedBy": "router"
+    },
+    "agent-1770023159134-97o9xl": {
+      "agentId": "agent-1770023159134-97o9xl",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "echo hello world"
+      },
+      "createdAt": "2026-02-02T09:05:59.137Z",
+      "model": "haiku",
+      "modelRoutedBy": "router"
+    },
+    "agent-1770023831365-adfk3v": {
+      "agentId": "agent-1770023831365-adfk3v",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "echo hello world"
+      },
+      "createdAt": "2026-02-02T09:17:11.369Z",
+      "model": "haiku",
+      "modelRoutedBy": "router"
+    },
+    "agent-1770023855378-vrq2uj": {
+      "agentId": "agent-1770023855378-vrq2uj",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "echo hello world"
+      },
+      "createdAt": "2026-02-02T09:17:35.380Z",
+      "model": "haiku",
+      "modelRoutedBy": "router"
     }
   },
   "version": "3.0.0"

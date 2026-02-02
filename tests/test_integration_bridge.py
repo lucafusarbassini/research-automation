@@ -103,7 +103,7 @@ class TestConfTestFixture:
         with patch("core.agents._get_bridge", return_value=mock_bridge):
             result = execute_agent_task(AgentType.RESEARCHER, "find papers")
             assert result.status == "success"
-            assert result.output == "fixture test"
+            assert "fixture test" in result.output
 
     def test_mock_bridge_fixture_knowledge(self, mock_bridge, tmp_path):
         from unittest.mock import patch

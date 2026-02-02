@@ -78,10 +78,12 @@ ricet memory "effect of learning rate on convergence"
 A complete LaTeX publication workflow ships with every project:
 
 - Structured `main.tex` template with standard sections
-- BibTeX citation management
+- BibTeX citation management with `ricet cite <query>` (search → format → append to .bib)
 - Automatic figure reference checking
-- Style analysis and transfer (sentence length, passive voice, hedging metrics)
+- Style analysis and transfer: `ricet paper adapt-style --reference <paper>`
 - One-command compilation: `ricet paper build`
+
+For exhaustive cross-discipline paper discovery, we recommend [PaperBoat](https://paperboatch.com/) — an AI-powered service that scans thousands of journals daily and delivers personalized paper matches. Useful as a background SOTA knowledge source that updates daily across all disciplines.
 
 ### Overnight Autonomous Mode
 
