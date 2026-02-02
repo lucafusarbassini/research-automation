@@ -1,0 +1,3987 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Scientific research automation powered by Claude Code.">
+      
+      
+      
+        <link rel="canonical" href="https://lucafusarbassini.github.io/research-automation/features/">
+      
+      
+        <link rel="prev" href="../quickstart/">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Features - ricet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="deep-purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#features" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ricet" class="md-header__button md-logo" aria-label="ricet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ricet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Features
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="deep-purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="deep-purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/lucafusarbassini/research-automation" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    research-automation
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ricet" class="md-nav__button md-logo" aria-label="ricet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ricet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/lucafusarbassini/research-automation" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    research-automation
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#multi-agent-orchestration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Agent Orchestration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-Agent Orchestration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task Routing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-dag-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task DAG Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-auto-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Auto-Discovery
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MCP Auto-Discovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tiers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tiers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-0-claude-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 0: claude-flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overnight-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overnight Mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overnight Mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enhanced-overnight-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enhanced Overnight Script
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#knowledge-accumulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowledge Accumulation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Knowledge Accumulation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sections
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Update
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vector-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vector Search
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cross-project-knowledge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Project Knowledge
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paper-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paper Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Paper Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#latex-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LaTeX Template
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#figure-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Figure Generation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#citation-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Citation Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compilation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compilation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#style-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Style Transfer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproducibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducibility
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reproducibility">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Logging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#artifact-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Artifact Registry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataset-hashing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataset Hashing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Security">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#secret-scanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secret Scanning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#immutable-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immutable Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permission Levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Logging
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Model Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#budget-aware-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Budget-Aware Fallback
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#thinking-mode-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Thinking Mode Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#session-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Session Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#creating-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#snapshots-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Snapshots and Recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notifications
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notifications">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#throttling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Throttling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Discovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-repository-coordination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Repository Coordination
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross-Repository Coordination">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#linking-repos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linking Repos
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coordinated-commits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinated Commits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rag-indexing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RAG Indexing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permission Boundaries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#auto-commit-push" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Commit &amp; Push
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Auto-Commit &amp; Push">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#covered-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Covered Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#claude-powered-intelligence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude-Powered Intelligence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Claude-Powered Intelligence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#disabling-claude-calls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disabling Claude Calls
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adopt-existing-repositories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adopt Existing Repositories
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adopt Existing Repositories">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-adopt-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Adopt Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to Use
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collaborative-research" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collaborative Research
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Collaborative Research">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-repository-rag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Repository RAG
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross-Repository RAG">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#linking-repos_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linking Repos
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-indexing-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Indexing Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#searching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Searching
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-boundaries_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permission Boundaries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-repos-during-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connecting Repos During Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-repos-later" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connecting Repos Later
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#auto-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Documentation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Auto-Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manual-trigger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual Trigger
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automatic-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#autonomous-routines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autonomous Routines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Autonomous Routines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#confirmation-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirmation Gates
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#literature-search-citation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Literature Search &amp; Citation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#style-transfer_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Style Transfer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automated-test-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated Test Generation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#package-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Package Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#daily-maintenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Daily Maintenance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#goal-fidelity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal Fidelity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-project-learning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Project Learning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-server-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Server Discovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dual-repository-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dual-Repository Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#url-browsing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        URL Browsing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#infrastructure-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Infrastructure Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runbook-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runbook Execution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#autonomous-overnight-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autonomous Overnight Enhancements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Autonomous Overnight Enhancements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-sandbox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Sandbox
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#falsifier-auto-trigger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Falsifier Auto-Trigger
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resource-aware-scheduling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource-Aware Scheduling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automated-research-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated Research Workflow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Automated Research Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reproducibility-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducibility Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#voice-prompting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voice Prompting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mobile-pwa-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mobile &amp; PWA Access
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interactive-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive Dashboard
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interactive Dashboard">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#panels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Panels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#figure-gallery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Figure Gallery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#git-worktree-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Git Worktree Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-queue-spooler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task Queue &amp; Spooler
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#website-builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Website Builder
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#doability-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Doability Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-suggestions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prompt Suggestions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rag-powered-mcp-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RAG-Powered MCP Discovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paperboat-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PaperBoat Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#multi-agent-orchestration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Agent Orchestration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-Agent Orchestration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task Routing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-dag-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task DAG Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-auto-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Auto-Discovery
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MCP Auto-Discovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tiers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tiers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-0-claude-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 0: claude-flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overnight-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overnight Mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overnight Mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enhanced-overnight-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enhanced Overnight Script
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#knowledge-accumulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowledge Accumulation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Knowledge Accumulation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sections
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Update
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vector-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vector Search
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cross-project-knowledge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Project Knowledge
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paper-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paper Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Paper Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#latex-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LaTeX Template
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#figure-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Figure Generation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#citation-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Citation Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compilation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compilation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#style-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Style Transfer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproducibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducibility
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reproducibility">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Logging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#artifact-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Artifact Registry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataset-hashing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataset Hashing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Security">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#secret-scanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secret Scanning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#immutable-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immutable Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permission Levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Logging
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Model Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#budget-aware-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Budget-Aware Fallback
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#thinking-mode-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Thinking Mode Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#session-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Session Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#creating-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#snapshots-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Snapshots and Recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notifications
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notifications">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#throttling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Throttling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Discovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-repository-coordination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Repository Coordination
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross-Repository Coordination">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#linking-repos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linking Repos
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coordinated-commits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinated Commits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rag-indexing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RAG Indexing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permission Boundaries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#auto-commit-push" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Commit &amp; Push
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Auto-Commit &amp; Push">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#covered-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Covered Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#claude-powered-intelligence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude-Powered Intelligence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Claude-Powered Intelligence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#disabling-claude-calls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disabling Claude Calls
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adopt-existing-repositories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adopt Existing Repositories
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adopt Existing Repositories">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-adopt-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Adopt Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to Use
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collaborative-research" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collaborative Research
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Collaborative Research">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-repository-rag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Repository RAG
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross-Repository RAG">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#linking-repos_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linking Repos
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-indexing-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Indexing Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#searching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Searching
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-boundaries_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permission Boundaries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-repos-during-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connecting Repos During Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-repos-later" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connecting Repos Later
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#auto-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Documentation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Auto-Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manual-trigger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual Trigger
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automatic-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#autonomous-routines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autonomous Routines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Autonomous Routines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#confirmation-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirmation Gates
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#literature-search-citation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Literature Search &amp; Citation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#style-transfer_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Style Transfer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automated-test-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated Test Generation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#package-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Package Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#daily-maintenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Daily Maintenance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#goal-fidelity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal Fidelity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-project-learning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Project Learning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-server-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Server Discovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dual-repository-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dual-Repository Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#url-browsing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        URL Browsing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#infrastructure-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Infrastructure Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runbook-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runbook Execution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#autonomous-overnight-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autonomous Overnight Enhancements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Autonomous Overnight Enhancements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-sandbox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Sandbox
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#falsifier-auto-trigger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Falsifier Auto-Trigger
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resource-aware-scheduling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource-Aware Scheduling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automated-research-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated Research Workflow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Automated Research Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reproducibility-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducibility Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#voice-prompting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voice Prompting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mobile-pwa-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mobile &amp; PWA Access
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interactive-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive Dashboard
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interactive Dashboard">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#panels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Panels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#figure-gallery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Figure Gallery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#git-worktree-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Git Worktree Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-queue-spooler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task Queue &amp; Spooler
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#website-builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Website Builder
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#doability-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Doability Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-suggestions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prompt Suggestions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rag-powered-mcp-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RAG-Powered MCP Discovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paperboat-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PaperBoat Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h1>
+<p>A complete reference for every major feature in ricet, designed by <strong>Luca Fusar Bassini</strong>.</p>
+<hr />
+<h2 id="multi-agent-orchestration">Multi-Agent Orchestration<a class="headerlink" href="#multi-agent-orchestration" title="Permanent link">&para;</a></h2>
+<p>ricet uses a hierarchical agent system where a Master agent routes tasks to six specialized sub-agents.</p>
+<h3 id="agent-types">Agent Types<a class="headerlink" href="#agent-types" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>Role</th>
+<th>Default Budget</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Master</strong></td>
+<td>Orchestrator -- parses requests, routes, merges results</td>
+<td>--</td>
+</tr>
+<tr>
+<td><strong>Researcher</strong></td>
+<td>Literature search, paper synthesis, citation management</td>
+<td>15%</td>
+</tr>
+<tr>
+<td><strong>Coder</strong></td>
+<td>Code writing, implementation, bug fixes</td>
+<td>35%</td>
+</tr>
+<tr>
+<td><strong>Reviewer</strong></td>
+<td>Code quality audits, improvement suggestions</td>
+<td>10%</td>
+</tr>
+<tr>
+<td><strong>Falsifier</strong></td>
+<td>Adversarial validation, data leakage checks, statistical audits</td>
+<td>20%</td>
+</tr>
+<tr>
+<td><strong>Writer</strong></td>
+<td>Paper sections, documentation, reports</td>
+<td>15%</td>
+</tr>
+<tr>
+<td><strong>Cleaner</strong></td>
+<td>Refactoring, optimization, dead code removal</td>
+<td>5%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="task-routing">Task Routing<a class="headerlink" href="#task-routing" title="Permanent link">&para;</a></h3>
+<p>Tasks are routed using Claude CLI intelligence (with keyword fallback). The Master agent analyzes your request and dispatches it to the best-fit sub-agent. For example:</p>
+<ul>
+<li>"Search for papers on attention mechanisms" routes to <strong>Researcher</strong></li>
+<li>"Implement a data loader for the CSV files" routes to <strong>Coder</strong></li>
+<li>"Check if there is data leakage in the pipeline" routes to <strong>Falsifier</strong></li>
+<li>"Write the methods section" routes to <strong>Writer</strong></li>
+</ul>
+<h3 id="task-dag-execution">Task DAG Execution<a class="headerlink" href="#task-dag-execution" title="Permanent link">&para;</a></h3>
+<p>Complex tasks can be decomposed into a directed acyclic graph (DAG) of subtasks. The orchestrator resolves dependencies and runs independent tasks in parallel using <code>ThreadPoolExecutor</code>.</p>
+<p>When claude-flow is available, swarm execution delegates to the bridge for enhanced coordination.</p>
+<hr />
+<h2 id="mcp-auto-discovery">MCP Auto-Discovery<a class="headerlink" href="#mcp-auto-discovery" title="Permanent link">&para;</a></h2>
+<p>ricet includes a catalog of 70+ Model Context Protocol (MCP) integrations organized into eight tiers. MCPs are loaded automatically based on task keywords.</p>
+<h3 id="tiers">Tiers<a class="headerlink" href="#tiers" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Category</th>
+<th>Example MCPs</th>
+<th>Loaded When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Essential</td>
+<td>paper-search, arxiv, git, github, filesystem, memory, fetch</td>
+<td>Always</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Data</td>
+<td>postgres, sqlite, duckdb, chroma</td>
+<td>"database", "sql", "data"</td>
+</tr>
+<tr>
+<td>3</td>
+<td>ML/DL</td>
+<td>jupyter, huggingface, mlflow, wandb</td>
+<td>"model", "training", "neural"</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Math</td>
+<td>wolfram, sympy</td>
+<td>"math", "equation", "derivative"</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Paper</td>
+<td>latex, overleaf</td>
+<td>"paper", "latex", "manuscript"</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Communication</td>
+<td>slack, gmail, sendgrid</td>
+<td>"notify", "email", "slack"</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Cloud</td>
+<td>aws, docker, terraform</td>
+<td>"deploy", "aws", "cloud"</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Startup</td>
+<td>vercel, gamma, stripe, notion</td>
+<td>"website", "slides", "presentation"</td>
+</tr>
+</tbody>
+</table>
+<h3 id="tier-0-claude-flow">Tier 0: claude-flow<a class="headerlink" href="#tier-0-claude-flow" title="Permanent link">&para;</a></h3>
+<p>When claude-flow is installed, it is injected as a tier-0 MCP providing swarm orchestration, HNSW vector memory, and 3-tier model routing.</p>
+<hr />
+<h2 id="overnight-mode">Overnight Mode<a class="headerlink" href="#overnight-mode" title="Permanent link">&para;</a></h2>
+<p>Run autonomous research while you sleep:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ricet<span class="w"> </span>overnight<span class="w"> </span>--iterations<span class="w"> </span><span class="m">20</span>
+</code></pre></div>
+<h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Reads <code>state/TODO.md</code> for the task list.</li>
+<li>Sends each task to Claude via the CLI in <code>--dangerously-skip-permissions</code> mode.</li>
+<li>After each iteration, checks for a <code>state/DONE</code> signal file.</li>
+<li>Auto-commits changes after each completed subtask.</li>
+<li>Monitors resources and creates checkpoints.</li>
+<li>Sends notifications on errors or completion (if configured).</li>
+</ol>
+<h3 id="enhanced-overnight-script">Enhanced Overnight Script<a class="headerlink" href="#enhanced-overnight-script" title="Permanent link">&para;</a></h3>
+<p>The <code>scripts/overnight-enhanced.sh</code> script adds:</p>
+<ul>
+<li>Automatic error recovery and retry logic</li>
+<li>Resource monitoring between iterations</li>
+<li>State snapshots for rollback</li>
+<li>Configurable iteration limits and timeouts</li>
+</ul>
+<hr />
+<h2 id="knowledge-accumulation">Knowledge Accumulation<a class="headerlink" href="#knowledge-accumulation" title="Permanent link">&para;</a></h2>
+<p>Every project maintains a living encyclopedia at <code>knowledge/ENCYCLOPEDIA.md</code>.</p>
+<h3 id="sections">Sections<a class="headerlink" href="#sections" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Environment</strong> -- System info, package versions, hardware.</li>
+<li><strong>Machines</strong> -- Local and remote compute resources.</li>
+<li><strong>Tricks</strong> -- Useful patterns and shortcuts discovered during work.</li>
+<li><strong>Decisions</strong> -- Design choices and their rationale.</li>
+<li><strong>What Works</strong> -- Successful approaches for future reference.</li>
+<li><strong>What Doesn't Work</strong> -- Failed approaches to avoid repeating.</li>
+</ul>
+<h3 id="auto-update">Auto-Update<a class="headerlink" href="#auto-update" title="Permanent link">&para;</a></h3>
+<p>After every task, the post-task hook and knowledge module can append new entries. Each entry includes a timestamp for traceability.</p>
+<h3 id="vector-search">Vector Search<a class="headerlink" href="#vector-search" title="Permanent link">&para;</a></h3>
+<p>When claude-flow is available, knowledge entries are dual-written to both the markdown file and an HNSW vector index. This enables semantic search over accumulated knowledge using <code>ricet memory search "query"</code>.</p>
+<h3 id="cross-project-knowledge">Cross-Project Knowledge<a class="headerlink" href="#cross-project-knowledge" title="Permanent link">&para;</a></h3>
+<p>The shared volume (<code>/shared/knowledge</code>) enables knowledge transfer across projects. Learnings from one project can inform another.</p>
+<hr />
+<h2 id="paper-pipeline">Paper Pipeline<a class="headerlink" href="#paper-pipeline" title="Permanent link">&para;</a></h2>
+<p>A complete academic paper workflow:</p>
+<h3 id="latex-template">LaTeX Template<a class="headerlink" href="#latex-template" title="Permanent link">&para;</a></h3>
+<p>Every project includes a LaTeX template (<code>paper/main.tex</code>) with:</p>
+<ul>
+<li>Standard sections: Abstract, Introduction, Methods, Results, Discussion, Conclusion</li>
+<li>natbib citation support</li>
+<li>Pre-configured packages: amsmath, graphicx, hyperref, booktabs, microtype</li>
+</ul>
+<h3 id="figure-generation">Figure Generation<a class="headerlink" href="#figure-generation" title="Permanent link">&para;</a></h3>
+<p>Publication-quality figures with colorblind-safe defaults:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">core.paper</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_rcparams</span><span class="p">,</span> <span class="n">COLORS</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">apply_rcparams</span><span class="p">()</span>  <span class="c1"># Sets matplotlib to publication quality</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Colorblind-safe palette</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">COLORS</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="s2">&quot;blue&quot;</span><span class="p">:</span> <span class="s2">&quot;#0077BB&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="s2">&quot;orange&quot;</span><span class="p">:</span> <span class="s2">&quot;#EE7733&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="s2">&quot;green&quot;</span><span class="p">:</span> <span class="s2">&quot;#009988&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="s2">&quot;red&quot;</span><span class="p">:</span> <span class="s2">&quot;#CC3311&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="s2">&quot;purple&quot;</span><span class="p">:</span> <span class="s2">&quot;#AA3377&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="s2">&quot;grey&quot;</span><span class="p">:</span> <span class="s2">&quot;#BBBBBB&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">}</span>
+</code></pre></div>
+<p>Figure specifications:</p>
+<ul>
+<li>Vector PDF output at 300 DPI</li>
+<li>Arial/Helvetica font, 8-10pt</li>
+<li>Single column (3.5in) or double column (7in) widths</li>
+<li>Spines removed from top and right for clean appearance</li>
+</ul>
+<h3 id="citation-management">Citation Management<a class="headerlink" href="#citation-management" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">core.paper</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_citation</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">add_citation</span><span class="p">(</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="s2">&quot;Smith2024&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">author</span><span class="o">=</span><span class="s2">&quot;Smith, J. and Doe, A.&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Efficient Transformers for Scientific Discovery&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">year</span><span class="o">=</span><span class="s2">&quot;2024&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">journal</span><span class="o">=</span><span class="s2">&quot;Nature Machine Intelligence&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">doi</span><span class="o">=</span><span class="s2">&quot;10.1038/s42256-024-00001-1&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">)</span>
+</code></pre></div>
+<h3 id="compilation">Compilation<a class="headerlink" href="#compilation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span>paper<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>all
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># Or: ricet paper build</span>
+</code></pre></div>
+<p>Runs <code>pdflatex</code> -&gt; <code>biber</code> -&gt; <code>pdflatex</code> -&gt; <code>pdflatex</code> for a complete build.</p>
+<h3 id="style-transfer">Style Transfer<a class="headerlink" href="#style-transfer" title="Permanent link">&para;</a></h3>
+<p>The <code>core/style_transfer.py</code> module can analyze the style of a reference paper and apply similar patterns to your writing, with plagiarism checks to ensure originality.</p>
+<hr />
+<h2 id="reproducibility">Reproducibility<a class="headerlink" href="#reproducibility" title="Permanent link">&para;</a></h2>
+<h3 id="run-logging">Run Logging<a class="headerlink" href="#run-logging" title="Permanent link">&para;</a></h3>
+<p>Every experiment run is recorded:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">core.reproducibility</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunLog</span><span class="p">,</span> <span class="n">log_run</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">run</span> <span class="o">=</span> <span class="n">RunLog</span><span class="p">(</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">run_id</span><span class="o">=</span><span class="s2">&quot;exp_001&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">command</span><span class="o">=</span><span class="s2">&quot;python train.py --lr 0.001&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">parameters</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;lr&quot;</span><span class="p">:</span> <span class="mf">0.001</span><span class="p">,</span> <span class="s2">&quot;epochs&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s2">&quot;batch_size&quot;</span><span class="p">:</span> <span class="mi">32</span><span class="p">},</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">git_hash</span><span class="o">=</span><span class="s2">&quot;abc1234&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="n">log_run</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
+</code></pre></div>
+<p>Each log captures: command, parameters, metrics, git hash, start/end timestamps, and artifact references.</p>
+<h3 id="artifact-registry">Artifact Registry<a class="headerlink" href="#artifact-registry" title="Permanent link">&para;</a></h3>
+<p>Artifacts (models, datasets, figures) are registered with SHA-256 checksums:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">core.reproducibility</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_artifact</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">register_artifact</span><span class="p">(</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="s2">&quot;trained_model&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;outputs/model.pt&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">run_id</span><span class="o">=</span><span class="s2">&quot;exp_001&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="mf">0.95</span><span class="p">},</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">)</span>
+</code></pre></div>
+<p>Integrity can be verified at any time to detect unintended modifications.</p>
+<h3 id="dataset-hashing">Dataset Hashing<a class="headerlink" href="#dataset-hashing" title="Permanent link">&para;</a></h3>
+<p>Datasets are hashed to ensure consistency across runs. If a dataset changes unexpectedly, the system flags a warning.</p>
+<hr />
+<h2 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h2>
+<h3 id="secret-scanning">Secret Scanning<a class="headerlink" href="#secret-scanning" title="Permanent link">&para;</a></h3>
+<p>Regex-based detection of API keys, tokens, and private keys in committed files:</p>
+<ul>
+<li>OpenAI keys (<code>sk-...</code>)</li>
+<li>GitHub PATs (<code>ghp_...</code>)</li>
+<li>AWS credentials</li>
+<li>PEM/private key files</li>
+<li>Generic password/token patterns</li>
+</ul>
+<h3 id="immutable-files">Immutable Files<a class="headerlink" href="#immutable-files" title="Permanent link">&para;</a></h3>
+<p>These paths are never modified by automation:</p>
+<ul>
+<li><code>.env</code>, <code>.env.local</code></li>
+<li><code>secrets/*</code></li>
+<li><code>*.pem</code>, <code>*.key</code></li>
+</ul>
+<h3 id="permission-levels">Permission Levels<a class="headerlink" href="#permission-levels" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Examples</th>
+<th>Policy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Safe</strong></td>
+<td>Read workspace, run Python, git operations</td>
+<td>Auto-approve</td>
+</tr>
+<tr>
+<td><strong>Moderate</strong></td>
+<td>Network requests, create directories</td>
+<td>Log and proceed</td>
+</tr>
+<tr>
+<td><strong>Elevated</strong></td>
+<td>Delete files, modify config, push to remote</td>
+<td>Ask in interactive, proceed in overnight</td>
+</tr>
+<tr>
+<td><strong>Dangerous</strong></td>
+<td>Sudo, modify secrets, spend money, send emails</td>
+<td>Always ask</td>
+</tr>
+</tbody>
+</table>
+<h3 id="audit-logging">Audit Logging<a class="headerlink" href="#audit-logging" title="Permanent link">&para;</a></h3>
+<p>All autonomous actions are recorded in <code>state/audit.log</code> with timestamps and action descriptions.</p>
+<hr />
+<h2 id="model-routing">Model Routing<a class="headerlink" href="#model-routing" title="Permanent link">&para;</a></h2>
+<p>Automatic model selection based on task complexity:</p>
+<table>
+<thead>
+<tr>
+<th>Complexity</th>
+<th>Model</th>
+<th>Use Cases</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple</td>
+<td>claude-haiku</td>
+<td>Formatting, lookups, classification</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>claude-sonnet</td>
+<td>Code writing, analysis, general tasks</td>
+</tr>
+<tr>
+<td>Complex</td>
+<td>claude-opus</td>
+<td>Debugging, architecture, research</td>
+</tr>
+<tr>
+<td>Critical</td>
+<td>claude-opus</td>
+<td>Validation, paper writing, production</td>
+</tr>
+</tbody>
+</table>
+<h3 id="budget-aware-fallback">Budget-Aware Fallback<a class="headerlink" href="#budget-aware-fallback" title="Permanent link">&para;</a></h3>
+<p>When the remaining budget drops below 20%, all tasks route to Haiku regardless of complexity.</p>
+<h3 id="thinking-mode-selection">Thinking Mode Selection<a class="headerlink" href="#thinking-mode-selection" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Task Type</th>
+<th>Thinking Mode</th>
+<th>Budget Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple</td>
+<td>None</td>
+<td>Minimal</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Standard</td>
+<td>Normal</td>
+</tr>
+<tr>
+<td>Complex</td>
+<td>Extended</td>
+<td>3% of budget</td>
+</tr>
+<tr>
+<td>Critical</td>
+<td>Ultra-think</td>
+<td>Maximum</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="session-management">Session Management<a class="headerlink" href="#session-management" title="Permanent link">&para;</a></h2>
+<h3 id="creating-sessions">Creating Sessions<a class="headerlink" href="#creating-sessions" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>ricet<span class="w"> </span>start<span class="w">                          </span><span class="c1"># Auto-named by timestamp</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>ricet<span class="w"> </span>start<span class="w"> </span>--session-name<span class="w"> </span><span class="s2">&quot;exp-v2&quot;</span><span class="w">  </span><span class="c1"># Named session</span>
+</code></pre></div>
+<h3 id="session-data">Session Data<a class="headerlink" href="#session-data" title="Permanent link">&para;</a></h3>
+<p>Each session tracks:</p>
+<ul>
+<li>Name and timestamps</li>
+<li>Status (active / completed)</li>
+<li>Token usage estimate</li>
+<li>Tasks completed and failed</li>
+<li>Checkpoint history</li>
+</ul>
+<h3 id="snapshots-and-recovery">Snapshots and Recovery<a class="headerlink" href="#snapshots-and-recovery" title="Permanent link">&para;</a></h3>
+<p>Sessions can be snapshotted for recovery. If an error occurs, the on-error hook saves the current state directory for debugging.</p>
+<hr />
+<h2 id="notifications">Notifications<a class="headerlink" href="#notifications" title="Permanent link">&para;</a></h2>
+<h3 id="channels">Channels<a class="headerlink" href="#channels" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Slack</strong> -- Via webhook URL</li>
+<li><strong>Email</strong> -- Via SMTP (Gmail and others)</li>
+<li><strong>Desktop</strong> -- Via <code>notify-send</code> on Linux</li>
+</ul>
+<h3 id="throttling">Throttling<a class="headerlink" href="#throttling" title="Permanent link">&para;</a></h3>
+<p>Notifications of the same type are throttled to a configurable interval (default: 5 minutes) to prevent spam during long overnight runs.</p>
+<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Set via state/notification_config.json or during project init</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="o">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="s2">&quot;slack_webhook&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://hooks.slack.com/...&quot;</span>,
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="s2">&quot;email_to&quot;</span>:<span class="w"> </span><span class="s2">&quot;you@example.com&quot;</span>,
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="s2">&quot;desktop_enabled&quot;</span>:<span class="w"> </span>true,
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="s2">&quot;throttle_seconds&quot;</span>:<span class="w"> </span><span class="m">300</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="o">}</span>
+</code></pre></div>
+<hr />
+<h2 id="environment-discovery">Environment Discovery<a class="headerlink" href="#environment-discovery" title="Permanent link">&para;</a></h2>
+<p>The <code>core/environment.py</code> module auto-detects:</p>
+<ul>
+<li>Operating system and version</li>
+<li>Python version</li>
+<li>CPU architecture</li>
+<li>GPU availability and model</li>
+<li>RAM capacity</li>
+<li>Conda and Docker availability</li>
+</ul>
+<p>This information is written to the project encyclopedia during initialization and used for resource-aware task planning.</p>
+<hr />
+<h2 id="cross-repository-coordination">Cross-Repository Coordination<a class="headerlink" href="#cross-repository-coordination" title="Permanent link">&para;</a></h2>
+<h3 id="linking-repos">Linking Repos<a class="headerlink" href="#linking-repos" title="Permanent link">&para;</a></h3>
+<p>Via CLI:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>ricet<span class="w"> </span>link<span class="w"> </span>/path/to/data-pipeline<span class="w"> </span>--name<span class="w"> </span>data
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>ricet<span class="w"> </span>link<span class="w"> </span>/path/to/shared-lib
+</code></pre></div>
+<p>Or programmatically:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">core.cross_repo</span><span class="w"> </span><span class="kn">import</span> <span class="n">link_repository</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">link_repository</span><span class="p">(</span><span class="s2">&quot;data-pipeline&quot;</span><span class="p">,</span> <span class="s2">&quot;/path/to/data-pipeline&quot;</span><span class="p">,</span> <span class="n">permissions</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;read&quot;</span><span class="p">,</span> <span class="s2">&quot;write&quot;</span><span class="p">])</span>
+</code></pre></div>
+<h3 id="coordinated-commits">Coordinated Commits<a class="headerlink" href="#coordinated-commits" title="Permanent link">&para;</a></h3>
+<p>Push the same commit message across linked repos:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">core.cross_repo</span><span class="w"> </span><span class="kn">import</span> <span class="n">coordinated_commit</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">coordinated_commit</span><span class="p">(</span><span class="s2">&quot;Sync shared schema v2&quot;</span><span class="p">,</span> <span class="n">repo_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;data-pipeline&quot;</span><span class="p">,</span> <span class="s2">&quot;analysis&quot;</span><span class="p">])</span>
+</code></pre></div>
+<h3 id="rag-indexing">RAG Indexing<a class="headerlink" href="#rag-indexing" title="Permanent link">&para;</a></h3>
+<p>Linked repos are automatically indexed for search:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">core.cross_repo</span><span class="w"> </span><span class="kn">import</span> <span class="n">index_linked_repo</span><span class="p">,</span> <span class="n">search_all_linked</span><span class="p">,</span> <span class="n">reindex_all</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># Index a single repo</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">index_linked_repo</span><span class="p">(</span><span class="n">repo</span><span class="p">)</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="c1"># Search across all linked repos</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="n">results</span> <span class="o">=</span> <span class="n">search_all_linked</span><span class="p">(</span><span class="s2">&quot;attention mechanism&quot;</span><span class="p">)</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="c1"># Re-index everything</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="n">reindex_all</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="permission-boundaries">Permission Boundaries<a class="headerlink" href="#permission-boundaries" title="Permanent link">&para;</a></h3>
+<p>Each linked repo has explicit permission grants. Cross-repo actions require matching permissions, preventing unauthorized modifications. Linked repos default to read-only.</p>
+<hr />
+<h2 id="auto-commit-push">Auto-Commit &amp; Push<a class="headerlink" href="#auto-commit-push" title="Permanent link">&para;</a></h2>
+<p>Every state-modifying CLI command automatically commits and pushes changes to git. This ensures your work is always versioned and backed up.</p>
+<h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
+<p>Control via environment variables:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RICET_AUTO_COMMIT</span><span class="o">=</span><span class="nb">true</span><span class="w">   </span><span class="c1"># Enable/disable (default: true)</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AUTO_PUSH</span><span class="o">=</span><span class="nb">true</span><span class="w">           </span><span class="c1"># Push after commit (default: true)</span>
+</code></pre></div>
+<h3 id="covered-commands">Covered Commands<a class="headerlink" href="#covered-commands" title="Permanent link">&para;</a></h3>
+<p>Auto-commit runs after: <code>init</code>, <code>start</code>, <code>config</code>, <code>overnight</code>, <code>paper build</code>, <code>verify</code>, <code>debug</code>, <code>projects register</code>, <code>worktree add</code>, <code>worktree remove</code>. Read-only commands (<code>status</code>, <code>agents</code>, <code>memory</code>, <code>metrics</code>) are excluded.</p>
+<hr />
+<h2 id="claude-powered-intelligence">Claude-Powered Intelligence<a class="headerlink" href="#claude-powered-intelligence" title="Permanent link">&para;</a></h2>
+<p>Seven core modules use the Claude CLI for intelligent decisions before falling back to keyword heuristics:</p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Function</th>
+<th>What Claude Decides</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agents</code></td>
+<td><code>route_task</code></td>
+<td>Best agent type for a task</td>
+</tr>
+<tr>
+<td><code>model_router</code></td>
+<td><code>classify_task_complexity</code></td>
+<td>Simple / medium / complex / critical</td>
+</tr>
+<tr>
+<td><code>auto_debug</code></td>
+<td><code>suggest_fix</code></td>
+<td>One-sentence fix for an error</td>
+</tr>
+<tr>
+<td><code>doability</code></td>
+<td><code>assess_doability</code></td>
+<td>Feasibility assessment with scores</td>
+</tr>
+<tr>
+<td><code>prompt_suggestions</code></td>
+<td><code>suggest_next_steps</code></td>
+<td>Next 3-5 research steps</td>
+</tr>
+<tr>
+<td><code>verification</code></td>
+<td><code>_extract_factual_sentences</code></td>
+<td>Claims with confidence scores</td>
+</tr>
+<tr>
+<td><code>onboarding</code></td>
+<td><code>install_inferred_packages</code></td>
+<td>Alternative packages on failure</td>
+</tr>
+</tbody>
+</table>
+<h3 id="disabling-claude-calls">Disabling Claude Calls<a class="headerlink" href="#disabling-claude-calls" title="Permanent link">&para;</a></h3>
+<p>Set <code>RICET_NO_CLAUDE=true</code> to disable Claude CLI calls (useful for CI or offline work). All functions fall back gracefully to keyword heuristics.</p>
+<hr />
+<h2 id="adopt-existing-repositories">Adopt Existing Repositories<a class="headerlink" href="#adopt-existing-repositories" title="Permanent link">&para;</a></h2>
+<p>Transform any existing GitHub repo into a ricet project with one command:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Fork + clone + scaffold (recommended -- keeps original intact)</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>ricet<span class="w"> </span>adopt<span class="w"> </span>https://github.com/user/repo
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Clone without forking</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>ricet<span class="w"> </span>adopt<span class="w"> </span>https://github.com/user/repo<span class="w"> </span>--no-fork
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Scaffold a local directory in place</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>ricet<span class="w"> </span>adopt<span class="w"> </span>/path/to/local/repo
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1"># Custom name and target directory</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>ricet<span class="w"> </span>adopt<span class="w"> </span>https://github.com/user/repo<span class="w"> </span>--name<span class="w"> </span>my-project<span class="w"> </span>--path<span class="w"> </span>~/research
+</code></pre></div>
+<h3 id="what-adopt-does">What Adopt Does<a class="headerlink" href="#what-adopt-does" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Forks</strong> the repo via <code>gh repo fork --clone</code> (preserves the original).</li>
+<li><strong>Overlays</strong> the ricet workspace structure: <code>knowledge/</code>, <code>state/</code>, <code>config/</code>, <code>paper/</code>.</li>
+<li><strong>Pre-fills</strong> <code>knowledge/GOAL.md</code> from the repository README.</li>
+<li><strong>Registers</strong> the project in <code>~/.ricet/projects.json</code>.</li>
+<li><strong>Auto-commits</strong> the scaffolding changes.</li>
+</ol>
+<h3 id="when-to-use">When to Use<a class="headerlink" href="#when-to-use" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Bringing an old research repo under ricet management.</li>
+<li>Starting a new contribution to an open-source project.</li>
+<li>Setting up a collaborator's fork with ricet tooling.</li>
+</ul>
+<hr />
+<h2 id="collaborative-research">Collaborative Research<a class="headerlink" href="#collaborative-research" title="Permanent link">&para;</a></h2>
+<p>Multiple researchers can work on the same ricet repository without conflicts.</p>
+<h3 id="how-it-works_1">How It Works<a class="headerlink" href="#how-it-works_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Sync on start</strong>: <code>ricet start</code> runs <code>git pull --rebase</code> before beginning the session.</li>
+<li><strong>User attribution</strong>: Every encyclopedia entry includes the user's git email.</li>
+<li><strong>Merge-friendly files</strong>: <code>.gitattributes</code> uses <code>merge=union</code> for append-only files (<code>ENCYCLOPEDIA.md</code>, <code>PROGRESS.md</code>), which auto-merges without conflicts.</li>
+</ol>
+<h3 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h3>
+<p>Collaboration works automatically. Just ensure both researchers have push access to the repository and run <code>ricet start</code> at the beginning of each session.</p>
+<hr />
+<h2 id="cross-repository-rag">Cross-Repository RAG<a class="headerlink" href="#cross-repository-rag" title="Permanent link">&para;</a></h2>
+<p>Link external repositories so agents can search across all your code while only writing to the current project.</p>
+<h3 id="linking-repos_1">Linking Repos<a class="headerlink" href="#linking-repos_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Link a repository for RAG search (read-only by default)</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>ricet<span class="w"> </span>link<span class="w"> </span>/path/to/other-repo<span class="w"> </span>--name<span class="w"> </span>my-lib
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Auto-named from directory name</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>ricet<span class="w"> </span>link<span class="w"> </span>/path/to/data-pipeline
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c1"># Re-index all linked repos</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>ricet<span class="w"> </span>reindex
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="c1"># Remove a linked repo</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>ricet<span class="w"> </span>unlink<span class="w"> </span>my-lib
+</code></pre></div>
+<h3 id="how-indexing-works">How Indexing Works<a class="headerlink" href="#how-indexing-works" title="Permanent link">&para;</a></h3>
+<p>Linked repos are walked recursively. Files with extensions <code>.py</code>, <code>.md</code>, <code>.txt</code>, <code>.tex</code>, <code>.rst</code>, <code>.yml</code>, <code>.yaml</code>, <code>.json</code> are indexed. Hidden directories, <code>node_modules</code>, and <code>.git</code> are skipped.</p>
+<p>When claude-flow is available, files are stored in HNSW vector memory for semantic search. Otherwise, a local JSON index is created under <code>state/linked_indexes/</code>.</p>
+<h3 id="searching">Searching<a class="headerlink" href="#searching" title="Permanent link">&para;</a></h3>
+<p>Cross-repo results are automatically included when you search knowledge:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>ricet<span class="w"> </span>memory<span class="w"> </span><span class="s2">&quot;attention mechanism implementation&quot;</span>
+</code></pre></div>
+<p>Results from linked repos are tagged with their source name (e.g. <code>[my-lib] def attention(...)</code>).</p>
+<h3 id="permission-boundaries_1">Permission Boundaries<a class="headerlink" href="#permission-boundaries_1" title="Permanent link">&para;</a></h3>
+<p>Linked repos default to <code>["read"]</code> permissions. The permission system prevents any write operations to linked repos, ensuring you can search but never accidentally modify external code.</p>
+<h3 id="connecting-repos-during-setup">Connecting Repos During Setup<a class="headerlink" href="#connecting-repos-during-setup" title="Permanent link">&para;</a></h3>
+<p>When initializing a new project, you can link repos immediately after:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>ricet<span class="w"> </span>init<span class="w"> </span>my-project
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nb">cd</span><span class="w"> </span>my-project
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>ricet<span class="w"> </span>link<span class="w"> </span>~/code/shared-utils<span class="w"> </span>--name<span class="w"> </span>utils
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>ricet<span class="w"> </span>link<span class="w"> </span>~/code/data-pipeline<span class="w"> </span>--name<span class="w"> </span>data
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>ricet<span class="w"> </span>start<span class="w">   </span><span class="c1"># linked repos are re-indexed on every start</span>
+</code></pre></div>
+<h3 id="connecting-repos-later">Connecting Repos Later<a class="headerlink" href="#connecting-repos-later" title="Permanent link">&para;</a></h3>
+<p>You can link and unlink repos at any time during active development:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># In your existing project directory</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>ricet<span class="w"> </span>link<span class="w"> </span>/path/to/new-dependency
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>ricet<span class="w"> </span>reindex<span class="w">   </span><span class="c1"># manual re-index (also happens on ricet start)</span>
+</code></pre></div>
+<hr />
+<h2 id="auto-documentation">Auto-Documentation<a class="headerlink" href="#auto-documentation" title="Permanent link">&para;</a></h2>
+<p>When you develop new code in a ricet project, documentation can update automatically.</p>
+<h3 id="manual-trigger">Manual Trigger<a class="headerlink" href="#manual-trigger" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>ricet<span class="w"> </span>docs<span class="w">           </span><span class="c1"># scan project, update docs/API.md, README.md, docs/MODULES.md</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>ricet<span class="w"> </span>docs<span class="w"> </span>--force<span class="w">   </span><span class="c1"># run even if RICET_AUTO_DOCS is not set</span>
+</code></pre></div>
+<h3 id="automatic-mode">Automatic Mode<a class="headerlink" href="#automatic-mode" title="Permanent link">&para;</a></h3>
+<p>Set <code>RICET_AUTO_DOCS=true</code> to have documentation update after every state-modifying ricet command (via the auto-commit hook) and after every Claude task (via the post-task shell hook).</p>
+<p>What gets generated:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docs/API.md</code></td>
+<td>API reference with function signatures and docstrings</td>
+</tr>
+<tr>
+<td><code>docs/MODULES.md</code></td>
+<td>Table of all modules with public item counts</td>
+</tr>
+<tr>
+<td><code>README.md</code></td>
+<td>Missing CLI commands appended to the command table</td>
+</tr>
+</tbody>
+</table>
+<p>Existing content is never overwritten -- only new modules and commands are appended. The system scans <code>src/</code>, <code>lib/</code>, <code>core/</code>, <code>app/</code> and any top-level directories containing <code>.py</code> files.</p>
+<h3 id="how-it-works_2">How It Works<a class="headerlink" href="#how-it-works_2" title="Permanent link">&para;</a></h3>
+<ol>
+<li>AST-parses every <code>.py</code> file in source directories.</li>
+<li>Extracts public functions and classes (skips <code>_private</code> names).</li>
+<li>Compares against existing <code>docs/API.md</code> and <code>README.md</code>.</li>
+<li>Appends markdown stubs for anything missing.</li>
+<li>Regenerates <code>docs/MODULES.md</code> as a full index.</li>
+</ol>
+<hr />
+<h2 id="autonomous-routines">Autonomous Routines<a class="headerlink" href="#autonomous-routines" title="Permanent link">&para;</a></h2>
+<p>Schedule recurring tasks:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">core.autonomous</span><span class="w"> </span><span class="kn">import</span> <span class="n">ScheduledRoutine</span><span class="p">,</span> <span class="n">add_routine</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="n">routine</span> <span class="o">=</span> <span class="n">ScheduledRoutine</span><span class="p">(</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;nightly-validation&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Re-run all experiments and check reproducibility&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    <span class="n">schedule</span><span class="o">=</span><span class="s2">&quot;daily&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>    <span class="n">command</span><span class="o">=</span><span class="s2">&quot;ricet overnight --iterations 5&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="p">)</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="n">add_routine</span><span class="p">(</span><span class="n">routine</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="confirmation-gates">Confirmation Gates<a class="headerlink" href="#confirmation-gates" title="Permanent link">&para;</a></h3>
+<p>Routines that involve spending money or sending external communications require explicit user confirmation, even in autonomous mode.</p>
+<hr />
+<h2 id="literature-search-citation">Literature Search &amp; Citation<a class="headerlink" href="#literature-search-citation" title="Permanent link">&para;</a></h2>
+<p>Discover and cite papers directly from the CLI:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Search for papers by topic</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>ricet<span class="w"> </span>cite<span class="w"> </span><span class="s2">&quot;attention mechanisms in transformers&quot;</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Discover related work across multiple databases</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>ricet<span class="w"> </span>discover<span class="w"> </span><span class="s2">&quot;graph neural networks for drug discovery&quot;</span>
+</code></pre></div>
+<p><code>ricet cite</code> searches Semantic Scholar and arXiv, formats results as BibTeX entries, and appends them to <code>paper/references.bib</code>. <code>ricet discover</code> performs a broader literature scan, returning ranked results with abstracts and citation counts.</p>
+<hr />
+<h2 id="style-transfer_1">Style Transfer<a class="headerlink" href="#style-transfer_1" title="Permanent link">&para;</a></h2>
+<p>Analyze a reference paper's writing style and apply it to your own manuscript:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>ricet<span class="w"> </span>paper<span class="w"> </span>adapt-style<span class="w"> </span>--reference<span class="w"> </span>path/to/reference.pdf
+</code></pre></div>
+<p>The style transfer module extracts stylistic patterns (sentence structure, formality, section conventions) from the reference and rewrites your paper sections to match, with plagiarism checks to ensure originality.</p>
+<hr />
+<h2 id="automated-test-generation">Automated Test Generation<a class="headerlink" href="#automated-test-generation" title="Permanent link">&para;</a></h2>
+<p>Automatically generate tests for new or modified source files:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>ricet<span class="w"> </span>test-gen
+</code></pre></div>
+<p>Scans the project for source files that lack corresponding test coverage and generates pytest-compatible test stubs. Uses Claude to analyze function signatures, docstrings, and usage patterns for meaningful test cases.</p>
+<hr />
+<h2 id="package-management">Package Management<a class="headerlink" href="#package-management" title="Permanent link">&para;</a></h2>
+<p>Create, build, and publish Python packages from your research code:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>ricet<span class="w"> </span>package<span class="w"> </span>init<span class="w">     </span><span class="c1"># Scaffold pyproject.toml, setup.cfg, package structure</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>ricet<span class="w"> </span>package<span class="w"> </span>build<span class="w">    </span><span class="c1"># Build sdist and wheel</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>ricet<span class="w"> </span>package<span class="w"> </span>publish<span class="w">  </span><span class="c1"># Publish to PyPI (or TestPyPI with --test)</span>
+</code></pre></div>
+<p>Useful for turning experiment code into reusable libraries that other projects can depend on.</p>
+<hr />
+<h2 id="daily-maintenance">Daily Maintenance<a class="headerlink" href="#daily-maintenance" title="Permanent link">&para;</a></h2>
+<p>Run all standard health checks in a single command:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>ricet<span class="w"> </span>maintain
+</code></pre></div>
+<p>Executes four daily routines:</p>
+<table>
+<thead>
+<tr>
+<th>Routine</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test-gen</code></td>
+<td>Auto-generate tests for new/changed source files</td>
+</tr>
+<tr>
+<td><code>docs-update</code></td>
+<td>Auto-update project documentation from source</td>
+</tr>
+<tr>
+<td><code>fidelity-check</code></td>
+<td>Check GOAL.md alignment and flag drift</td>
+</tr>
+<tr>
+<td><code>verify-pass</code></td>
+<td>Run verification on recent outputs</td>
+</tr>
+</tbody>
+</table>
+<p>Maintenance runs automatically at the end of every <code>ricet overnight</code> session, ensuring the project stays healthy between human check-ins.</p>
+<hr />
+<h2 id="goal-fidelity">Goal Fidelity<a class="headerlink" href="#goal-fidelity" title="Permanent link">&para;</a></h2>
+<p>Check whether the project is still aligned with its stated research goal:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>ricet<span class="w"> </span>fidelity
+</code></pre></div>
+<p>Compares the current state of the codebase and outputs against <code>knowledge/GOAL.md</code>. Returns a fidelity score (0-100) and flags specific drift areas with recommendations. Integrated into overnight mode as a pre-flight check.</p>
+<hr />
+<h2 id="cross-project-learning">Cross-Project Learning<a class="headerlink" href="#cross-project-learning" title="Permanent link">&para;</a></h2>
+<p>Share learnings between ricet projects:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>ricet<span class="w"> </span>sync-learnings
+</code></pre></div>
+<p>Reads the current project's encyclopedia and publishes key patterns, decisions, and what-works/what-doesn't entries to a shared knowledge volume. Other ricet projects can pull these learnings to bootstrap their own knowledge base.</p>
+<hr />
+<h2 id="mcp-server-discovery">MCP Server Discovery<a class="headerlink" href="#mcp-server-discovery" title="Permanent link">&para;</a></h2>
+<p>Search a catalog of 1300+ Model Context Protocol servers and install them on demand:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>ricet<span class="w"> </span>mcp-search<span class="w"> </span><span class="s2">&quot;database migration&quot;</span>
+</code></pre></div>
+<p>Results include server name, description, install command, and compatibility info. Select a result to install it directly into your project's MCP configuration.</p>
+<hr />
+<h2 id="dual-repository-structure">Dual-Repository Structure<a class="headerlink" href="#dual-repository-structure" title="Permanent link">&para;</a></h2>
+<p>Manage a clean separation between experimental and production code:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>ricet<span class="w"> </span>two-repo<span class="w"> </span>init<span class="w">       </span><span class="c1"># Set up experiments/ and clean/ directories</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>ricet<span class="w"> </span>two-repo<span class="w"> </span>promote<span class="w">    </span><span class="c1"># Promote validated code from experiments/ to clean/</span>
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>ricet<span class="w"> </span>two-repo<span class="w"> </span>status<span class="w">     </span><span class="c1"># Show what&#39;s in each side</span>
+</code></pre></div>
+<p>The <code>experiments/</code> directory is for rapid iteration; <code>clean/</code> holds reviewed, tested code. Promotion requires passing verification checks.</p>
+<hr />
+<h2 id="url-browsing">URL Browsing<a class="headerlink" href="#url-browsing" title="Permanent link">&para;</a></h2>
+<p>Fetch and extract text from any URL for use in literature review:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>ricet<span class="w"> </span>browse<span class="w"> </span>https://example.com/paper-landing-page
+</code></pre></div>
+<p>Uses headless browser automation when available (Puppeteer MCP), falling back to HTTP fetch. Extracts readable text content and stores it in the project knowledge base.</p>
+<hr />
+<h2 id="infrastructure-management">Infrastructure Management<a class="headerlink" href="#infrastructure-management" title="Permanent link">&para;</a></h2>
+<p>Run infrastructure checks, Docker builds, CI/CD setup, and secrets management:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>ricet<span class="w"> </span>infra<span class="w"> </span>check<span class="w">     </span><span class="c1"># Verify Docker, CI, dependencies</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>ricet<span class="w"> </span>infra<span class="w"> </span>build<span class="w">     </span><span class="c1"># Build project Docker image</span>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>ricet<span class="w"> </span>infra<span class="w"> </span>secrets<span class="w">   </span><span class="c1"># Manage project secrets</span>
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>ricet<span class="w"> </span>infra<span class="w"> </span>ci<span class="w">        </span><span class="c1"># Generate/update CI workflow files</span>
+</code></pre></div>
+<hr />
+<h2 id="runbook-execution">Runbook Execution<a class="headerlink" href="#runbook-execution" title="Permanent link">&para;</a></h2>
+<p>Parse and execute code blocks from a markdown runbook:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>ricet<span class="w"> </span>runbook<span class="w"> </span>docs/setup-runbook.md
+</code></pre></div>
+<p>Extracts fenced code blocks from the markdown file and executes them sequentially, reporting pass/fail for each step. Useful for onboarding, environment setup, and reproducible deployment procedures.</p>
+<hr />
+<h2 id="autonomous-overnight-enhancements">Autonomous Overnight Enhancements<a class="headerlink" href="#autonomous-overnight-enhancements" title="Permanent link">&para;</a></h2>
+<h3 id="docker-sandbox">Docker Sandbox<a class="headerlink" href="#docker-sandbox" title="Permanent link">&para;</a></h3>
+<p>Run overnight sessions inside a Docker container for full isolation:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>ricet<span class="w"> </span>overnight<span class="w"> </span>--iterations<span class="w"> </span><span class="m">30</span><span class="w"> </span>--docker
+</code></pre></div>
+<p>Automatically builds the <code>ricet:latest</code> image if it does not exist, mounts the project directory and Claude credentials, then runs the overnight loop inside the container.</p>
+<h3 id="falsifier-auto-trigger">Falsifier Auto-Trigger<a class="headerlink" href="#falsifier-auto-trigger" title="Permanent link">&para;</a></h3>
+<p>After every overnight iteration, the falsifier agent automatically validates results. It checks for data leakage, statistical validity, confounders, and reproducibility issues. No manual intervention needed.</p>
+<h3 id="resource-aware-scheduling">Resource-Aware Scheduling<a class="headerlink" href="#resource-aware-scheduling" title="Permanent link">&para;</a></h3>
+<p>Overnight mode monitors CPU, RAM, and disk usage between iterations. If resources drop below safe thresholds, the run pauses and checkpoints. High memory triggers an automatic checkpoint commit. Old checkpoints are cleaned up to free disk space.</p>
+<hr />
+<h2 id="automated-research-workflow">Automated Research Workflow<a class="headerlink" href="#automated-research-workflow" title="Permanent link">&para;</a></h2>
+<p>Run the full research automation pipeline:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>ricet<span class="w"> </span>auto<span class="w"> </span>add-routine<span class="w"> </span>--name<span class="w"> </span>nightly-check<span class="w"> </span>--command<span class="w"> </span><span class="s2">&quot;ricet verify&quot;</span><span class="w"> </span>--schedule<span class="w"> </span>daily
+<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>ricet<span class="w"> </span>auto<span class="w"> </span>list-routines
+<a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>ricet<span class="w"> </span>auto<span class="w"> </span>monitor<span class="w"> </span>--topic<span class="w"> </span><span class="s2">&quot;large language models&quot;</span>
+</code></pre></div>
+<h3 id="reproducibility-tracking">Reproducibility Tracking<a class="headerlink" href="#reproducibility-tracking" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>ricet<span class="w"> </span>repro<span class="w"> </span>log<span class="w"> </span>--command<span class="w"> </span><span class="s2">&quot;python train.py&quot;</span><span class="w"> </span>--run-id<span class="w"> </span>exp-001
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>ricet<span class="w"> </span>repro<span class="w"> </span>list
+<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>ricet<span class="w"> </span>repro<span class="w"> </span>show<span class="w"> </span>--run-id<span class="w"> </span>exp-001
+<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>ricet<span class="w"> </span>repro<span class="w"> </span><span class="nb">hash</span><span class="w"> </span>--path<span class="w"> </span>data/dataset.csv
+</code></pre></div>
+<p>Every experiment run is logged with parameters, git hash, metrics, and SHA-256 artifact checksums.</p>
+<hr />
+<h2 id="voice-prompting">Voice Prompting<a class="headerlink" href="#voice-prompting" title="Permanent link">&para;</a></h2>
+<p>Transcribe audio instructions and feed them into the agent pipeline:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>ricet<span class="w"> </span>voice
+</code></pre></div>
+<p>The voice module:</p>
+<ol>
+<li>Accepts an audio file (WAV, MP3, FLAC).</li>
+<li>Transcribes it to text using whisper-cpp or a compatible backend.</li>
+<li>Detects the language automatically.</li>
+<li>Structures the transcription into an actionable research prompt.</li>
+<li>Routes the structured prompt to the appropriate agent.</li>
+</ol>
+<p>Useful for capturing ideas on the go or dictating experiment plans.</p>
+<hr />
+<h2 id="mobile-pwa-access">Mobile &amp; PWA Access<a class="headerlink" href="#mobile-pwa-access" title="Permanent link">&para;</a></h2>
+<p>Set up remote access to your research project from a mobile device:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>ricet<span class="w"> </span>mobile
+</code></pre></div>
+<p>The mobile module generates a Progressive Web App (PWA) configuration that enables:</p>
+<ul>
+<li>Remote dashboard access from any device with a browser.</li>
+<li>Push notifications for overnight mode events.</li>
+<li>Mobile-optimized prompt input for on-the-go task submission.</li>
+</ul>
+<hr />
+<h2 id="interactive-dashboard">Interactive Dashboard<a class="headerlink" href="#interactive-dashboard" title="Permanent link">&para;</a></h2>
+<p>A Rich-powered terminal UI for monitoring active sessions:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>ricet<span class="w"> </span>dashboard
+</code></pre></div>
+<h3 id="panels">Panels<a class="headerlink" href="#panels" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Agents</strong> -- Active agent types, current tasks, and budget usage.</li>
+<li><strong>Resources</strong> -- CPU, RAM, GPU, and disk utilization.</li>
+<li><strong>Memory</strong> -- Recent knowledge entries and vector memory stats.</li>
+<li><strong>Progress</strong> -- Task completion log and session history.</li>
+</ul>
+<p>The dashboard auto-refreshes and provides a single-pane view of your project's status.</p>
+<hr />
+<h2 id="figure-gallery">Figure Gallery<a class="headerlink" href="#figure-gallery" title="Permanent link">&para;</a></h2>
+<p>Scan, catalog, and organize experiment figures:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>ricet<span class="w"> </span>gallery
+</code></pre></div>
+<p>The gallery module:</p>
+<ul>
+<li>Recursively scans the project for image files (PNG, PDF, SVG).</li>
+<li>Groups figures by run ID and experiment.</li>
+<li>Displays a navigable terminal-based preview.</li>
+<li>Helps quickly select figures for paper inclusion.</li>
+</ul>
+<hr />
+<h2 id="git-worktree-management">Git Worktree Management<a class="headerlink" href="#git-worktree-management" title="Permanent link">&para;</a></h2>
+<p>Manage parallel experiment branches using git worktrees:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>ricet<span class="w"> </span>worktree<span class="w"> </span>add<span class="w"> </span>feature-branch<span class="w">     </span><span class="c1"># Create a new worktree</span>
+<a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a>ricet<span class="w"> </span>worktree<span class="w"> </span>list<span class="w">                   </span><span class="c1"># List active worktrees</span>
+<a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>ricet<span class="w"> </span>worktree<span class="w"> </span>remove<span class="w"> </span>feature-branch<span class="w">  </span><span class="c1"># Remove a worktree</span>
+</code></pre></div>
+<p>Worktrees let you run concurrent experiments on different branches without stashing or switching, keeping each experiment isolated.</p>
+<hr />
+<h2 id="task-queue-spooler">Task Queue &amp; Spooler<a class="headerlink" href="#task-queue-spooler" title="Permanent link">&para;</a></h2>
+<p>Manage background task execution:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>ricet<span class="w"> </span>queue<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;run experiment with lr=0.01&quot;</span><span class="w">    </span><span class="c1"># Add a task to the queue</span>
+<a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>ricet<span class="w"> </span>queue<span class="w"> </span>list<span class="w">                                 </span><span class="c1"># List queued tasks</span>
+<a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a>ricet<span class="w"> </span>queue<span class="w"> </span>run<span class="w">                                  </span><span class="c1"># Execute all queued tasks</span>
+<a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a>ricet<span class="w"> </span>queue<span class="w"> </span>clear<span class="w">                                </span><span class="c1"># Clear the queue</span>
+</code></pre></div>
+<p>The task spooler handles batch execution of queued tasks, integrating with the agent system for routing and with the reproducibility module for logging.</p>
+<hr />
+<h2 id="website-builder">Website Builder<a class="headerlink" href="#website-builder" title="Permanent link">&para;</a></h2>
+<p>Generate and deploy a GitHub Pages documentation site:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>ricet<span class="w"> </span>website<span class="w"> </span>init<span class="w">       </span><span class="c1"># Scaffold MkDocs site</span>
+<a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>ricet<span class="w"> </span>website<span class="w"> </span>build<span class="w">      </span><span class="c1"># Build static site</span>
+<a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a>ricet<span class="w"> </span>website<span class="w"> </span>deploy<span class="w">     </span><span class="c1"># Deploy to GitHub Pages</span>
+</code></pre></div>
+<p>The website builder creates a Material-themed MkDocs site from your project's documentation, API reference, and README.</p>
+<hr />
+<h2 id="doability-assessment">Doability Assessment<a class="headerlink" href="#doability-assessment" title="Permanent link">&para;</a></h2>
+<p>Assess the feasibility of a task before starting:</p>
+<p>The doability module analyzes a task description and returns:</p>
+<ul>
+<li>A feasibility score (0-100).</li>
+<li>Risk factors and potential blockers.</li>
+<li>Estimated complexity classification.</li>
+<li>Recommendations for approach.</li>
+</ul>
+<p>This is used internally by the agent system to plan work and can be triggered via <code>ricet auto</code> routines.</p>
+<hr />
+<h2 id="prompt-suggestions">Prompt Suggestions<a class="headerlink" href="#prompt-suggestions" title="Permanent link">&para;</a></h2>
+<p>AI-powered next-step recommendations:</p>
+<p>The prompt suggestions module analyzes current project state and suggests the next 3-5 research steps. Used internally during interactive sessions to guide the user when they are unsure what to work on next.</p>
+<hr />
+<h2 id="rag-powered-mcp-discovery">RAG-Powered MCP Discovery<a class="headerlink" href="#rag-powered-mcp-discovery" title="Permanent link">&para;</a></h2>
+<p>A searchable index of 1300+ Model Context Protocol servers:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>ricet<span class="w"> </span>mcp-search<span class="w"> </span><span class="s2">&quot;database migration&quot;</span>
+</code></pre></div>
+<p>The RAG MCP module (<code>core/rag_mcp.py</code>) provides:</p>
+<ul>
+<li><strong>Keyword-based search</strong> over a comprehensive catalog of MCP servers.</li>
+<li><strong>Task-based suggestions</strong> -- describe what you need and get ranked MCP recommendations.</li>
+<li><strong>On-demand installation</strong> -- install suggested MCPs directly from search results.</li>
+<li><strong>JSON persistence</strong> -- save and load custom indexes for project-specific MCP sets.</li>
+</ul>
+<p>The full catalog of 1300+ servers is available at <code>defaults/raggable_mcps.md</code>.</p>
+<hr />
+<h2 id="paperboat-integration">PaperBoat Integration<a class="headerlink" href="#paperboat-integration" title="Permanent link">&para;</a></h2>
+<p>For exhaustive cross-discipline paper discovery, ricet recommends <a href="https://paperboatch.com/">PaperBoat</a> -- an AI-powered service that scans thousands of journals daily and delivers personalized paper matches. Useful as a background SOTA knowledge source that updates daily across all disciplines.</p>
+<p>Referenced in the paper pipeline section of the README and available as a complement to <code>ricet cite</code> and <code>ricet discover</code> for broader literature coverage.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2025-2026 Luca Fusar Bassini
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/lucafusarbassini/research-automation" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.tabs.link", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
