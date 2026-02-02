@@ -137,3 +137,43 @@ def test_keywords_fallback_functions():
     assert _classify_task_complexity_keywords("format this") == TaskComplexity.SIMPLE
     model = _route_to_model_keywords("debug the issue")
     assert model.name == DEFAULT_MODELS["claude-opus"].name
+
+
+def test_route_to_model_name_used_in_agent_execution():
+    """Integration-style: route_to_model().name is passed as --model in agent execution."""
+    from core.agents import AgentType, _execute_agent_task_legacy
+
+    fake_proc = MagicMock()
+    fake_proc.returncode = 0
+    fake_proc.stdout = "done"
+
+    with patch("core.agents.subprocess.run", return_value=fake_proc) as mock_run:
+        with patch("core.agents.get_agent_prompt", return_value="prompt"):
+            # "debug the memory leak" -> COMPLEX -> claude-opus
+            _execute_agent_task_legacy(AgentType.CODER, "debug the memory leak")
+
+    cmd = mock_run.call_args[0][0]
+    model_idx = cmd.index("--model")
+    actual_model = cmd[model_idx + 1]
+
+    expected = route_to_model("debug the memory leak")
+    assert actual_model == expected.name
+    assert actual_model == DEFAULT_MODELS["claude-opus"].name
+
+
+def test_route_to_model_haiku_for_simple_task_in_execution():
+    """Simple tasks route to haiku and that model name reaches the CLI command."""
+    from core.agents import AgentType, _execute_agent_task_legacy
+
+    fake_proc = MagicMock()
+    fake_proc.returncode = 0
+    fake_proc.stdout = "done"
+
+    with patch("core.agents.subprocess.run", return_value=fake_proc) as mock_run:
+        with patch("core.agents.get_agent_prompt", return_value="prompt"):
+            _execute_agent_task_legacy(AgentType.CLEANER, "format the output list")
+
+    cmd = mock_run.call_args[0][0]
+    model_idx = cmd.index("--model")
+    actual_model = cmd[model_idx + 1]
+    assert actual_model == DEFAULT_MODELS["claude-haiku"].name

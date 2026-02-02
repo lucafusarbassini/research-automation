@@ -203,18 +203,36 @@ def _route_task_keywords(task_description: str) -> AgentType:
     return max(scores, key=scores.get)
 
 
-def get_agent_prompt(agent_type: AgentType) -> str:
+def get_agent_prompt(agent_type: AgentType, *, project_root: Path | None = None) -> str:
     """Load the agent's system prompt from its markdown file.
+
+    Looks for the prompt in the project's ``.claude/agents/`` directory first,
+    then falls back to the bundled templates directory so agents always get
+    their prompts even if deployment was incomplete.
 
     Args:
         agent_type: The agent to load.
+        project_root: Project root directory.  Defaults to ``Path.cwd()``.
 
     Returns:
         The agent's prompt text, or empty string if not found.
     """
-    agent_file = AGENTS_DIR / f"{agent_type.value}.md"
+    if project_root is None:
+        project_root = Path.cwd()
+    agent_file = project_root / ".claude" / "agents" / f"{agent_type.value}.md"
     if agent_file.exists():
         return agent_file.read_text()
+    # Fallback: try the bundled templates directory
+    template_file = (
+        Path(__file__).resolve().parent.parent
+        / "templates"
+        / ".claude"
+        / "agents"
+        / f"{agent_type.value}.md"
+    )
+    if template_file.exists():
+        logger.info("Using template agent prompt for %s", agent_type.value)
+        return template_file.read_text()
     logger.warning("Agent file not found: %s", agent_file)
     return ""
 
@@ -265,10 +283,22 @@ def _execute_agent_task_legacy(
     dangerously_skip_permissions: bool = False,
 ) -> TaskResult:
     """Execute a task via direct Claude CLI (legacy fallback)."""
+    from core.model_router import route_to_model
+    from core.tokens import select_thinking_mode
+
     agent_prompt = get_agent_prompt(agent_type)
     full_prompt = f"{agent_prompt}\n\n## Current Task\n\n{task}"
 
-    cmd = ["claude", "-p", full_prompt]
+    # Route to appropriate model and thinking mode based on task complexity
+    model_config = route_to_model(task)
+    thinking_mode = select_thinking_mode(task)
+
+    cmd = ["claude", "-p", full_prompt, "--model", model_config.name]
+
+    # Add thinking budget for models that support it
+    if model_config.supports_thinking and thinking_mode in ("extended", "ultrathink"):
+        budget = "16000" if thinking_mode == "ultrathink" else "8000"
+        cmd.extend(["--thinking-budget", budget])
     if dangerously_skip_permissions:
         cmd.insert(1, "--dangerously-skip-permissions")
 

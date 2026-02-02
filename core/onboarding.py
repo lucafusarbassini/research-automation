@@ -808,6 +808,26 @@ REQUIRED_PACKAGES = {
 }
 
 
+def _get_pip_prefix(run_cmd=None) -> str:
+    """Return the pip command prefix using the project env's python if available.
+
+    Reads settings to find the project environment info. If an env python is
+    configured, uses ``<python> -m pip`` instead of bare ``pip``.
+
+    Returns:
+        A command prefix string, e.g. ``"/path/.venv/bin/python -m pip"`` or ``"pip"``.
+    """
+    try:
+        settings = load_settings(Path.cwd())
+        env_info = settings.get("environment", {})
+        python = env_info.get("python", "")
+        if python:
+            return f"{python} -m pip"
+    except Exception:
+        pass
+    return "pip"
+
+
 def check_and_install_packages(
     *,
     install: bool = True,
@@ -823,6 +843,8 @@ def check_and_install_packages(
         List of packages that could not be installed (empty = all OK).
     """
     import importlib
+
+    pip_prefix = _get_pip_prefix()
 
     if run_cmd is None:
 
@@ -843,10 +865,10 @@ def check_and_install_packages(
                 continue
             logger.info("Installing missing package: %s", pip_name)
             try:
-                result = run_cmd(f"pip install {pip_name}")
+                result = run_cmd(f"{pip_prefix} install {pip_name}")
                 if result.returncode != 0:
                     # Retry with force
-                    result = run_cmd(f"pip install --force-reinstall {pip_name}")
+                    result = run_cmd(f"{pip_prefix} install --force-reinstall {pip_name}")
                     if result.returncode != 0:
                         failed.append(pip_name)
             except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -1055,6 +1077,8 @@ def install_inferred_packages(
     """
     import importlib
 
+    pip_prefix = _get_pip_prefix()
+
     if run_cmd is None:
 
         def run_cmd(cmd: str) -> subprocess.CompletedProcess:
@@ -1089,7 +1113,7 @@ def install_inferred_packages(
 
         logger.info("Installing inferred package: %s", pkg)
         try:
-            result = run_cmd(f"pip install {pkg}")
+            result = run_cmd(f"{pip_prefix} install {pkg}")
             if result.returncode == 0:
                 installed.append(pkg)
             else:
@@ -1097,7 +1121,7 @@ def install_inferred_packages(
                 alt = _suggest_alternative_package(pkg)
                 if alt and alt != pkg:
                     logger.info("Trying alternative: %s", alt)
-                    result = run_cmd(f"pip install {alt}")
+                    result = run_cmd(f"{pip_prefix} install {alt}")
                     if result.returncode == 0:
                         installed.append(alt)
                         continue
@@ -1147,6 +1171,8 @@ def ensure_package(
     except ImportError:
         pass
 
+    pip_prefix = _get_pip_prefix()
+
     if run_cmd is None:
 
         def run_cmd(cmd: str) -> subprocess.CompletedProcess:
@@ -1158,7 +1184,7 @@ def ensure_package(
 
     logger.info("Runtime install: %s", pip_name)
     try:
-        result = run_cmd(f"pip install {pip_name}")
+        result = run_cmd(f"{pip_prefix} install {pip_name}")
         if result.returncode == 0:
             # Clear import caches
             importlib.invalidate_caches()
@@ -1168,7 +1194,7 @@ def ensure_package(
             except ImportError:
                 pass
         # Retry with force
-        result = run_cmd(f"pip install --force-reinstall {pip_name}")
+        result = run_cmd(f"{pip_prefix} install --force-reinstall {pip_name}")
         if result.returncode == 0:
             importlib.invalidate_caches()
             try:
@@ -1233,3 +1259,69 @@ def load_settings(project_path: Path) -> dict:
     if not settings_path.exists():
         return {}
     return yaml.safe_load(settings_path.read_text()) or {}
+
+
+def generate_goal_milestones(goal_text: str) -> list[str]:
+    """Generate project milestones from GOAL.md content.
+
+    Tries Claude CLI first, falls back to keyword-based generation.
+
+    Args:
+        goal_text: Raw text from GOAL.md.
+
+    Returns:
+        List of milestone strings (up to 10). Empty list if goal_text
+        is too short to be meaningful.
+    """
+    if not goal_text or len(goal_text.strip()) < 50:
+        return []
+
+    # Try Claude
+    from core.claude_helper import call_claude
+
+    prompt = (
+        "Given this research project goal, generate 5-8 high-level milestones "
+        "as a simple numbered list. Each milestone should be one line, actionable, "
+        "and in logical order.\n\n"
+        f"Goal:\n{goal_text[:2000]}"
+    )
+    result = call_claude(prompt)
+    if result:
+        lines = [
+            l.strip().lstrip("0123456789.-) ")
+            for l in result.strip().splitlines()
+            if l.strip()
+        ]
+        milestones = [l for l in lines if len(l) > 10]
+        if milestones:
+            return milestones[:10]
+
+    # Keyword fallback
+    return _generate_milestones_keywords(goal_text)
+
+
+def _generate_milestones_keywords(goal_text: str) -> list[str]:
+    """Keyword-based milestone generation.
+
+    Args:
+        goal_text: Raw text from GOAL.md.
+
+    Returns:
+        List of milestone strings.
+    """
+    milestones = [
+        "Literature review and background research",
+        "Set up data pipeline and preprocessing",
+        "Implement baseline approach",
+        "Run initial experiments and validate pipeline",
+        "Iterate on methodology based on results",
+        "Run full-scale experiments",
+        "Analyze results and generate figures",
+        "Write paper draft",
+    ]
+    text_lower = goal_text.lower()
+    if "model" in text_lower or "train" in text_lower:
+        milestones.insert(3, "Design and implement model architecture")
+    if "dataset" in text_lower:
+        milestones.insert(1, "Acquire and explore dataset")
+    return milestones[:10]

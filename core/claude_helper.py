@@ -59,7 +59,17 @@ def call_claude(
             )
 
     try:
-        result = run_cmd(["claude", "-p", prompt, "--output-format", "json"])
+        result = run_cmd(
+            [
+                "claude",
+                "-p",
+                prompt,
+                "--output-format",
+                "json",
+                "--model",
+                "claude-haiku-3-5-20241022",
+            ]
+        )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:

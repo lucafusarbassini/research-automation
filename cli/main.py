@@ -20,6 +20,7 @@ from core.onboarding import (
     create_github_repo,
     detect_system_for_init,
     ensure_package,
+    generate_goal_milestones,
     infer_packages_from_goal,
     install_inferred_packages,
     load_settings,
@@ -158,6 +159,16 @@ def init(
     else:
         project_path.mkdir(parents=True)
 
+    # Ensure agent prompt files are deployed (hidden dirs may be skipped
+    # on some platforms or by future ignore filters)
+    agents_src = TEMPLATE_DIR / ".claude" / "agents"
+    agents_dst = project_path / ".claude" / "agents"
+    if agents_src.exists():
+        agents_dst.mkdir(parents=True, exist_ok=True)
+        for f in agents_src.iterdir():
+            if f.is_file():
+                shutil.copy2(f, agents_dst / f.name)
+
     # Setup workspace folders
     setup_workspace(project_path)
 
@@ -167,12 +178,44 @@ def init(
     write_env_file(project_path, credentials)
     write_env_example(project_path)
 
+    # Create isolated Python environment
+    from core.environment import create_project_env, populate_encyclopedia_env, discover_system
+
+    env_info = create_project_env(project_name, project_path)
+    console.print(f"  [green]Python environment: {env_info['type']} ({env_info['name']})[/green]")
+
+    # Store env info in settings
+    settings_path = project_path / "config" / "settings.yml"
+    if settings_path.exists():
+        import yaml
+
+        _settings = yaml.safe_load(settings_path.read_text()) or {}
+        _settings["environment"] = env_info
+        settings_path.write_text(yaml.dump(_settings, default_flow_style=False, sort_keys=False))
+
+    # Populate encyclopedia with environment details
+    sys_info_obj = discover_system()
+    populate_encyclopedia_env(project_path, env_info, sys_info_obj)
+
     # Create state directories
     (project_path / "state" / "sessions").mkdir(parents=True, exist_ok=True)
-    (project_path / "state" / "TODO.md").write_text(
-        "# TODO\n\n- [ ] Edit GOAL.md with detailed project description\n"
-        "- [ ] Set up environment\n- [ ] Begin first task\n"
-    )
+
+    # Generate goal-aware TODO milestones
+    goal_file_for_todo = project_path / "knowledge" / "GOAL.md"
+    _goal_text = goal_file_for_todo.read_text() if goal_file_for_todo.exists() else ""
+    milestones = generate_goal_milestones(_goal_text)
+    todo_content = "# TODO\n\n"
+    if milestones:
+        for m in milestones:
+            todo_content += f"- [ ] {m}\n"
+    else:
+        todo_content += (
+            "- [ ] Edit GOAL.md with detailed project description\n"
+            "- [ ] Set up environment\n"
+            "- [ ] Begin first task\n"
+        )
+    (project_path / "state" / "TODO.md").write_text(todo_content)
+
     (project_path / "state" / "PROGRESS.md").write_text("# Progress\n\n")
 
     # Write GOAL.md prompt for user
@@ -213,6 +256,8 @@ def init(
                 console.print(f"  [green]Repo created: {repo_url}[/green]")
                 # Update settings with repo URL
                 write_settings(project_path, answers)
+                # Set repo description and topics from GOAL.md
+                _configure_github_repo_from_goal(project_path, project_name, repo_url)
             else:
                 console.print(
                     "  [yellow]Could not create repo. "
@@ -259,6 +304,113 @@ def init(
     console.print("     (at least 200 characters of real content)")
     console.print("  3. Add reference papers to [bold]reference/papers/[/bold]")
     console.print("  4. ricet start")
+
+
+def _configure_github_repo_from_goal(
+    project_path: Path,
+    project_name: str,
+    repo_url: str,
+    *,
+    run_cmd=None,
+) -> None:
+    """Set GitHub repo description and topics from GOAL.md content.
+
+    Args:
+        project_path: Root of the project.
+        project_name: The project name.
+        repo_url: The GitHub repo URL.
+        run_cmd: Optional callable for testing.
+    """
+    goal_file = project_path / "knowledge" / "GOAL.md"
+    if not goal_file.exists():
+        return
+
+    goal_text = goal_file.read_text()
+    # Extract first meaningful paragraph (skip markdown headers and blank lines)
+    lines = [
+        l.strip()
+        for l in goal_text.splitlines()
+        if l.strip() and not l.strip().startswith("#")
+    ]
+    if not lines:
+        return
+
+    # Description: first 350 chars of goal content
+    description = " ".join(lines)[:350]
+
+    # Try to infer topics from goal keywords
+    topics = _infer_topics_from_goal(goal_text)
+
+    if run_cmd is None:
+
+        def run_cmd(cmd: list[str]) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+
+    try:
+        owner_repo = "/".join(
+            repo_url.rstrip("/").split("/")[-2:]
+        ).replace(".git", "")
+
+        run_cmd(
+            ["gh", "repo", "edit", owner_repo, "--description", description]
+        )
+
+        if topics:
+            topic_args: list[str] = []
+            for t in topics[:20]:  # GitHub max 20 topics
+                topic_args.extend(["--add-topic", t])
+            run_cmd(["gh", "repo", "edit", owner_repo] + topic_args)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+
+def _infer_topics_from_goal(goal_text: str) -> list[str]:
+    """Extract GitHub topic tags from goal text using Claude.
+
+    Tries Claude CLI first for flexible, context-aware topic inference.
+    Falls back to a minimal keyword check only if Claude is unavailable.
+
+    Args:
+        goal_text: Raw GOAL.md content.
+
+    Returns:
+        List of GitHub topic strings (max 20).
+    """
+    from core.claude_helper import call_claude_json
+
+    # Always include base topics
+    base = ["research-automation", "ricet"]
+
+    # Ask Claude to infer topics flexibly
+    result = call_claude_json(
+        "Given this research project description, suggest 3-10 GitHub repository "
+        "topic tags. Topics must be lowercase, hyphenated, no spaces, "
+        "relevant to the research domain. Reply as a JSON array of strings.\n\n"
+        f"Project:\n{goal_text[:2000]}"
+    )
+    if result and isinstance(result, list):
+        # Sanitize: lowercase, replace spaces with hyphens, strip
+        topics = base + [
+            t.strip().lower().replace(" ", "-")
+            for t in result
+            if isinstance(t, str) and t.strip()
+        ]
+        # Deduplicate while preserving order
+        seen: set[str] = set()
+        unique = []
+        for t in topics:
+            if t not in seen:
+                seen.add(t)
+                unique.append(t)
+        return unique[:20]
+
+    # Minimal fallback: just use base topics (no hardcoded domain map)
+    return base
 
 
 def _inject_claude_flow_mcp(project_path: Path) -> None:
@@ -405,6 +557,14 @@ def start(
                 f"(install manually with pip)[/yellow]"
             )
 
+    # --- Generate requirements.txt from project env ---
+    from core.environment import generate_requirements_txt
+
+    _start_settings = load_settings(Path.cwd())
+    _start_env_info = _start_settings.get("environment", {})
+    if _start_env_info:
+        generate_requirements_txt(Path.cwd(), _start_env_info)
+
     # --- Quick package sanity check ---
     base_failed = check_and_install_packages()
     if base_failed:
@@ -516,12 +676,28 @@ def overnight(
     except ClaudeFlowUnavailable:
         pass
 
-    # Fallback: raw claude -p loop
+    # Fallback: raw claude -p loop with agent routing
+    from core.agents import get_agent_prompt, route_task
+    from core.model_router import route_to_model
+
+    overnight_model = route_to_model(tasks)
+    agent_type = route_task(tasks)
+    agent_prompt = get_agent_prompt(agent_type)
+    enriched_tasks = (
+        f"{agent_prompt}\n\n## Tasks\n\n{tasks}" if agent_prompt else tasks
+    )
     for i in range(iterations):
         console.print(f"\n[cyan]Iteration {i + 1}/{iterations}[/cyan]")
 
         result = subprocess.run(
-            ["claude", "--dangerously-skip-permissions", "-p", tasks],
+            [
+                "claude",
+                "--dangerously-skip-permissions",
+                "-p",
+                enriched_tasks,
+                "--model",
+                overnight_model.name,
+            ],
             capture_output=True,
             text=True,
         )
@@ -662,6 +838,26 @@ def metrics():
         if snap.cpu_percent > 0:
             console.print(f"  CPU: {snap.cpu_percent}%")
         console.print(f"  Disk free: {snap.disk_free_gb} GB")
+
+
+@app.command(name="mcp-search")
+def mcp_search(
+    need: str = typer.Argument(help="What you need (e.g. 'access PubMed papers')"),
+    install: bool = typer.Option(False, "--install", "-i", help="Auto-install the match"),
+):
+    """Search the MCP catalog for a server matching your need.
+
+    Claude reads the full MCP catalog (1 300+ servers) and suggests the
+    best match, its install command, and any API keys required.
+    """
+    from core.mcps import suggest_and_install_mcp
+
+    suggest_and_install_mcp(
+        need,
+        auto_install=install,
+        prompt_fn=lambda q, d: typer.prompt(q, default=d),
+        print_fn=lambda msg: console.print(msg),
+    )
 
 
 @app.command()

@@ -60,7 +60,10 @@ class TestCallClaude:
             return _FakeResult(stdout="ok")
 
         call_claude("my prompt", run_cmd=run_cmd)
-        assert captured[0] == ["claude", "-p", "my prompt", "--output-format", "json"]
+        assert captured[0] == [
+            "claude", "-p", "my prompt", "--output-format", "json",
+            "--model", "claude-haiku-3-5-20241022",
+        ]
 
 
 class TestCallClaudeJson:
