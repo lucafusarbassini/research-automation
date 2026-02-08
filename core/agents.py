@@ -151,20 +151,144 @@ from collections import deque
 _agent_output_buffers: dict[str, deque] = {}
 _AGENT_OUTPUT_MAX = 500
 
+# Shared output file for cross-process visibility (mobile server reads this)
+_SHARED_OUTPUT_FILE = Path("/tmp/ricet-agent-output.jsonl")
+
 
 def append_agent_output(agent_type: str, line: str) -> None:
-    """Append a line of output to an agent's ring buffer."""
+    """Append a line of output to an agent's ring buffer (memory + file)."""
+    line = line.rstrip()
+    # In-memory (same-process access)
     if agent_type not in _agent_output_buffers:
         _agent_output_buffers[agent_type] = deque(maxlen=_AGENT_OUTPUT_MAX)
-    _agent_output_buffers[agent_type].append(line.rstrip())
+    _agent_output_buffers[agent_type].append(line)
+    # File-backed (cross-process access for mobile server)
+    try:
+        with open(_SHARED_OUTPUT_FILE, "a") as f:
+            f.write(json.dumps({"a": agent_type, "l": line}) + "\n")
+    except Exception:
+        pass
 
 
 def get_all_agent_outputs(last_n: int = 30) -> dict[str, list[str]]:
-    """Return the last *last_n* output lines per agent type."""
-    return {
-        agent: list(buf)[-last_n:]
-        for agent, buf in _agent_output_buffers.items()
-    }
+    """Return the last *last_n* output lines per agent type.
+
+    Checks (in order): in-memory buffer → shared output file → project state files.
+    This allows the mobile server (separate process) to see agent output.
+    """
+    result: dict[str, list[str]] = {}
+
+    # 1. In-memory buffer (same process — works for overnight/programmatic agents)
+    for agent, buf in _agent_output_buffers.items():
+        result[agent] = list(buf)[-last_n:]
+
+    # 2. Shared file (cross-process — another process called append_agent_output)
+    if not result:
+        result = _read_shared_output_file(last_n)
+
+    # 3. Project state scanning (interactive session — no programmatic agent running)
+    if not result:
+        result = _scan_project_activity(last_n)
+
+    return result
+
+
+def _read_shared_output_file(last_n: int = 30) -> dict[str, list[str]]:
+    """Read agent output from the shared JSONL file."""
+    result: dict[str, list[str]] = {}
+    try:
+        if not _SHARED_OUTPUT_FILE.exists():
+            return result
+        # Read last chunk (avoid reading huge files)
+        text = _SHARED_OUTPUT_FILE.read_text()
+        lines = text.strip().splitlines()
+        for raw in lines[-(last_n * 10):]:
+            try:
+                entry = json.loads(raw)
+                agent = entry.get("a", "agent")
+                line = entry.get("l", "")
+                if agent not in result:
+                    result[agent] = []
+                result[agent].append(line)
+            except (json.JSONDecodeError, KeyError):
+                continue
+        # Trim to last_n per agent
+        for agent in result:
+            result[agent] = result[agent][-last_n:]
+    except Exception:
+        pass
+    return result
+
+
+def _scan_project_activity(last_n: int = 30) -> dict[str, list[str]]:
+    """Scan project state files for recent activity (interactive session fallback).
+
+    Reads PROGRESS.md, TODO.md, and lists recently modified files to give the
+    mobile dashboard something to show during interactive Claude sessions.
+    """
+    import time
+
+    result: dict[str, list[str]] = {}
+    cwd = Path.cwd()
+
+    # PROGRESS.md — the agent updates this with major decisions/results
+    progress = cwd / "state" / "PROGRESS.md"
+    try:
+        if progress.exists():
+            lines = [
+                l.strip()
+                for l in progress.read_text().splitlines()
+                if l.strip() and not l.startswith("#")
+            ]
+            if lines:
+                result["progress"] = lines[-last_n:]
+    except Exception:
+        pass
+
+    # TODO.md — current task list
+    todo = cwd / "state" / "TODO.md"
+    try:
+        if todo.exists():
+            lines = [
+                l.strip()
+                for l in todo.read_text().splitlines()
+                if l.strip()
+            ]
+            if lines:
+                result["tasks"] = lines[-last_n:]
+    except Exception:
+        pass
+
+    # Recently modified files (lightweight: only check state/ and src/)
+    try:
+        recent_threshold = time.time() - 300  # last 5 minutes
+        activity: list[str] = []
+        scan_dirs = [cwd / "state", cwd / "src", cwd / "notebooks", cwd / "slides"]
+        for scan_dir in scan_dirs:
+            if not scan_dir.is_dir():
+                continue
+            for f in scan_dir.rglob("*"):
+                if not f.is_file():
+                    continue
+                try:
+                    mtime = f.stat().st_mtime
+                except OSError:
+                    continue
+                if mtime > recent_threshold:
+                    rel = f.relative_to(cwd)
+                    if any(skip in str(rel) for skip in ["__pycache__", ".pyc"]):
+                        continue
+                    ts = time.strftime("%H:%M:%S", time.localtime(mtime))
+                    activity.append(f"[{ts}] {rel}")
+                if len(activity) >= last_n:
+                    break
+        if activity:
+            activity.sort(reverse=True)
+            result["recent-files"] = activity[:last_n]
+    except Exception:
+        pass
+
+    return result
 
 
 def _route_task_opus(task_description: str) -> AgentType | None:
