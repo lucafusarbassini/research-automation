@@ -158,64 +158,128 @@ def get_priority_mcps() -> dict:
     return priority
 
 
-def install_priority_mcps() -> dict[str, bool]:
-    """Install all priority MCP servers (all tiers).
+def install_priority_mcps(project_path: Path | None = None) -> dict[str, bool]:
+    """Register all priority MCP servers in .claude/settings.json.
 
-    For npx-based MCPs, pre-fetches the package so first invocation is fast.
-    For source-based MCPs, uses the MCP installer.
+    Instead of installing MCPs globally (which often fails), we write
+    them into the project's ``.claude/settings.json``.  Claude Code
+    downloads and runs each MCP on first use via ``npx``.
 
     Returns:
         Mapping of MCP name -> success boolean.
     """
     results: dict[str, bool] = {}
-    for name, cfg in get_priority_mcps().items():
-        source = cfg.get("source", "")
-        if source:
-            results[name] = install_mcp(name, source)
-        elif cfg.get("command") == "npx":
-            # npx-based: pre-fetch the package
-            cmd_parts = cfg.get("args", [])
-            pkg = next((a for a in cmd_parts if not a.startswith("-")), None)
-            if pkg:
-                try:
-                    subprocess.run(
-                        f"npx -y {pkg} --help",
-                        shell=True, capture_output=True, timeout=60,
-                    )
-                    results[name] = True
-                except Exception:
-                    results[name] = False
-            else:
-                results[name] = True  # nothing to install
+    settings_path = (project_path or Path.cwd()) / ".claude" / "settings.json"
+
+    # Load existing settings
+    try:
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        if settings_path.exists():
+            settings = json.loads(settings_path.read_text())
         else:
-            results[name] = True  # no source or command, skip
+            settings = {}
+    except (json.JSONDecodeError, OSError):
+        settings = {}
+
+    mcps = settings.setdefault("mcpServers", {})
+    registered = 0
+
+    for name, cfg in get_priority_mcps().items():
+        # Already configured — skip
+        if name in mcps:
+            results[name] = True
+            continue
+
+        # Build the MCP entry for settings.json
+        entry = _build_mcp_settings_entry(name, cfg)
+        if entry:
+            mcps[name] = entry
+            results[name] = True
+            registered += 1
+        else:
+            results[name] = True  # skip gracefully (community placeholder etc.)
+
+    # Write updated settings
+    try:
+        settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+        logger.info("Registered %d MCP servers in %s", registered, settings_path)
+    except OSError as exc:
+        logger.warning("Could not write MCP settings: %s", exc)
+
     return results
 
 
+# Map of well-known MCP names to their npm packages
+_KNOWN_MCP_PACKAGES: dict[str, str] = {
+    "git": "@modelcontextprotocol/server-git",
+    "github": "@modelcontextprotocol/server-github",
+    "filesystem": "@modelcontextprotocol/server-filesystem",
+    "memory": "@modelcontextprotocol/server-memory",
+    "fetch": "@modelcontextprotocol/server-fetch",
+    "sequential-thinking": "@modelcontextprotocol/server-sequential-thinking",
+    "puppeteer": "@modelcontextprotocol/server-puppeteer",
+    "postgres": "@modelcontextprotocol/server-postgres",
+    "sqlite": "@modelcontextprotocol/server-sqlite",
+    "slack-mcp": "@modelcontextprotocol/server-slack",
+}
+
+
+def _build_mcp_settings_entry(name: str, cfg: dict) -> dict | None:
+    """Convert an mcp-nucleus.json entry into a .claude/settings.json entry."""
+    # If it already has command + args (npx-based), use directly
+    if cfg.get("command"):
+        return {
+            "command": cfg["command"],
+            "args": cfg.get("args", []),
+        }
+
+    source = cfg.get("source", "")
+
+    # Skip placeholders
+    if source in ("community", ""):
+        return None
+
+    # Well-known MCP name → npm package
+    if name in _KNOWN_MCP_PACKAGES:
+        pkg = _KNOWN_MCP_PACKAGES[name]
+        return {
+            "command": "npx",
+            "args": ["-y", pkg],
+        }
+
+    # modelcontextprotocol/servers → @modelcontextprotocol/server-{name}
+    if source == "modelcontextprotocol/servers":
+        return {
+            "command": "npx",
+            "args": ["-y", f"@modelcontextprotocol/server-{name}"],
+        }
+
+    # modelcontextprotocol/servers-archived → same pattern
+    if source == "modelcontextprotocol/servers-archived":
+        return {
+            "command": "npx",
+            "args": ["-y", f"@modelcontextprotocol/server-{name}"],
+        }
+
+    # GitHub org/repo → try as npx package
+    if "/" in source:
+        # Try common patterns: org/name → @org/name or name
+        org, repo = source.split("/", 1)
+        return {
+            "command": "npx",
+            "args": ["-y", f"@{org}/{repo}"],
+        }
+
+    return None
+
+
 def install_mcp(mcp_name: str, source: str) -> bool:
-    """Install an MCP from source.
-
-    Handles GitHub repo references (org/repo), npm packages, and
-    gracefully skips placeholder sources like "community".
-    """
-    # Skip placeholder sources that aren't real packages
+    """Install an MCP from source (legacy — prefer install_priority_mcps)."""
     if source in ("community",):
-        logger.debug("Skipping %s: placeholder source '%s'", mcp_name, source)
-        return True  # not a failure, just nothing to install yet
-
-    if "github.com" in source or "/" in source:
-        cmd = f"npx -y @anthropic-ai/mcp-installer install {source}"
-    else:
-        cmd = f"npm install -g {source}"
-
-    try:
-        subprocess.run(
-            cmd, shell=True, check=True, capture_output=True, timeout=120,
-        )
         return True
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-        logger.warning("Failed to install MCP %s from %s: %s", mcp_name, source, exc)
-        return False
+    # Just register in settings instead of trying to install globally
+    logger.info("MCP %s will be auto-installed by Claude Code on first use", mcp_name)
+    return True
 
 
 # ---------------------------------------------------------------------------

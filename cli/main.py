@@ -353,18 +353,51 @@ def init(
     else:
         console.print("  [dim]LaTeX scaffold: paper/ already populated[/dim]")
 
-    # Write GOAL.md prompt for user
+    # --- Step 4b: Detailed project description → GOAL.md ---
+    console.print("\n[bold cyan]Step 4b: Project description[/bold cyan]")
+    console.print(
+        "  [dim]Describe your project in detail. This drives scaffolding,\n"
+        "  agent behavior, and paper structure. Be thorough (research question,\n"
+        "  methodology, expected outcomes, constraints). Type your description,\n"
+        "  then press Enter twice (empty line) to finish.[/dim]"
+    )
+    console.print()
+    goal_lines: list[str] = []
+    try:
+        while True:
+            line = input("  > ")
+            if line == "" and goal_lines and goal_lines[-1] == "":
+                goal_lines.pop()  # remove trailing blank
+                break
+            goal_lines.append(line)
+    except EOFError:
+        pass  # piped input ends here
+
+    user_goal = "\n".join(goal_lines).strip()
+    if not user_goal:
+        user_goal = f"Research project: {project_name}"
+        console.print(f"  [dim]Using default: {user_goal}[/dim]")
+    else:
+        console.print(
+            f"  [green]Goal captured ({len(user_goal)} chars, "
+            f"{len(user_goal.split())} words)[/green]"
+        )
+
+    # Write GOAL.md with user's description
     goal_file = project_path / "knowledge" / "GOAL.md"
     if goal_file.exists():
         goal_content = goal_file.read_text()
-        if "<!-- User provides during init -->" in goal_content:
-            goal_content = goal_content.replace(
-                "<!-- User provides during init -->",
-                "<!-- WRITE YOUR PROJECT DESCRIPTION HERE -->\n"
-                "<!-- Be detailed: at least one full page. Describe your research\n"
-                "     question, methodology, expected outcomes, and constraints. -->\n",
-            )
-            goal_file.write_text(goal_content)
+        # Replace the template placeholder with user's actual description
+        for placeholder in (
+            "<!-- User provides during init -->",
+            "<!-- WRITE YOUR PROJECT DESCRIPTION HERE -->",
+        ):
+            if placeholder in goal_content:
+                goal_content = goal_content.replace(placeholder, user_goal)
+        goal_file.write_text(goal_content)
+    else:
+        goal_file.parent.mkdir(parents=True, exist_ok=True)
+        goal_file.write_text(f"# Project Goal\n\n## Description\n\n{user_goal}\n")
 
     # Write claude-flow config
     cf_config_src = TEMPLATE_DIR / "config" / "claude-flow.json"
@@ -456,19 +489,19 @@ def init(
             "You can retry by rebuilding the image.[/yellow]"
         )
 
-    # --- Step 8: Install priority MCP servers ---
+    # --- Step 8: Register MCP servers in .claude/settings.json ---
     console.print(
-        "\n[bold cyan]Step 8: Installing priority MCP servers...[/bold cyan]"
+        "\n[bold cyan]Step 8: Registering MCP servers...[/bold cyan]"
     )
     try:
         from core.mcps import install_priority_mcps
 
-        mcp_results = install_priority_mcps()
+        mcp_results = install_priority_mcps(project_path=project_path)
         mcp_ok = sum(1 for v in mcp_results.values() if v)
         mcp_total = len(mcp_results)
         if mcp_total > 0:
             console.print(
-                f"  [green]{mcp_ok}/{mcp_total} priority MCPs installed[/green]"
+                f"  [green]{mcp_ok}/{mcp_total} MCP servers registered[/green]"
             )
             for name, ok in mcp_results.items():
                 status = "[green]OK[/green]" if ok else "[yellow]SKIP[/yellow]"

@@ -524,7 +524,7 @@ def create_github_repo(
     visibility = "--private" if private else "--public"
     try:
         result = run_cmd(
-            ["gh", "repo", "create", project_name, visibility, "--confirm"]
+            ["gh", "repo", "create", project_name, visibility]
         )
         if result.returncode == 0:
             # Extract URL from output
