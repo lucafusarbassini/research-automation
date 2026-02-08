@@ -307,7 +307,7 @@ def prepare_docker_environment(project_path: Path) -> bool:
         logger.info("No dependency files found; Docker environment is ready as-is.")
         return True
 
-    combined = " && ".join(install_cmds)
+    combined = "export PATH=/opt/venv/bin:$PATH && " + " && ".join(install_cmds)
     logger.info("Installing project dependencies inside Docker container...")
 
     try:
@@ -357,7 +357,7 @@ def test_docker_setup() -> bool:
                 "bash",
                 RICET_DOCKER_IMAGE,
                 "-c",
-                "python3 -c \"import typer; print('python-ok')\" && node -e \"console.log('node-ok')\"",
+                "export PATH=/opt/venv/bin:$PATH && python3 -c \"import typer; print('python-ok')\" && node -e \"console.log('node-ok')\"",
             ],
             capture_output=True,
             text=True,

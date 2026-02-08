@@ -191,6 +191,28 @@ def init(
     except subprocess.TimeoutExpired:
         console.print("  [yellow]Claude CLI timed out[/yellow]")
 
+    # --- Step 2c: Install cloudflared for tunnel access ---
+    console.print("\n[bold cyan]Step 2c: Setting up cloudflared...[/bold cyan]")
+    try:
+        from core.mobile import _ensure_cloudflared
+
+        cf_path = _ensure_cloudflared()
+        _cf_ver = subprocess.run(
+            [str(cf_path), "--version"],
+            capture_output=True, text=True, timeout=10,
+        )
+        console.print(
+            f"  [green]cloudflared ready: {_cf_ver.stdout.strip()}[/green]"
+        )
+    except Exception as cf_exc:
+        console.print(
+            f"  [yellow]cloudflared not installed: {cf_exc}[/yellow]"
+        )
+        console.print(
+            "  [dim]Tunnel access will not work. "
+            "Install manually: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/[/dim]"
+        )
+
     # --- Step 3: Streamlined questionnaire ---
     console.print("\n[bold cyan]Step 3: Project configuration[/bold cyan]")
 
@@ -846,6 +868,74 @@ def _init_update(
         console.print("  [dim]Docker not available (optional)[/dim]")
     else:
         console.print("  [yellow]Docker setup incomplete[/yellow]")
+
+    # --- Start mobile access with cloudflared tunnel ---
+    console.print("\n[bold cyan]Starting mobile access...[/bold cyan]")
+    try:
+        from core.mobile import (
+            MobileAuth,
+            generate_qr_terminal,
+            parse_tunnel_url,
+            start_server,
+            start_tunnel,
+            stop_server,
+        )
+
+        import socket as _socket
+
+        auth = MobileAuth()
+        _port = 8777
+
+        # Kill any existing server on the port
+        _sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+        try:
+            _sock.bind(("0.0.0.0", _port))
+            _sock.close()
+        except OSError:
+            _sock.close()
+            stop_server()
+            import time as _time
+            _time.sleep(0.5)
+            try:
+                _lsof = subprocess.run(
+                    ["lsof", "-ti", f":{_port}"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                for pid in _lsof.stdout.strip().split():
+                    if pid.isdigit():
+                        subprocess.run(["kill", pid], timeout=5)
+                _time.sleep(0.5)
+            except Exception:
+                pass
+
+        try:
+            start_server(host="0.0.0.0", port=_port, auth=auth, tls=False)
+            console.print(f"  [green]Mobile server started on port {_port}[/green]")
+        except OSError as srv_exc:
+            console.print(
+                f"  [yellow]Port {_port} in use: {srv_exc} (reusing existing server)[/yellow]"
+            )
+
+        console.print("  [dim]Setting up cloudflared tunnel...[/dim]")
+        tunnel_proc = start_tunnel(port=_port)
+        tunnel_url = parse_tunnel_url(tunnel_proc, timeout=25)
+        if tunnel_url:
+            token = auth.generate_token(label=f"update-{project_name}")
+            full_url = f"{tunnel_url}?token={token}"
+            console.print(f"\n  [bold green]Public URL: {full_url}[/bold green]")
+            qr = generate_qr_terminal(full_url)
+            if qr:
+                console.print(qr)
+            console.print(
+                "  [dim]Scan the QR code or open the URL on your phone.[/dim]"
+            )
+        else:
+            console.print(
+                "  [yellow]Could not establish tunnel. "
+                "Run 'ricet mobile tunnel' later.[/yellow]"
+            )
+    except Exception as exc:
+        console.print(f"  [yellow]Mobile access: {exc}[/yellow]")
 
     # --- Done ---
     console.print(f"\n[bold green]Project updated![/bold green]")
