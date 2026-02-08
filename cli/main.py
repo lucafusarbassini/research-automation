@@ -588,36 +588,82 @@ def init(
             parse_tunnel_url,
             start_server,
             start_tunnel,
+            stop_server,
         )
 
         auth = MobileAuth()
-        start_server(host="0.0.0.0", port=8777, auth=auth, tls=False)
-        console.print("  [green]Mobile server started on port 8777[/green]")
+
+        # Kill any existing server on the port before binding
+        import socket as _socket
+
+        _port = 8777
+        _sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
         try:
-            tunnel_proc = start_tunnel(port=8777)
-            tunnel_url = parse_tunnel_url(tunnel_proc, timeout=20)
-            if tunnel_url:
-                token = auth.generate_token(label=f"init-{project_name}")
-                full_url = f"{tunnel_url}?token={token}"
-                console.print(f"  [bold green]Public URL: {full_url}[/bold green]")
-                qr = generate_qr_terminal(full_url)
-                if qr:
-                    console.print(qr)
-                console.print(
-                    "  [dim]Scan the QR code or open the URL on your phone to access ricet.[/dim]"
+            _sock.bind(("0.0.0.0", _port))
+            _sock.close()
+        except OSError:
+            # Port in use — try to stop our own server, or find the PID
+            _sock.close()
+            stop_server()
+            import time as _time
+            _time.sleep(0.5)
+            # If still in use, try to kill the process holding the port
+            try:
+                _lsof = subprocess.run(
+                    ["lsof", "-ti", f":{_port}"],
+                    capture_output=True, text=True, timeout=5,
                 )
-            else:
-                console.print(
-                    "  [yellow]Could not establish tunnel. "
-                    "Run 'ricet mobile start' later.[/yellow]"
-                )
-        except Exception as tunnel_exc:
+                for pid in _lsof.stdout.strip().split():
+                    if pid.isdigit():
+                        subprocess.run(["kill", pid], timeout=5)
+                _time.sleep(0.5)
+            except Exception:
+                pass
+
+        server_ok = False
+        try:
+            start_server(host="0.0.0.0", port=_port, auth=auth, tls=False)
+            console.print(f"  [green]Mobile server started on port {_port}[/green]")
+            server_ok = True
+        except OSError as srv_exc:
             console.print(
-                f"  [yellow]Tunnel not started: {tunnel_exc}[/yellow]"
+                f"  [yellow]Mobile server port {_port} still in use: {srv_exc}[/yellow]"
             )
             console.print(
-                "  [dim]You can start it later with: ricet mobile start[/dim]"
+                "  [dim]The tunnel will still work — it connects to the existing server.[/dim]"
             )
+            server_ok = True  # existing server on that port is fine for the tunnel
+
+        # Always attempt tunnel + QR, even if server had issues
+        if server_ok:
+            try:
+                console.print("  [dim]Setting up cloudflared tunnel...[/dim]")
+                tunnel_proc = start_tunnel(port=_port)
+                tunnel_url = parse_tunnel_url(tunnel_proc, timeout=25)
+                if tunnel_url:
+                    token = auth.generate_token(label=f"init-{project_name}")
+                    full_url = f"{tunnel_url}?token={token}"
+                    console.print(
+                        f"\n  [bold green]Public URL: {full_url}[/bold green]"
+                    )
+                    qr = generate_qr_terminal(full_url)
+                    if qr:
+                        console.print(qr)
+                    console.print(
+                        "  [dim]Scan the QR code or open the URL on your phone to access ricet.[/dim]"
+                    )
+                else:
+                    console.print(
+                        "  [yellow]Could not establish tunnel. "
+                        "Run 'ricet mobile tunnel' later.[/yellow]"
+                    )
+            except Exception as tunnel_exc:
+                console.print(
+                    f"  [yellow]Tunnel not started: {tunnel_exc}[/yellow]"
+                )
+                console.print(
+                    "  [dim]You can start it later with: ricet mobile tunnel[/dim]"
+                )
     except Exception as exc:
         console.print(f"  [yellow]Mobile access skipped: {exc}[/yellow]")
 
@@ -1111,19 +1157,48 @@ def start(
 
     # Always start mobile server + tunnel
     try:
-        from core.mobile import mobile_server, start_tunnel, parse_tunnel_url
+        from core.mobile import (
+            mobile_server, start_tunnel, parse_tunnel_url,
+            generate_qr_terminal, stop_server,
+        )
 
-        mobile_server.start()
-        url = mobile_server.get_url()
-        console.print(f"[green]Mobile server: {url}[/green]")
+        import socket as _socket
+
+        _port = 8777
+        _sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+        try:
+            _sock.bind(("0.0.0.0", _port))
+            _sock.close()
+        except OSError:
+            _sock.close()
+            stop_server()
+            import time as _time
+            _time.sleep(0.5)
+            try:
+                _lsof = subprocess.run(
+                    ["lsof", "-ti", f":{_port}"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                for pid in _lsof.stdout.strip().split():
+                    if pid.isdigit():
+                        subprocess.run(["kill", pid], timeout=5)
+                _time.sleep(0.5)
+            except Exception:
+                pass
+
+        try:
+            mobile_server.start(port=_port)
+            url = mobile_server.get_url(port=_port)
+            console.print(f"[green]Mobile server: {url}[/green]")
+        except OSError:
+            console.print(f"[dim]Mobile server port {_port} in use (reusing existing)[/dim]")
+
         # Start cloudflared tunnel
         try:
-            tunnel_proc = start_tunnel(port=8777)
+            tunnel_proc = start_tunnel(port=_port)
             tunnel_url = parse_tunnel_url(tunnel_proc, timeout=20)
             if tunnel_url:
                 console.print(f"[bold green]Public URL: {tunnel_url}[/bold green]")
-                from core.mobile import generate_qr_terminal
-
                 qr = generate_qr_terminal(tunnel_url)
                 if qr:
                     console.print(qr)
