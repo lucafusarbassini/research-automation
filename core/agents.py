@@ -31,6 +31,7 @@ class AgentType(str, Enum):
     FALSIFIER = "falsifier"
     WRITER = "writer"
     CLEANER = "cleaner"
+    SLIDE_MAKER = "slide-maker"
 
 
 # Default budget allocation (percentage of session tokens)
@@ -41,6 +42,7 @@ DEFAULT_BUDGET_SPLIT = {
     AgentType.FALSIFIER: 20,
     AgentType.WRITER: 15,
     AgentType.CLEANER: 5,
+    AgentType.SLIDE_MAKER: 15,
 }
 
 # Keywords used as last-resort fallback when Opus and claude-flow are unavailable
@@ -106,6 +108,14 @@ ROUTING_KEYWORDS = {
         "lint",
         "format",
         "organize",
+    ],
+    AgentType.SLIDE_MAKER: [
+        "slide",
+        "presentation",
+        "deck",
+        "pptx",
+        "powerpoint",
+        "talk",
     ],
 }
 

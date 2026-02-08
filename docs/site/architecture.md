@@ -32,6 +32,9 @@ graph TB
         Social["social_media.py<br/>Publishing"]
         Adopt["adopt.py<br/>Repo Adoption"]
         Voice["voice.py<br/>Audio Input"]
+        Sandbox["sandbox.py<br/>Docker Sandbox"]
+        Slides["slides.py<br/>Slide Generation"]
+        CredStore["credential_store.py<br/>Global Creds"]
     end
 
     Bridge["claude_flow.py<br/>Claude-Flow Bridge"]
@@ -50,6 +53,9 @@ graph TB
     CLI --> Social
     CLI --> Adopt
     CLI --> Voice
+    CLI --> Sandbox
+    CLI --> Slides
+    Onboard --> CredStore
     Agents --> Router
     Agents --> Tokens
     Agents --> Bridge
@@ -120,8 +126,8 @@ research-automation/
 │   ├── dashboard.py              # Rich TUI dashboard
 │   └── gallery.py                # Figure gallery viewer
 │
-├── core/                         # Business logic (45+ modules)
-│   ├── agents.py                 # Agent types, routing, DAG execution
+├── core/                         # Business logic (50+ modules)
+│   ├── agents.py                 # Agent types, routing, DAG execution (incl. Slide-Maker)
 │   ├── session.py                # Session CRUD, snapshots
 │   ├── tokens.py                 # Token estimation, budget checks
 │   ├── knowledge.py              # Encyclopedia CRUD, vector search
@@ -137,6 +143,9 @@ research-automation/
 │   ├── cross_repo.py             # Multi-repo linking, coordinated commits
 │   ├── autonomous.py             # Scheduled routines, audit logging
 │   ├── claude_flow.py            # Bridge to claude-flow v3
+│   ├── credential_store.py       # Global credential store (~/.ricet/credentials.env)
+│   ├── sandbox.py                # Docker sandbox orchestration
+│   ├── slides.py                 # Slide deck generation orchestration
 │   ├── style_transfer.py         # Writing style analysis, plagiarism check
 │   ├── voice.py                  # Audio transcription
 │   ├── meta_rules.py             # Rule extraction from conversations
@@ -166,10 +175,13 @@ research-automation/
 │   └── verification.py           # Result verification
 │
 ├── templates/                    # Copied into new projects
+│   ├── .claude/                  # Agent prompts (incl. slide-maker), hooks, skills
 │   ├── config/                   # MCP config, settings template
-│   │   └── mcp-nucleus.json      # 70+ MCPs in 8 tiers
+│   │   └── mcp-nucleus.json      # 34 MCPs installed at startup
 │   ├── knowledge/                # GOAL.md, ENCYCLOPEDIA.md, CONSTRAINTS.md
-│   └── paper/                    # main.tex, references.bib, Makefile
+│   ├── paper/                    # main.tex, references.bib, Makefile
+│   ├── sandbox/                  # Dockerfile, docker-compose, martinprompt
+│   └── slides/                   # slide_utils.py, slides_task.md, example script
 │
 ├── defaults/                     # Shared defaults (not copied into projects)
 │   ├── PHILOSOPHY.md             # Core research principles
@@ -323,6 +335,7 @@ This ensures the system works identically with or without claude-flow installed.
 | FALSIFIER | security-auditor |
 | WRITER | api-docs |
 | CLEANER | refactorer |
+| SLIDE_MAKER | presentation-builder |
 
 ---
 

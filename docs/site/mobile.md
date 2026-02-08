@@ -20,15 +20,22 @@ The mobile system (`core/mobile.py` and `core/mobile_pwa.py`) provides:
 
 ## Quick Start
 
-### Enable During Project Init
+### Always-On by Default
 
-When running `ricet init`, answer "yes" to the mobile access question:
+Mobile and web access is always enabled -- no configuration needed. During `ricet init`, the mobile server starts automatically and a Cloudflare Tunnel is set up with a QR code for instant phone pairing.
 
-```
-Do you need mobile access? (yes/no) [no]: yes
-```
+When you run `ricet start`, the mobile server launches automatically alongside your Claude session.
 
-This stores the preference in `config/settings.yml`. When you run `ricet start`, the mobile server launches automatically alongside your Claude session.
+### Cloudflare Tunnel Auto-Setup
+
+During `ricet init`, ricet automatically:
+
+1. Installs `cloudflared` if not present
+2. Creates a Cloudflare Tunnel pointing to the mobile server
+3. Displays a public URL and QR code in the terminal
+4. The QR code can be scanned to instantly pair your phone
+
+This gives you remote access without opening firewall ports or configuring VPNs.
 
 ### Manual Server Management
 
@@ -98,6 +105,9 @@ All API responses are JSON with a `_ts` timestamp and string values truncated to
 | `POST` | `/task` | Submit a new task | Yes |
 | `POST` | `/voice` | Submit voice-transcribed text as a task | Yes |
 | `GET` | `/connect-info` | TLS fingerprint and connection methods | Yes |
+| `GET` | `/dashboard` | Web dashboard (HTML) | Yes |
+| `GET` | `/dashboard/html` | Alias for web dashboard | Yes |
+| `GET` | `/agents/output` | Live verbose agent output | Yes |
 
 ### Multi-Project Endpoints
 
@@ -106,6 +116,7 @@ All API responses are JSON with a `_ts` timestamp and string values truncated to
 | `GET` | `/projects` | List all registered ricet projects | Yes |
 | `GET` | `/project/status?name=X` | Get a specific project's progress and sessions | Yes |
 | `POST` | `/project/task?name=X` | Submit a task to a specific project | Yes |
+| `POST` | `/project/create` | Create a new project from mobile | Yes |
 
 ### Example Requests
 
@@ -155,7 +166,7 @@ Response:
 
 ## Progressive Web App (PWA)
 
-When you open the server URL in your phone's browser, you get a full mobile-optimized app with four tabs:
+When you open the server URL in your phone's browser, you get a full mobile-optimized app with five tabs:
 
 ### Dashboard
 
@@ -163,11 +174,15 @@ Lists all registered ricet projects with their status, description, and progress
 
 ### Tasks
 
-Select a project from the dropdown, type a task description, and submit it. The task is queued for execution by the agent system.
+Select a project from the dropdown, type a task description, and submit it. The task is queued for execution by the agent system. You can also create new projects directly from this tab.
 
 ### Voice
 
 Tap the microphone button to dictate a command using your phone's speech recognition (Web Speech API). The transcribed text can be sent as a task to any project.
+
+### Monitor
+
+Live verbose output from running agents. Shows the last 15 lines of each active agent's output with agent name headers. Auto-refreshes to display real-time activity. Useful for checking overnight session progress from your phone.
 
 ### Settings
 
@@ -186,48 +201,49 @@ The app works in standalone mode (no browser chrome) and includes a service work
 
 ## Connection Methods
 
-The `ricet mobile connect-info` command shows three ways to reach your server:
+The `ricet mobile connect-info` command shows your connection options:
 
-### 1. Direct HTTPS (Same Network)
+### 1. Cloudflare Tunnel (Recommended)
+
+Auto-configured during `ricet init`. A QR code is displayed in the terminal for instant pairing:
+
+```
+https://your-tunnel-id.trycloudflare.com
+```
+
+No firewall changes needed. Works from anywhere with internet access.
+
+!!! note
+    `cloudflared` is auto-installed if not present. The tunnel URL uses `--no-tls-verify` since the tunnel handles encryption.
+
+### 2. Direct HTTPS (Same Network)
 
 If your phone and computer are on the same Wi-Fi:
 
 ```
-https://192.168.1.100:8777
+https://192.168.1.100:8443
 ```
 
 Your phone will show a certificate warning because the certificate is self-signed. Accept it after verifying the SHA-256 fingerprint matches.
 
-### 2. SSH Tunnel (Remote Access)
+### 3. SSH Tunnel (Remote Access)
 
 For accessing a remote lab server:
 
 ```bash
 # On your laptop or phone (Termux, etc.)
-ssh -L 8777:localhost:8777 user@lab-server.example.com
+ssh -L 8443:localhost:8443 user@lab-server.example.com
 
 # Then open
-https://localhost:8777
+https://localhost:8443
 ```
 
-### 3. WireGuard VPN (Peer-to-Peer)
+### 4. WireGuard VPN (Peer-to-Peer)
 
 If you have a WireGuard VPN between your phone and server:
 
 ```
-https://<wireguard-ip>:8777
-```
-
-### 4. Cloudflare Tunnel or ngrok (Public Access)
-
-For internet-facing access without opening ports:
-
-```bash
-# Cloudflare Tunnel (free)
-cloudflared tunnel --url https://localhost:8777
-
-# ngrok
-ngrok http https://localhost:8777
+https://<wireguard-ip>:8443
 ```
 
 !!! warning

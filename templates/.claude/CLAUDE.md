@@ -1,6 +1,11 @@
 # Project Instructions
 
-Scientific research project. Read `knowledge/GOAL.md`, `knowledge/CONSTRAINTS.md`, and `state/TODO.md` before starting any work.
+Scientific research project. Read these files before starting any work:
+- `knowledge/GOAL.md` — project description and objectives
+- `knowledge/CONSTRAINTS.md` — hard rules and preferences
+- `knowledge/LEGISLATION.md` — detailed behavioral rules (coding style, paper writing, figure making, answer style)
+- `knowledge/PHILOSOPHY.md` — core research principles
+- `state/TODO.md` — current task list
 
 ## Core Philosophies
 

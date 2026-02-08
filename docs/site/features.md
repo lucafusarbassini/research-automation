@@ -19,6 +19,7 @@ ricet uses a hierarchical agent system where a Master agent routes tasks to six 
 | **Falsifier** | Adversarial validation, data leakage checks, statistical audits | 20% |
 | **Writer** | Paper sections, documentation, reports | 15% |
 | **Cleaner** | Refactoring, optimization, dead code removal | 5% |
+| **Slide-Maker** | Presentation deck generation with AI schematics | 15% |
 
 ### Task Routing
 
@@ -39,7 +40,7 @@ When claude-flow is available, swarm execution delegates to the bridge for enhan
 
 ## MCP Auto-Discovery
 
-ricet includes a catalog of 70+ Model Context Protocol (MCP) integrations organized into eight tiers. MCPs are loaded automatically based on Opus-powered semantic task analysis.
+ricet installs 34 MCP integrations at startup, organized into eight tiers. Additional MCPs are loaded automatically based on Opus-powered semantic task analysis.
 
 ### Tiers
 
@@ -827,6 +828,144 @@ Overnight mode monitors CPU, RAM, and disk usage between iterations. If resource
 
 ---
 
+## Sandbox Infrastructure
+
+Run autonomous sessions inside a fully isolated Docker sandbox managed by ricet:
+
+```bash
+ricet sandbox setup     # Build sandbox image (Ubuntu 24.04 + full toolchain)
+ricet sandbox start     # Launch sandbox container
+ricet sandbox status    # Check sandbox health and resource usage
+ricet sandbox logs      # View sandbox container logs
+ricet sandbox extract   # Copy work products from sandbox to host
+ricet sandbox backup    # Snapshot the current sandbox state
+ricet sandbox destroy   # Tear down the sandbox completely
+```
+
+### What the Sandbox Includes
+
+The sandbox image (`ricet-sandbox`) ships with:
+
+- Ubuntu 24.04 with Node.js 20+, Python 3.11, and pip
+- Claude Code CLI pre-installed
+- Full LaTeX toolchain (texlive-full, biber, latexmk)
+- ffmpeg and audio processing libraries
+- All ricet Python dependencies
+- Your project mounted at `/workspace`
+- Claude credentials mounted read-only
+
+### Auto-Backup
+
+During overnight sessions, the sandbox automatically creates backups every 30 minutes. Backups are stored on the host in `sandbox-backups/` with timestamped directories.
+
+### Work Extraction
+
+After a sandbox session completes, extract the results:
+
+```bash
+ricet sandbox extract           # Copies sandbox:/workspace → ./sandbox-output/
+ricet sandbox extract --path outputs/   # Extract specific directory
+```
+
+---
+
+## Slide Deck Generation
+
+Generate polished, presentation-ready `.pptx` decks from your codebase using Claude and AI-generated schematics:
+
+```bash
+ricet slides setup      # Copy slide templates into your project (slides/ directory)
+ricet slides create     # Claude agent analyzes your project, writes make_slides.py
+ricet slides build      # Run the script: generates schematics + builds .pptx
+```
+
+### How It Works
+
+1. **Setup**: Templates (`slide_utils.py`, `slides_task.md`, example script) are copied into `slides/`.
+2. **Create**: The Slide-Maker agent reads your codebase and `slides_task.md`, then writes `make_slides.py` with a full narrative, schematic prompts, and slide content.
+3. **Build**: Running the script calls Nano Banana Pro (Gemini 3 Pro) to generate N schematic diagrams, then assembles the complete `.pptx` deck.
+
+### Nano Banana Pro Schematics
+
+- Model: `gemini-3-pro-image-preview`
+- Aspect ratio: 16:9 (matches slide dimensions)
+- Resolution: 2K (crisp on projectors)
+- Cost: ~$0.02-0.12 per image
+- Schematics are full-slide images -- the image IS the slide content
+
+### Slide Templates
+
+| Function | Description |
+|----------|-------------|
+| `add_title_slide()` | Dark title with accent bar, subtitle, author |
+| `add_section_slide()` | Section divider with number and title |
+| `add_content_slide()` | Title + bullet points |
+| `add_two_column_slide()` | Side-by-side comparison |
+| `add_key_metrics_slide()` | Big numbers in a row |
+| `add_image_slide()` | Full-slide schematic image |
+| `add_closing_slide()` | Thank-you slide |
+
+All slides use a consistent dark theme (teal/blue/gold palette).
+
+### Credential Requirements
+
+Requires a Google API key for Nano Banana Pro. The key is loaded from:
+1. `GOOGLE_API_KEY` environment variable
+2. Project-level `.env` file
+3. Global credential store (`~/.ricet/credentials.env`)
+
+---
+
+## Global Credential Store
+
+Store API keys once and use them across all ricet projects:
+
+```
+~/.ricet/credentials.env    # Shared credentials file (chmod 600)
+```
+
+### How It Works
+
+During `ricet init`, credentials are collected through a guided walkthrough of 20+ API keys (core, ML, publishing, cloud, integrations). Each entered key is saved to both:
+- The project's local `secrets/.env`
+- The global `~/.ricet/credentials.env`
+
+New projects automatically inherit all global credentials. Project-level `.env` files can override globals for project-specific keys.
+
+### Security
+
+- The global credential file has `chmod 600` (owner read/write only)
+- Stored in `~/.ricet/` (not in any git repository)
+- Never committed to version control
+- Masked in logs and dashboard output
+
+### Supported Credentials
+
+The onboarding wizard supports 20+ credentials including:
+
+| Category | Keys |
+|----------|------|
+| Core | `ANTHROPIC_API_KEY`, `GITHUB_TOKEN` |
+| ML | `OPENAI_API_KEY`, `HUGGINGFACE_TOKEN`, `WANDB_API_KEY` |
+| Search | `SEMANTIC_SCHOLAR_KEY`, `SERP_API_KEY`, `GOOGLE_API_KEY` |
+| Publishing | `MEDIUM_TOKEN`, `LINKEDIN_ACCESS_TOKEN` |
+| Cloud | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| Notifications | `SLACK_WEBHOOK`, SMTP credentials |
+
+---
+
+## Project Updates
+
+Update an existing project with the latest ricet templates, agents, hooks, and skills:
+
+```bash
+ricet init my-project --update
+```
+
+This overlays the latest template files onto an existing project without overwriting user-modified files. Useful after upgrading ricet to get new agent prompts, hooks, and configuration defaults.
+
+---
+
 ## Automated Research Workflow
 
 Run the full research automation pipeline:
@@ -870,16 +1009,25 @@ Useful for capturing ideas on the go or dictating experiment plans.
 
 ---
 
-## Mobile Access
+## Mobile & Web Access
 
-Control your research projects from your phone with a full-featured mobile system.
+Mobile and web access is always enabled -- no configuration needed. During `ricet init`, a Cloudflare Tunnel is automatically set up, providing a public URL with a QR code for instant phone pairing.
+
+### Always-On Architecture
+
+Mobile and web servers start automatically during `ricet init` and with every `ricet start`. No opt-in question is asked -- the feature is always available.
+
+- The HTTPS server runs on port 8443 (mobile) and 8444 (web dashboard)
+- A Cloudflare Tunnel is auto-configured for remote access
+- QR code is displayed in the terminal for instant phone pairing
+- `cloudflared` is auto-installed if not present
 
 ### Server Management
 
 ```bash
-ricet mobile serve          # Start HTTPS server on port 8777
+ricet mobile serve          # Start HTTPS server
 ricet mobile pair           # Generate bearer token + QR code for pairing
-ricet mobile connect-info   # Show connection methods (direct, SSH, WireGuard)
+ricet mobile connect-info   # Show connection methods (direct, SSH, tunnel)
 ricet mobile tokens         # List active authentication tokens
 ricet mobile cert-regen     # Regenerate TLS certificates
 ricet mobile status         # Check if server is running
@@ -907,6 +1055,10 @@ The mobile server implements defense-in-depth security:
 | `GET` | `/projects` | List all registered projects |
 | `GET` | `/project/status?name=X` | Get a project's progress |
 | `POST` | `/project/task?name=X` | Submit a task to a specific project |
+| `POST` | `/project/create` | Create a new project from mobile |
+| `GET` | `/dashboard` | Web dashboard (HTML) |
+| `GET` | `/dashboard/html` | Alias for web dashboard |
+| `GET` | `/agents/output` | Live agent output stream |
 | `GET` | `/connect-info` | TLS fingerprint and connection methods |
 
 ### Progressive Web App
@@ -916,20 +1068,27 @@ The built-in PWA (`core/mobile_pwa.py`) provides a native-like mobile experience
 - **Dashboard tab** -- Project list with status badges and progress bars. Auto-refreshes every 30 seconds.
 - **Tasks tab** -- Select a project and submit tasks via text input.
 - **Voice tab** -- Tap-to-speak voice command input using the Web Speech API. Transcribed text is sent as a task.
+- **Monitor tab** -- Live verbose agent output showing what agents are doing in real time.
 - **Settings tab** -- Connection info, TLS fingerprint, and token management.
 - **Offline support** -- Service worker caches the app shell. API requests degrade gracefully when offline.
 - **Installable** -- Supports "Add to Home Screen" on iOS (Safari) and Android (Chrome) with standalone display mode.
 
 ### Connection Methods
 
-- **Direct HTTPS** -- Same Wi-Fi network: `https://<local-ip>:8777`
-- **SSH tunnel** -- Remote access: `ssh -L 8777:localhost:8777 user@server`
-- **WireGuard VPN** -- Peer-to-peer: `https://<wg-ip>:8777`
-- **Cloudflare Tunnel / ngrok** -- Public access without opening ports
+- **Direct HTTPS** -- Same Wi-Fi network: `https://<local-ip>:8443`
+- **SSH tunnel** -- Remote access: `ssh -L 8443:localhost:8443 user@server`
+- **WireGuard VPN** -- Peer-to-peer: `https://<wg-ip>:8443`
+- **Cloudflare Tunnel** -- Auto-configured during `ricet init`, provides a public URL without opening ports
 
-### Auto-Start
+### Project Creation from Mobile
 
-If mobile access is enabled during `ricet init`, the server starts automatically with `ricet start`. The URL is printed in the terminal.
+Create new ricet projects directly from the PWA:
+
+```bash
+POST /project/create
+Content-Type: application/json
+{"name": "my-new-project", "goal": "Investigate attention mechanisms"}
+```
 
 See [Mobile Access](mobile.md) for the complete guide.
 
@@ -949,6 +1108,11 @@ ricet dashboard
 - **Resources** -- CPU, RAM, GPU, and disk utilization.
 - **Memory** -- Recent knowledge entries and vector memory stats.
 - **Progress** -- Task completion log and session history.
+- **Verbose Agent Output** -- Live output from running agents (last 15 lines per agent). Shows agent name headers and real-time activity.
+
+### Web Dashboard
+
+The dashboard is also accessible via the web at `/dashboard` on the mobile/web server. This renders an HTML version of the same panels, accessible from any browser.
 
 The dashboard auto-refreshes and provides a single-pane view of your project's status.
 

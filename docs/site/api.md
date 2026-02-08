@@ -13,15 +13,18 @@ The main Typer application providing the `ricet` command.
 | Command | Description |
 |---------|-------------|
 | `ricet init <name>` | Initialize a new research project with interactive onboarding |
+| `ricet init <name> --update` | Update an existing project with latest templates and agents |
 | `ricet start` | Start an interactive research session |
 | `ricet overnight` | Run autonomous overnight mode |
 | `ricet status` | Show current TODO and progress |
 | `ricet config [section]` | View or reconfigure project settings |
 | `ricet paper <action>` | Paper pipeline (build, update, modernize, check, adapt-style) |
-| `ricet dashboard` | Launch the TUI dashboard |
+| `ricet dashboard` | Launch the TUI dashboard with live agent output |
 | `ricet agents` | List agent types and their status |
 | `ricet memory <action>` | Knowledge base (search, log-decision, export, import, stats) |
 | `ricet metrics` | Display token and cost metrics |
+| `ricet sandbox <action>` | Sandbox management (setup, start, stop, status, logs, extract, backup, destroy) |
+| `ricet slides <action>` | Slide deck generation (setup, create, build) |
 | `ricet mobile <action>` | Mobile server (serve, stop, pair, connect-info, tokens, cert-regen, status) |
 | `ricet voice` | Record and transcribe voice commands |
 | `ricet publish <platform>` | Publish to social media (medium, linkedin) |
@@ -54,9 +57,11 @@ The main Typer application providing the `ricet` command.
 ### Selected Options
 
 ```
-ricet init <name> [--path PATH] [--skip-repo] [--no-env]
+ricet init <name> [--path PATH] [--skip-repo] [--no-env] [--update]
 ricet start [--session-name NAME]
 ricet overnight [--task-file PATH] [--iterations N] [--docker]
+ricet sandbox setup|start|stop|status|logs|extract|backup|destroy
+ricet slides setup|create|build
 ricet mobile serve|stop|pair|connect-info|tokens|cert-regen|status
 ricet paper build|update|modernize|check|adapt-style
 ```
@@ -73,6 +78,7 @@ Rich-based terminal dashboard for monitoring active sessions.
 - **Resources** -- CPU, RAM, GPU, and disk utilization.
 - **Memory** -- Recent knowledge entries and vector memory stats.
 - **Progress** -- Task completion log.
+- **Verbose Agent Output** -- Live output from running agents (last 15 lines per agent with agent name headers).
 
 ---
 
@@ -97,6 +103,7 @@ class AgentType(str, Enum):
     FALSIFIER = "falsifier"
     WRITER = "writer"
     CLEANER = "cleaner"
+    SLIDE_MAKER = "slide-maker"
 ```
 
 ### Constants
@@ -1062,6 +1069,94 @@ Static HTML/CSS/JS constants served by the mobile server. No imports, no logic.
 - `MANIFEST_JSON` -- PWA manifest for standalone display mode.
 - `SERVICE_WORKER_JS` -- Cache-first for app shell, network-first for API routes.
 - `ICON_SVG` -- Scalable app icon.
+
+---
+
+## `core.sandbox` -- Sandbox Infrastructure
+
+Docker sandbox management for isolated autonomous sessions.
+
+### Functions
+
+#### `setup_sandbox(project_path: Path, *, print_fn=print) -> bool`
+
+Build the sandbox Docker image from templates. Copies Dockerfile, docker-compose.yml, and martinprompt into the project's `sandbox/` directory.
+
+#### `start_sandbox(project_path: Path, *, print_fn=print) -> bool`
+
+Launch the sandbox container with project mounted at `/workspace` and Claude credentials mounted read-only.
+
+#### `stop_sandbox(project_path: Path, *, print_fn=print) -> bool`
+
+Stop the running sandbox container.
+
+#### `sandbox_status(project_path: Path) -> dict`
+
+Return sandbox health information including container state, uptime, and resource usage.
+
+#### `extract_work(project_path: Path, *, target: Path | None = None, print_fn=print) -> Path`
+
+Copy work products from `sandbox:/workspace` to the host.
+
+#### `run_backup(project_path: Path, *, print_fn=print) -> Path`
+
+Create a timestamped backup of the sandbox state.
+
+#### `start_auto_backup(project_path: Path, interval_minutes: int = 30) -> threading.Thread`
+
+Start a background thread that creates periodic backups.
+
+#### `destroy_sandbox(project_path: Path, *, print_fn=print) -> bool`
+
+Tear down the sandbox container and optionally remove the image.
+
+---
+
+## `core.slides` -- Slide Deck Generation
+
+Orchestration for presentation deck generation with AI schematics.
+
+### Functions
+
+#### `setup_slides(project_path: Path, *, print_fn=print) -> bool`
+
+Copy slide template files (`slide_utils.py`, `slides_task.md`, `make_slides_example.py`) into the project's `slides/` directory.
+
+#### `has_slides(project_path: Path) -> bool`
+
+Check if a project has slide infrastructure set up.
+
+#### `create_slides(project_path: Path, *, title: str, audience: str, duration: str, key_message: str, emphasis: list[str], skip: list[str], schematics_n: int, author: str, source_path: str | None = None, source_url: str | None = None, dangerously_skip_permissions: bool = False) -> Path`
+
+Write `slides_task.md` with the provided parameters, then invoke the Slide-Maker agent to analyze the project and write `make_slides.py`. Returns the path to the generated script.
+
+#### `build_slides(project_path: Path) -> Path`
+
+Run `make_slides.py` to generate schematics via Nano Banana Pro and assemble the `.pptx` deck. Loads `GOOGLE_API_KEY` from environment, project `.env`, or global credential store.
+
+---
+
+## `core.credential_store` -- Global Credential Store
+
+Shared credential management across all ricet projects.
+
+### Functions
+
+#### `load_global_credentials() -> dict[str, str]`
+
+Load credentials from `~/.ricet/credentials.env`. Returns a dict of key-value pairs.
+
+#### `save_global_credentials(credentials: dict[str, str]) -> Path`
+
+Save credentials to `~/.ricet/credentials.env` with `chmod 600`. Returns the file path.
+
+#### `merge_credentials(project_creds: dict[str, str], global_creds: dict[str, str]) -> dict[str, str]`
+
+Merge project-level and global credentials. Project-level credentials take precedence.
+
+#### `mask_value(value: str) -> str`
+
+Mask a credential value for display (shows first 4 and last 4 characters).
 
 ---
 

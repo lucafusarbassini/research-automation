@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/ricet.png" alt="ricet logo" width="300">
+</p>
+
 # ricet
 
 **Automate scientific research using Claude Code with multi-agent orchestration, overnight autonomous execution, and comprehensive tooling.**
@@ -19,8 +23,11 @@ Running a research project involves dozens of repetitive tasks: environment setu
 | Ad-hoc experiment tracking | Reproducibility engine with run logs, artifact registry, and dataset hashing |
 | Scattered knowledge | Persistent encyclopedia that grows automatically with every task |
 | Tedious boilerplate | Project templates with agents, hooks, LaTeX, and CI/CD out of the box |
-| Unsafe autonomous runs | Docker isolation with four-tier permission model |
+| Unsafe autonomous runs | Docker sandbox with four-tier permission model and auto-backup |
 | Manual paper formatting | Integrated LaTeX pipeline with colorblind-safe figures and citation management |
+| Presentation preparation | AI-generated slide decks with Nano Banana Pro schematics |
+| Credential sprawl | Global credential store with per-project overrides |
+| No remote monitoring | Always-on mobile PWA + Cloudflare Tunnel with QR pairing |
 
 ---
 
@@ -60,8 +67,14 @@ The `ricet init` wizard auto-detects your system (GPU, conda, Docker), installs 
 
 ## Feature Highlights
 
-- **Multi-Agent Orchestration** -- Master agent routes tasks to Researcher, Coder, Reviewer, Falsifier, Writer, and Cleaner sub-agents, each with dedicated budgets and system prompts.
-- **70+ MCP Integrations** -- Automatically discovered and loaded based on task type, organized in eight tiers from essential tools to cloud infrastructure.
+- **Multi-Agent Orchestration** -- Master agent routes tasks to Researcher, Coder, Reviewer, Falsifier, Writer, Cleaner, and Slide-Maker sub-agents, each with dedicated budgets and system prompts.
+- **34 MCP Integrations** -- All installed at startup, organized in eight tiers from essential tools to cloud infrastructure.
+- **Sandbox Infrastructure** -- `ricet sandbox` manages a fully isolated Docker sandbox with auto-backup, credential mounting, and work extraction. Ubuntu 24.04 with full toolchain.
+- **Slide Deck Generation** -- `ricet slides` creates presentation-ready `.pptx` decks with AI-generated schematics via Nano Banana Pro (Gemini 3 Pro). Analyzes your codebase and designs a 15-25 slide narrative.
+- **Always-On Mobile & Web** -- Mobile PWA and web dashboard are always enabled. Cloudflare Tunnel auto-configured during `ricet init` with QR code for instant phone pairing. Monitor tab shows live agent output.
+- **Global Credential Store** -- `~/.ricet/credentials.env` stores API keys once. New projects inherit them automatically. Per-project `.env` overrides supported.
+- **Live Dashboard** -- `ricet dashboard` shows a Rich TUI with agents, resources, memory, progress, and verbose agent output. Also accessible via web at `/dashboard`.
+- **Project Updates** -- `ricet init --update` upgrades an existing project with latest templates, agents, hooks, and skills without overwriting user files.
 - **Overnight Mode** -- Autonomous execution loop with auto-debug, resource monitoring, and recovery. Run `ricet overnight` and check results in the morning.
 - **Knowledge Accumulation** -- A project encyclopedia that records learnings, decisions, successful approaches, and failed attempts. Supports HNSW vector search when claude-flow is available.
 - **Paper Pipeline** -- LaTeX template, publication-quality figure generation with matplotlib rcParams, BibTeX citation management, and one-command compilation.
@@ -91,8 +104,6 @@ The `ricet init` wizard auto-detects your system (GPU, conda, Docker), installs 
 - **Resource-Aware Overnight** -- Monitors CPU/RAM/disk between iterations, auto-pauses on low resources.
 - **Falsifier Auto-Trigger** -- Falsifier agent validates results after every overnight iteration automatically.
 - **Voice Prompting** -- `ricet voice` transcribes audio instructions and structures them into actionable research prompts.
-- **Mobile PWA** -- `ricet mobile serve` launches an HTTPS API server with a full Progressive Web App (dashboard, task submission, voice commands, QR pairing, bearer token authentication, and TLS with certificate pinning).
-- **Interactive Dashboard** -- `ricet dashboard` provides a Rich TUI with live agent status, budget, and resource utilization.
 - **Figure Gallery** -- `ricet gallery` scans and catalogs experiment figures by run ID for quick review and paper inclusion.
 - **Git Worktree Management** -- `ricet worktree` manages parallel branches for concurrent experiments.
 - **Task Queue** -- `ricet queue` manages and spools background tasks for batch execution.
@@ -125,15 +136,18 @@ ricet is under active development. The core modules, CLI, Docker setup, template
 | Component | Status |
 |-----------|--------|
 | CLI (`ricet` command) | Implemented |
-| Core modules (45+ modules) | Implemented |
-| Docker containerization | Implemented |
-| Agent orchestration | Implemented |
+| Core modules (50+ modules) | Implemented |
+| Docker sandbox infrastructure | Implemented |
+| Agent orchestration (7 agent types) | Implemented |
 | Paper pipeline | Implemented |
-| MCP auto-discovery (70+) | Implemented |
+| Slide deck generation | Implemented |
+| MCP integrations (34 at startup) | Implemented |
 | claude-flow integration | Implemented (optional) |
 | GitHub workflows | Implemented |
-| Voice & mobile access | Implemented |
-| Interactive dashboard & gallery | Implemented |
+| Always-on mobile & web access | Implemented |
+| Global credential store | Implemented |
+| Live dashboard (TUI + web) | Implemented |
+| Cloudflare Tunnel auto-setup | Implemented |
 | Documentation site | You are here |
 
 ---

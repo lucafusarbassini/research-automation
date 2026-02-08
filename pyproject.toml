@@ -57,6 +57,7 @@ ml = [
 paper = []  # LaTeX toolchain is external; no Python deps required
 browser = []  # Puppeteer is Node.js; no Python deps required
 mobile = ["qrcode>=7.0"]  # QR code generation for mobile pairing
+slides = ["python-pptx>=0.6.21", "google-genai>=1.0.0", "Pillow>=10.0.0"]
 data = [
     "daft",
 ]
@@ -70,6 +71,7 @@ dev = [
 all = [
     "ricet[ml]",
     "ricet[data]",
+    "ricet[slides]",
 ]
 
 [project.scripts]

@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="docs/site/assets/ricet.png" alt="ricet logo" width="300">
+</p>
+
+<p align="center">
   <h1 align="center">ricet</h1>
   <p align="center">
     Scientific research automation powered by Claude Code.
@@ -17,7 +21,7 @@
 
 ---
 
-ricet turns a research idea into reproducible code, validated results, and a publication-ready LaTeX paper -- all from your terminal. A master agent breaks your goal into subtasks and dispatches them to specialized sub-agents (researcher, coder, reviewer, falsifier, writer, cleaner) that execute inside a Docker-isolated environment with 70+ MCP integrations auto-discovered on demand.
+ricet turns a research idea into reproducible code, validated results, and a publication-ready LaTeX paper -- all from your terminal. A master agent breaks your goal into subtasks and dispatches them to specialized sub-agents (researcher, coder, reviewer, falsifier, writer, cleaner, slide-maker) that execute inside a Docker-isolated environment with 34 MCP integrations installed at startup.
 
 ## Prerequisites
 
@@ -62,6 +66,7 @@ A hierarchical swarm of specialized Claude agents collaborates on your research.
 | **Falsifier** | Attacks results, finds flaws, enforces Popperian falsification |
 | **Writer** | Paper sections, documentation, reports |
 | **Cleaner** | Refactoring, optimization, code hygiene |
+| **Slide-Maker** | Presentation deck generation with AI-generated schematics |
 
 Token budgets are automatically distributed across agents and monitored throughout the session.
 
@@ -163,9 +168,50 @@ Link multiple repositories, run coordinated commits, and enforce permission boun
 
 Transcribe audio instructions, detect language, and structure them into actionable prompts that feed directly into the agent pipeline.
 
+### Sandbox Infrastructure
+
+Run autonomous sessions inside a fully isolated Docker sandbox:
+
+```bash
+ricet sandbox setup     # Build sandbox image with full toolchain
+ricet sandbox start     # Launch sandbox container
+ricet sandbox status    # Check sandbox health
+ricet sandbox extract   # Copy work products to host
+ricet sandbox backup    # Snapshot the sandbox state
+ricet sandbox destroy   # Tear down the sandbox
+```
+
+The sandbox uses Ubuntu 24.04 with Node.js, Python 3.11, LaTeX, and all ricet dependencies pre-installed. Claude credentials are mounted read-only. Auto-backup runs every 30 minutes during overnight sessions.
+
+### Slide Deck Generation
+
+Generate presentation-ready `.pptx` decks with AI-generated schematics:
+
+```bash
+ricet slides setup      # Copy slide templates into project
+ricet slides create     # Claude agent designs narrative + writes make_slides.py
+ricet slides build      # Run script to generate schematics + build .pptx
+```
+
+Uses Nano Banana Pro (Google Gemini 3 Pro) to generate full-slide schematic diagrams in 16:9 format. The agent analyzes your codebase, designs a 15-25 slide narrative, engineers detailed prompts for N schematics, and writes a self-contained build script.
+
+### Global Credential Store
+
+Manage API keys once, use them across all projects:
+
+```bash
+~/.ricet/credentials.env    # Shared credentials (chmod 600)
+```
+
+During `ricet init`, credentials are collected once and stored globally. New projects inherit them automatically. Project-level `.env` files can override globals.
+
+### Always-On Mobile & Web Access
+
+Mobile and web access is always enabled -- no configuration needed. During `ricet init`, a Cloudflare Tunnel is automatically set up with a QR code for instant phone pairing. The PWA includes a Monitor tab showing live agent output.
+
 ### Interactive Dashboard
 
-A Rich-powered TUI that shows live progress, TODO status, session history, and resource utilization at a glance.
+A Rich-powered TUI that shows live progress, TODO status, session history, resource utilization, and verbose agent output at a glance. Also accessible via the web at `/dashboard`.
 
 ### Figure Gallery
 
@@ -261,6 +307,7 @@ GITHUB_TOKEN=ghp_...
 | Command | Description |
 |---------|-------------|
 | `ricet init <name>` | Scaffold a new research project with interactive onboarding |
+| `ricet init <name> --update` | Update an existing project with latest templates and agents |
 | `ricet start` | Launch an interactive Claude Code session |
 | `ricet overnight` | Run autonomous overnight mode with configurable iterations |
 | `ricet status` | Show current TODO, progress, and resource metrics |
@@ -269,6 +316,9 @@ GITHUB_TOKEN=ghp_...
 | `ricet memory <query>` | Semantic search across vector memory |
 | `ricet agents` | Show active swarm agent status |
 | `ricet metrics` | Display token usage, cost, and system resource stats |
+| `ricet sandbox <action>` | Sandbox management: `setup`, `start`, `stop`, `status`, `logs`, `extract`, `backup`, `destroy` |
+| `ricet slides <action>` | Slide deck generation: `setup`, `create`, `build` |
+| `ricet dashboard` | Launch the Rich TUI dashboard with live agent output |
 | `ricet adopt <source>` | Adopt an existing repo as a ricet project (fork + scaffold) |
 | `ricet link <path>` | Link a repository for cross-repo RAG search |
 | `ricet unlink <name>` | Remove a linked repository |
@@ -306,7 +356,7 @@ research-automation/
 |   +-- gallery.py              #   Figure gallery viewer
 |
 |-- core/                       # Python library modules
-|   |-- agents.py               #   Agent definitions & routing
+|   |-- agents.py               #   Agent definitions & routing (incl. Slide-Maker)
 |   |-- auto_debug.py           #   Auto-debug loop
 |   |-- autonomous.py           #   Overnight autonomous runner
 |   |-- browser.py              #   Headless browser integration
@@ -314,10 +364,11 @@ research-automation/
 |   |-- claude_flow.py          #   claude-flow bridge (swarm, memory, metrics)
 |   |-- claude_helper.py        #   Shared Claude CLI helper for intelligent fallbacks
 |   |-- collaboration.py        #   Multi-user sync, merge, user identity
+|   |-- credential_store.py     #   Global credential store (~/.ricet/credentials.env)
 |   |-- cross_repo.py           #   Multi-repo coordination & RAG indexing
 |   |-- adopt.py                #   Transform existing repos into ricet projects
 |   |-- knowledge.py            #   Encyclopedia & keyword search
-|   |-- mcps.py                 #   MCP discovery & management (70+ integrations)
+|   |-- mcps.py                 #   MCP discovery & management (34 installed at startup)
 |   |-- meta_rules.py           #   Automatic meta-rule capture
 |   |-- model_router.py         #   3-tier model routing
 |   |-- notifications.py        #   Email / Slack notifications
@@ -325,18 +376,22 @@ research-automation/
 |   |-- paper.py                #   LaTeX compilation & citation management
 |   |-- reproducibility.py      #   Reproducibility tracking
 |   |-- resources.py            #   System resource monitoring
+|   |-- sandbox.py              #   Docker sandbox orchestration
 |   |-- security.py             #   Credential & permission guards
 |   |-- session.py              #   Session lifecycle management
+|   |-- slides.py               #   Slide deck generation orchestration
 |   |-- style_transfer.py       #   Academic writing style analysis
 |   |-- tokens.py               #   Token budget tracking
 |   |-- verification.py         #   Result verification
 |   +-- voice.py                #   Voice transcription & prompt structuring
 |
 |-- templates/                  # Scaffolded into every new project
-|   |-- .claude/                #   Agent definitions, hooks, skills
+|   |-- .claude/                #   Agent definitions (incl. slide-maker), hooks, skills
 |   |-- paper/                  #   LaTeX template, Makefile, references.bib
 |   |-- knowledge/              #   GOAL.md, ENCYCLOPEDIA.md, CONSTRAINTS.md
 |   |-- config/                 #   settings.yml, mcp-nucleus.json, claude-flow.json
+|   |-- sandbox/                #   Dockerfile, docker-compose, martinprompt
+|   |-- slides/                 #   slide_utils.py, slides_task.md, example script
 |   +-- .github/workflows/      #   CI: tests, linting, paper build
 |
 |-- docker/                     # Dockerfile & docker-compose

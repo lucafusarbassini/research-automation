@@ -1339,6 +1339,10 @@ GOAL_PACKAGE_MAP: list[tuple[list[str], list[str]]] = [
         ["bioinformatics", "genomics", "sequence", "protein"],
         ["biopython", "numpy", "pandas"],
     ),
+    (
+        ["slide", "slides", "presentation", "pptx", "powerpoint", "deck"],
+        ["python-pptx", "google-genai", "Pillow"],
+    ),
 ]
 
 

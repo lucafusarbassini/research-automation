@@ -72,6 +72,7 @@ def main(
 
 
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
+DEFAULTS_DIR = Path(__file__).parent.parent / "defaults"
 CONFIG_DIR = Path.home() / ".ricet"
 SETUP_SCRIPT = Path(__file__).parent.parent / "scripts" / "setup_claude_flow.sh"
 
@@ -285,6 +286,16 @@ def init(
         for f in agents_src.iterdir():
             if f.is_file():
                 shutil.copy2(f, agents_dst / f.name)
+
+    # Deploy behavioral rules from defaults/ into project knowledge/
+    _defaults_to_deploy = ["LEGISLATION.md", "PHILOSOPHY.md"]
+    knowledge_dst = project_path / "knowledge"
+    knowledge_dst.mkdir(parents=True, exist_ok=True)
+    for fname in _defaults_to_deploy:
+        src = DEFAULTS_DIR / fname
+        dst = knowledge_dst / fname
+        if src.exists() and not dst.exists():
+            shutil.copy2(src, dst)
 
     # Setup workspace folders
     setup_workspace(project_path)
@@ -731,6 +742,21 @@ def _init_update(
                     shutil.copy2(f, dst_file)
                     updated_agents += 1
         console.print(f"  [green]{updated_agents} agent template(s) refreshed[/green]")
+
+    # --- Refresh behavioral rules from defaults/ ---
+    _defaults_to_deploy = ["LEGISLATION.md", "PHILOSOPHY.md"]
+    knowledge_dst = project_path / "knowledge"
+    knowledge_dst.mkdir(parents=True, exist_ok=True)
+    updated_defaults = 0
+    for fname in _defaults_to_deploy:
+        src = DEFAULTS_DIR / fname
+        dst = knowledge_dst / fname
+        if src.exists():
+            if not dst.exists() or src.stat().st_mtime > dst.stat().st_mtime:
+                shutil.copy2(src, dst)
+                updated_defaults += 1
+    if updated_defaults:
+        console.print(f"  [green]{updated_defaults} behavioral rule file(s) refreshed[/green]")
 
     # --- Ensure state files exist ---
     state_dir = project_path / "state"
@@ -1772,6 +1798,143 @@ def sandbox_destroy_cmd():
         print_fn=lambda msg: console.print(f"  {msg}"),
     )
     if not ok:
+        raise typer.Exit(1)
+
+
+# ---------------------------------------------------------------------------
+# Slides subcommands
+# ---------------------------------------------------------------------------
+
+slides_app = typer.Typer(help="Generate presentation slide decks.")
+app.add_typer(slides_app, name="slides")
+
+
+@slides_app.command("setup")
+def slides_setup_cmd():
+    """Set up slide-making infrastructure in the current project."""
+    from core.slides import setup_slides
+
+    project_path = Path.cwd().resolve()
+    ok = setup_slides(
+        project_path,
+        print_fn=lambda msg: console.print(f"  {msg}"),
+    )
+    if ok:
+        console.print("[green]Slides infrastructure ready.[/green]")
+        console.print("")
+        console.print("[bold]Next steps:[/bold]")
+        console.print("  ricet slides create          # Generate slide deck via agent")
+        console.print("  ricet slides build           # Build the .pptx presentation")
+    else:
+        console.print("[red]Slides setup failed.[/red]")
+        raise typer.Exit(1)
+
+
+@slides_app.command("create")
+def slides_create_cmd(
+    title: str = typer.Option(..., "--title", "-t", prompt="Presentation title"),
+    audience: str = typer.Option(
+        "Technical peers", "--audience", "-a", prompt="Target audience"
+    ),
+    duration: str = typer.Option(
+        "15 minutes", "--duration", "-d", prompt="Duration"
+    ),
+    key_message: str = typer.Option(
+        "", "--key-message", "-k", prompt="Key message (one thing to remember)"
+    ),
+    schematics: int = typer.Option(4, "--schematics", "-n", help="Number of schematics"),
+    author: str = typer.Option("", "--author", prompt="Author"),
+    source: str = typer.Option("", "--source", "-s", help="Codebase path or URL to analyze"),
+    dangerously_skip_permissions: bool = typer.Option(
+        False, "--dangerously-skip-permissions", hidden=True
+    ),
+):
+    """Run the slide-maker agent to generate a presentation script.
+
+    The agent analyzes your project and writes make_slides.py with all slide
+    content and schematic prompts. Run 'ricet slides build' afterwards to
+    generate the .pptx.
+    """
+    from core.slides import create_slides
+
+    project_path = Path.cwd().resolve()
+
+    # Collect emphasis points
+    console.print("\n[bold]What to emphasize[/bold] (enter points, empty line to finish):")
+    emphasis: list[str] = []
+    while True:
+        point = typer.prompt(f"  {len(emphasis) + 1}", default="", show_default=False)
+        if not point:
+            break
+        emphasis.append(point)
+
+    # Determine source type
+    source_path = None
+    source_url = None
+    if source:
+        if source.startswith("http://") or source.startswith("https://"):
+            source_url = source
+        else:
+            source_path = source
+
+    console.print(f"\n[bold cyan]Generating slide deck: {title}[/bold cyan]")
+    console.print(f"  Audience: {audience}  |  Duration: {duration}")
+    console.print(f"  Schematics: {schematics}  |  Author: {author}")
+    console.print("")
+
+    make_slides = create_slides(
+        project_path,
+        title=title,
+        audience=audience,
+        duration=duration,
+        key_message=key_message,
+        emphasis=emphasis,
+        schematics_n=schematics,
+        author=author,
+        source_path=source_path,
+        source_url=source_url,
+        dangerously_skip_permissions=dangerously_skip_permissions,
+    )
+
+    if make_slides.exists():
+        console.print(f"\n[green]Generated: {make_slides}[/green]")
+        console.print("")
+        console.print("[bold]Next:[/bold]")
+        console.print("  ricet slides build           # Build the .pptx")
+    else:
+        console.print("[yellow]Agent finished but make_slides.py not found.[/yellow]")
+        console.print("Check the slides/ directory and agent output.")
+
+
+@slides_app.command("build")
+def slides_build_cmd():
+    """Build the .pptx presentation from make_slides.py.
+
+    Runs the generated script to produce schematics (via Nano Banana Pro)
+    and the final PowerPoint deck.
+    """
+    from core.slides import build_slides, has_slides
+
+    project_path = Path.cwd().resolve()
+
+    if not has_slides(project_path):
+        console.print("[yellow]No slides infrastructure. Run: ricet slides setup[/yellow]")
+        raise typer.Exit(1)
+
+    console.print("[bold cyan]Building slide deck...[/bold cyan]")
+
+    try:
+        output = build_slides(project_path)
+        if output.exists():
+            size_kb = output.stat().st_size / 1024
+            console.print(f"\n[green]Presentation ready: {output} ({size_kb:.0f} KB)[/green]")
+        else:
+            console.print(f"\n[yellow]Build completed but .pptx not found at {output}[/yellow]")
+    except FileNotFoundError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+    except RuntimeError as e:
+        console.print(f"[red]Build failed:[/red] {e}")
         raise typer.Exit(1)
 
 

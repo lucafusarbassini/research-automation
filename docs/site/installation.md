@@ -53,13 +53,21 @@ pip install -e ".[ml]"
 
 Adds `numpy`, `pandas`, `scipy`, `scikit-learn`, `matplotlib`, and `seaborn`.
 
+### With slides extras
+
+```bash
+pip install -e ".[slides]"
+```
+
+Adds `python-pptx`, `google-genai` (for Nano Banana Pro schematics), and `Pillow`.
+
 ### Full install
 
 ```bash
 pip install -e ".[all]"
 ```
 
-Adds everything in `ml` plus `chromadb`, `sentence-transformers`, `torch`, and `jupyter`.
+Adds everything in `ml`, `slides`, and `data` extras.
 
 ### Development install
 
@@ -157,11 +165,14 @@ pytest
 ```
 research-automation/
 ├── cli/                 # CLI entry point (ricet command)
-├── core/                # Python modules (45+ modules)
+├── core/                # Python modules (50+ modules)
 ├── templates/           # Copied into new projects
+│   ├── .claude/         # Agent prompts, hooks, skills
 │   ├── config/          # MCP config, settings
 │   ├── knowledge/       # Encyclopedia, goals
-│   └── paper/           # LaTeX template
+│   ├── paper/           # LaTeX template
+│   ├── sandbox/         # Dockerfile, docker-compose, martinprompt
+│   └── slides/          # slide_utils.py, slides_task.md, example
 ├── defaults/            # Default prompts, philosophy, code style
 ├── docker/              # Dockerfile, docker-compose
 ├── scripts/             # Setup, overnight, interactive
@@ -202,8 +213,11 @@ If claude-flow is available, metrics will report actual token counts and cost da
 |----------|----------|-------------|
 | Claude subscription (Pro/Team) | Yes | `claude auth login` (required and recommended). `ANTHROPIC_API_KEY` is an optional fallback for CI/headless only |
 | `GITHUB_TOKEN` | No | GitHub access for PRs, issues, Actions |
+| `GOOGLE_API_KEY` | No | Nano Banana Pro for slide schematics (`ricet slides build`) |
 | `NOTIFICATION_WEBHOOK` | No | Slack/webhook URL for notifications |
 | `SMTP_USER` / `SMTP_PASSWORD` | No | Email notification credentials |
+
+Credentials can also be stored in the global credential store at `~/.ricet/credentials.env` (managed by `ricet init`).
 
 ---
 

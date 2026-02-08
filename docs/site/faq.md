@@ -63,14 +63,22 @@ The core Python modules work on Windows. Some shell scripts (`scripts/*.sh`) and
 ricet init my-project
 ```
 
-This runs an interactive wizard that auto-detects your system (GPU, conda, Docker), sets up claude-flow, walks you through notification and credential configuration, creates the project structure from templates, optionally creates a conda environment with inferred packages, and initializes a GitHub repository. The project goal is written to `knowledge/GOAL.md` after init -- the wizard does not ask for it as a one-liner.
+This runs a streamlined interactive wizard that auto-detects your system (GPU, conda, Docker), installs 34 MCPs at startup, collects credentials (saved globally to `~/.ricet/credentials.env`), creates the project structure from templates, starts mobile/web servers with Cloudflare Tunnel, and optionally creates a GitHub repository. The project goal is written to `knowledge/GOAL.md` after init.
+
+### How do I update an existing project?
+
+```bash
+ricet init my-project --update
+```
+
+This overlays the latest templates, agents, hooks, and skills onto an existing project without overwriting user-modified files.
 
 ### What happens during `ricet start`?
 
 1. Syncs with remote (`git pull --rebase`) for collaborative workflows.
 2. Validates that `knowledge/GOAL.md` has at least 200 characters of real content. Opens your `$EDITOR` if insufficient.
 3. Infers and installs Python packages based on your goal description.
-4. Starts the mobile server if enabled in settings.
+4. Starts the mobile/web server (always-on).
 5. Re-indexes linked repositories for cross-repo RAG search.
 6. Creates a session record in `state/sessions/`.
 7. Suggests next research steps based on your goal and progress.
@@ -113,6 +121,7 @@ Yes. Each project is a self-contained directory with its own state, knowledge, a
 | Falsifier | Adversarial validation (Popperian) |
 | Writer | Paper and documentation writing |
 | Cleaner | Refactoring and optimization |
+| Slide-Maker | Presentation deck generation with AI schematics |
 
 ### Can I customize agent prompts?
 
@@ -253,14 +262,14 @@ If claude-flow is unavailable, the system silently falls back to local implement
 ### Mobile server does not start
 
 - Ensure `openssl` is installed (required for TLS certificate generation)
-- Check that port 8777 is not already in use: `lsof -i :8777`
-- Verify mobile access is enabled: check `config/settings.yml` for `features.mobile: true`
+- Check that port 8443 is not already in use: `lsof -i :8443`
 - Start manually with: `ricet mobile serve`
 
 ### Cannot connect to mobile server from phone
 
-- Both devices must be on the same network (or use an SSH tunnel / VPN)
-- Check firewall: `sudo ufw allow 8777/tcp`
+- Use the Cloudflare Tunnel URL (auto-configured during `ricet init`)
+- For direct access: both devices must be on the same network (or use SSH tunnel / VPN)
+- Check firewall: `sudo ufw allow 8443/tcp`
 - The self-signed certificate will show a browser warning -- verify the fingerprint with `ricet mobile connect-info` before accepting
 - Ensure the bearer token is included in the `Authorization` header or URL parameter
 
@@ -269,3 +278,70 @@ If claude-flow is unavailable, the system silently falls back to local implement
 - The PWA service worker caches the app shell but API calls require a live connection
 - Check that the server is running: `ricet mobile status`
 - Verify network connectivity between phone and server
+
+---
+
+## Sandbox
+
+### What is the sandbox?
+
+The sandbox is a Docker container that provides a fully isolated environment for autonomous sessions. It runs Ubuntu 24.04 with all ricet dependencies, Claude Code CLI, and LaTeX pre-installed. Your project is mounted at `/workspace` and Claude credentials are mounted read-only.
+
+### How do I use the sandbox?
+
+```bash
+ricet sandbox setup     # Build the sandbox image (one-time)
+ricet sandbox start     # Launch the container
+ricet sandbox status    # Check health
+ricet sandbox extract   # Copy results to host
+ricet sandbox destroy   # Tear down
+```
+
+### Does the sandbox auto-backup?
+
+Yes. During overnight sessions, backups are created every 30 minutes to `sandbox-backups/` on the host.
+
+---
+
+## Slides
+
+### How do I generate a slide deck?
+
+```bash
+ricet slides setup      # Copy slide templates to project
+ricet slides create     # Claude agent designs the deck
+ricet slides build      # Generate schematics + build .pptx
+```
+
+### What is Nano Banana Pro?
+
+Nano Banana Pro is Google's Gemini 3 Pro image generation model (`gemini-3-pro-image-preview`). ricet uses it to generate full-slide schematic diagrams (architecture diagrams, data pipelines, comparison charts, etc.) in 16:9 format. Costs ~$0.02-0.12 per image.
+
+### Do I need a Google API key?
+
+Yes, `GOOGLE_API_KEY` is required for `ricet slides build`. Set it via environment variable, project `.env`, or the global credential store at `~/.ricet/credentials.env`.
+
+### Can I skip the schematics?
+
+Yes. If `GOOGLE_API_KEY` is not set, the build step skips image generation and creates the `.pptx` without schematics.
+
+---
+
+## Credentials
+
+### Where are credentials stored?
+
+Credentials are stored in two places:
+
+1. **Global**: `~/.ricet/credentials.env` (chmod 600, shared across all projects)
+2. **Project**: `secrets/.env` (project-specific overrides)
+
+Project-level credentials take precedence over globals.
+
+### How do I add a credential after init?
+
+Edit `~/.ricet/credentials.env` directly, or re-run with `ricet init my-project --update`.
+
+### Are credentials committed to git?
+
+No. Both `secrets/.env` and `~/.ricet/` are excluded from version control.
