@@ -2011,7 +2011,7 @@ def paper(
 @app.command()
 def mobile(
     action: str = typer.Argument(
-        help="Action: serve, stop, pair, connect-info, tokens, cert-regen, status"
+        help="Action: serve, stop, pair, tunnel, connect-info, tokens, cert-regen, status"
     ),
     port: int = typer.Option(8777, "--port", "-p", help="Server port"),
     host: str = typer.Option("0.0.0.0", "--host", help="Bind address"),
@@ -2044,10 +2044,13 @@ def mobile(
             )
             console.print(f"\n[bold]Mobile phone access:[/bold]")
             console.print(
-                f"  Run: ricet mobile pair  (in another terminal)"
+                f"  Option 1 (recommended): ricet mobile tunnel"
             )
             console.print(
-                f"  Scan the QR code or open the URL with token on your phone"
+                f"    Creates a public URL via Cloudflare — works through firewalls"
+            )
+            console.print(
+                f"  Option 2: ricet mobile pair  (same network only)"
             )
             if tls:
                 console.print(
@@ -2100,6 +2103,47 @@ def mobile(
         except Exception as exc:
             console.print(f"[red]Failed: {exc}[/red]")
             raise typer.Exit(1)
+    elif action == "tunnel":
+        # Start mobile server (no TLS — tunnel handles TLS) + cloudflared tunnel
+        console.print("[bold]Starting mobile server + public tunnel...[/bold]")
+        try:
+            info = mobile_server.serve(host="127.0.0.1", port=port, tls=False)
+            console.print(f"[green]{info}[/green]")
+        except Exception as exc:
+            console.print(f"[red]Failed to start server: {exc}[/red]")
+            raise typer.Exit(1)
+
+        console.print("[dim]Setting up cloudflared tunnel...[/dim]")
+        from core.mobile import parse_tunnel_url, start_tunnel, generate_qr_terminal
+
+        proc = start_tunnel(port=port)
+        public_url = parse_tunnel_url(proc)
+        if not public_url:
+            console.print(
+                "[red]Could not start tunnel. Check network connectivity.[/red]"
+            )
+            mobile_server.stop()
+            raise typer.Exit(1)
+
+        console.print(f"\n[bold green]Public URL (open on your phone):[/bold green]")
+        console.print(f"  {public_url}")
+        qr = generate_qr_terminal(public_url)
+        if qr:
+            console.print(f"\n{qr}")
+        console.print("[dim]Press Ctrl+C to stop.[/dim]")
+        import signal
+
+        try:
+            signal.pause()
+        except AttributeError:
+            import time as _t
+
+            while True:
+                _t.sleep(3600)
+        except KeyboardInterrupt:
+            proc.terminate()
+            mobile_server.stop()
+            console.print("\n[green]Tunnel + server stopped.[/green]")
     elif action == "status":
         st = mobile_server.status()
         running = "[green]running[/green]" if st["running"] else "[dim]stopped[/dim]"
@@ -2108,7 +2152,7 @@ def mobile(
     else:
         console.print(f"[red]Unknown action: {action}[/red]")
         console.print(
-            "Available: serve, stop, pair, connect-info, tokens, cert-regen, status"
+            "Available: serve, stop, pair, tunnel, connect-info, tokens, cert-regen, status"
         )
         raise typer.Exit(1)
 

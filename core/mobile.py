@@ -508,6 +508,7 @@ class MobileServer:
             "status": "queued",
         }
         self._tasks.append(task)
+        self._persist_task_to_todo(prompt, source=f"mobile:{name}")
         logger.info("Project task queued: %s [%s] — %s", task_id, name, prompt[:80])
         return {"ok": True, "task_id": task_id, "project": name, "status": "queued"}
 
@@ -869,3 +870,87 @@ class _MobileManager:
 
 
 mobile_server = _MobileManager()
+
+
+# ---------------------------------------------------------------------------
+# Cloudflare tunnel for phone access through firewalls
+# ---------------------------------------------------------------------------
+
+_CLOUDFLARED_BIN = Path.home() / ".local" / "bin" / "cloudflared"
+
+
+def _ensure_cloudflared() -> Path:
+    """Download cloudflared binary if not present. No sudo needed."""
+    # Check system-wide first
+    import shutil
+
+    system_cf = shutil.which("cloudflared")
+    if system_cf:
+        return Path(system_cf)
+
+    if _CLOUDFLARED_BIN.exists():
+        return _CLOUDFLARED_BIN
+
+    import platform as _plat
+    import urllib.request
+
+    arch = _plat.machine()
+    arch_map = {"x86_64": "amd64", "aarch64": "arm64", "arm64": "arm64"}
+    arch_slug = arch_map.get(arch, "amd64")
+    url = (
+        f"https://github.com/cloudflare/cloudflared/releases/latest/download/"
+        f"cloudflared-linux-{arch_slug}"
+    )
+    _CLOUDFLARED_BIN.parent.mkdir(parents=True, exist_ok=True)
+    logger.info("Downloading cloudflared from %s", url)
+    urllib.request.urlretrieve(url, str(_CLOUDFLARED_BIN))
+    os.chmod(_CLOUDFLARED_BIN, 0o755)
+    logger.info("cloudflared installed at %s", _CLOUDFLARED_BIN)
+    return _CLOUDFLARED_BIN
+
+
+def start_tunnel(port: int = 8777) -> subprocess.Popen:
+    """Start a cloudflared quick-tunnel exposing localhost:port.
+
+    Returns the Popen object. The public URL is printed to stderr by
+    cloudflared and can be parsed from its output.
+    """
+    cf_bin = _ensure_cloudflared()
+    scheme = "http"  # tunnel terminates TLS, so connect to local HTTP
+    proc = subprocess.Popen(
+        [
+            str(cf_bin),
+            "tunnel",
+            "--url",
+            f"{scheme}://localhost:{port}",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    return proc
+
+
+def parse_tunnel_url(proc: subprocess.Popen, timeout: float = 15.0) -> str:
+    """Read cloudflared stderr until the public URL appears."""
+    import re
+    import select
+
+    deadline = time.monotonic() + timeout
+    url_re = re.compile(r"(https://[a-z0-9-]+\.trycloudflare\.com)")
+    collected = []
+    while time.monotonic() < deadline:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        ready, _, _ = select.select([proc.stderr], [], [], min(remaining, 1.0))
+        if ready:
+            line = proc.stderr.readline()  # type: ignore[union-attr]
+            if not line:
+                break
+            collected.append(line)
+            m = url_re.search(line)
+            if m:
+                return m.group(1)
+    logger.warning("Could not parse tunnel URL. Output:\n%s", "".join(collected))
+    return ""
