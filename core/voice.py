@@ -59,7 +59,7 @@ def record_audio(
     # Try arecord (Linux ALSA)
     if shutil.which("arecord"):
         try:
-            _run(
+            result = subprocess.run(
                 [
                     "arecord",
                     "-d",
@@ -71,11 +71,21 @@ def record_audio(
                     "-c",
                     "1",
                     str(output_path),
-                ]
+                ],
+                capture_output=True,
+                text=True,
+                timeout=duration + 5,
             )
-            return output_path.exists()
-        except Exception:
-            pass
+            if result.returncode != 0:
+                logger.warning(
+                    "arecord failed (rc=%d): %s",
+                    result.returncode,
+                    result.stderr.strip()[:200],
+                )
+            if output_path.exists() and output_path.stat().st_size > 44:
+                return True
+        except Exception as exc:
+            logger.warning("arecord exception: %s", exc)
 
     # Try sox/rec
     if shutil.which("rec"):

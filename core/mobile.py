@@ -384,8 +384,9 @@ class MobileServer:
         If authentication is configured, the ``Authorization`` header must
         contain a valid ``Bearer <token>``.
         """
-        # Auth check (skip for PWA asset routes)
-        if self._auth is not None and path not in (
+        # Auth check (skip for PWA asset routes and localhost/tunnel access)
+        is_local = client_ip in ("127.0.0.1", "::1", "localhost", "")
+        if self._auth is not None and not is_local and path not in (
             "/",
             "/manifest.json",
             "/sw.js",

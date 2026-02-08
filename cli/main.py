@@ -2021,18 +2021,24 @@ def mobile(
             info = mobile_server.serve(host=host, port=port, tls=tls)
             console.print(f"[green]{info}[/green]")
             scheme = "https" if tls else "http"
-            console.print(f"\n[bold]Local access:[/bold]  {scheme}://localhost:{port}")
+            console.print(f"\n[bold]Local/tunnel access (no auth needed):[/bold]")
+            console.print(f"  {scheme}://localhost:{port}")
+            console.print(f"\n[bold]SSH tunnel from another machine:[/bold]")
             console.print(
-                f"[bold]Remote access:[/bold] ssh -L {port}:localhost:{port} "
+                f"  ssh -L {port}:localhost:{port} "
                 f"$(whoami)@$(hostname -I 2>/dev/null | awk '{{print $1}}')"
+            )
+            console.print(f"\n[bold]Mobile phone access:[/bold]")
+            console.print(
+                f"  Run: ricet mobile pair  (in another terminal)"
+            )
+            console.print(
+                f"  Scan the QR code or open the URL with token on your phone"
             )
             if tls:
                 console.print(
-                    f"\n[dim]Tip: If your browser rejects the self-signed cert, "
-                    f"restart with --no-tls:[/dim]"
-                )
-                console.print(
-                    f"[dim]  ricet mobile start --no-tls[/dim]"
+                    f"\n[dim]Tip: If browser rejects the self-signed cert, "
+                    f"restart with --no-tls[/dim]"
                 )
             console.print("\n[dim]Press Ctrl+C to stop the server.[/dim]")
             # Block the main thread so the daemon server thread stays alive.
@@ -3251,12 +3257,31 @@ def voice(
     prompt = voice_prompt(duration=duration)
     if prompt:
         console.print(f"\n[green]Transcribed prompt:[/green]\n{prompt}")
-        # Could feed into agent execution here
     else:
         console.print("[red]No audio captured or transcription failed.[/red]")
-        console.print("[dim]Install whisper: pip install openai-whisper[/dim]")
+        console.print("")
+        console.print("[bold]Possible causes:[/bold]")
         console.print(
-            "[dim]Install recorder: sudo apt install alsa-utils (Linux)[/dim]"
+            "  1. No microphone on this machine (common on remote servers)"
+        )
+        console.print("  2. Whisper not installed: pip install openai-whisper")
+        console.print(
+            "  3. No recorder: sudo apt install alsa-utils (Linux)"
+        )
+        console.print("")
+        console.print("[bold]Alternatives for remote servers:[/bold]")
+        console.print(
+            "  - Use the Voice tab in the mobile PWA: ricet mobile start --no-tls"
+        )
+        console.print(
+            "  - Record on your local machine, then transcribe:"
+        )
+        console.print(
+            "    scp recording.wav server:~/recording.wav"
+        )
+        console.print(
+            '    python -c "import whisper; m=whisper.load_model(\'base\'); '
+            'print(m.transcribe(\'recording.wav\')[\'text\'])"'
         )
 
 
