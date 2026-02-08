@@ -154,7 +154,28 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
     else:
         results["make"] = False
 
-    # 3. Docker check (don't auto-install, just report)
+    # 3. ffmpeg - needed by whisper for audio decoding
+    if shutil.which("ffmpeg"):
+        results["ffmpeg"] = True
+    else:
+        for pkg_mgr in ("mamba", "conda"):
+            if shutil.which(pkg_mgr):
+                try:
+                    subprocess.run(
+                        [pkg_mgr, "install", "-y", "-c", "conda-forge", "ffmpeg"],
+                        capture_output=True, timeout=120,
+                    )
+                    if shutil.which("ffmpeg"):
+                        print_fn("  ffmpeg: installed via " + pkg_mgr)
+                        results["ffmpeg"] = True
+                        break
+                except Exception:
+                    pass
+        if "ffmpeg" not in results:
+            print_fn("  ffmpeg: not found (needed for audio; try: mamba install -c conda-forge ffmpeg)")
+            results["ffmpeg"] = False
+
+    # 4. Docker check (don't auto-install, just report)
     if shutil.which("docker"):
         print_fn("  docker: available")
         results["docker"] = True
@@ -163,7 +184,7 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
         print_fn("    Install: https://docs.docker.com/get-docker/")
         results["docker"] = False
 
-    # 4. Whisper (speech-to-text) - try pip install
+    # 5. Whisper (speech-to-text) - try pip install
     try:
         import whisper  # noqa: F401
         print_fn("  whisper: already installed")
