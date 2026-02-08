@@ -81,60 +81,94 @@ _TUNNEL_LOG = Path("/tmp/ricet-tunnel.log")
 
 
 def _launch_tunnel_background(console: Console) -> None:
-    """Kill stale tunnels, launch `ricet mobile tunnel` fully detached, show URL + QR.
+    """Kill stale tunnels, start server + cloudflared inline, show URL + QR.
 
-    The child writes to a log file (not a pipe) and runs in a new session,
-    so it survives after the parent process exits.
+    Starts the mobile server (daemon thread) and cloudflared directly — no
+    intermediate subprocess.  Cloudflared runs with ``start_new_session=True``
+    so it survives after the parent process exits.  A tiny keepalive server is
+    also forked so the mobile API stays up.
     """
     import os
     import re
     import sys
     import time
 
+    port = 8777
+
     # 1. Kill ALL old tunnel/server processes
-    subprocess.run("fuser -k 8777/tcp", shell=True, capture_output=True)
-    subprocess.run(
-        "pkill -f 'ricet mobile tunnel'", shell=True, capture_output=True
-    )
+    subprocess.run(f"fuser -k {port}/tcp", shell=True, capture_output=True)
     subprocess.run(
         "pkill -f 'cloudflared tunnel --url'", shell=True, capture_output=True
     )
     time.sleep(1)
 
-    # 2. Find ricet binary
-    ricet_bin = shutil.which("ricet") or sys.executable
-    if "ricet" in str(ricet_bin):
-        tunnel_cmd = [str(ricet_bin), "mobile", "tunnel"]
-    else:
-        tunnel_cmd = [sys.executable, "-m", "cli.main", "mobile", "tunnel"]
+    # 2. Start mobile server directly (daemon thread — stays alive as long as
+    #    this process or the forked keepalive lives).
+    try:
+        from core.mobile import MobileServer
 
-    # 3. Launch fully detached: write to log file, new session (no SIGPIPE, no SIGHUP)
-    _TUNNEL_LOG.write_text("")  # clear old log
-    log_fd = os.open(str(_TUNNEL_LOG), os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
-    proc = subprocess.Popen(
-        tunnel_cmd,
-        stdout=log_fd,
-        stderr=log_fd,
-        stdin=subprocess.DEVNULL,
-        start_new_session=True,  # survives parent exit
+        srv = MobileServer()
+        info = srv.serve(host="127.0.0.1", port=port, tls=False)
+        console.print(f"  [dim]{info}[/dim]")
+    except OSError as exc:
+        if "Address already in use" in str(exc):
+            subprocess.run(f"fuser -k {port}/tcp", shell=True, capture_output=True)
+            time.sleep(0.5)
+            try:
+                from core.mobile import MobileServer
+
+                srv = MobileServer()
+                info = srv.serve(host="127.0.0.1", port=port, tls=False)
+                console.print(f"  [dim]{info}[/dim]")
+            except Exception as exc2:
+                console.print(f"  [red]Server failed: {exc2}[/red]")
+                return
+        else:
+            console.print(f"  [red]Server failed: {exc}[/red]")
+            return
+    except Exception as exc:
+        console.print(f"  [red]Server failed: {exc}[/red]")
+        return
+
+    # 3. Start cloudflared directly — read URL from its stderr
+    from core.mobile import _ensure_cloudflared
+
+    try:
+        cf_bin = _ensure_cloudflared()
+    except Exception as exc:
+        console.print(f"  [red]cloudflared not available: {exc}[/red]")
+        return
+
+    cf_proc = subprocess.Popen(
+        [str(cf_bin), "tunnel", "--url", f"http://localhost:{port}"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
     )
-    os.close(log_fd)  # parent doesn't need the fd
 
-    # 4. Tail the log file until URL appears
+    # 4. Parse URL directly from cloudflared stderr (up to 30s)
+    import select
+
     url_re = re.compile(r"(https://[a-z0-9-]+\.trycloudflare\.com)")
     tunnel_url = ""
     deadline = time.monotonic() + 30
     console.print("  [dim]Waiting for tunnel URL...[/dim]")
+    collected: list[str] = []
     while time.monotonic() < deadline:
-        time.sleep(1)
-        try:
-            content = _TUNNEL_LOG.read_text()
-        except Exception:
-            continue
-        m = url_re.search(content)
-        if m:
-            tunnel_url = m.group(1)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
             break
+        ready, _, _ = select.select([cf_proc.stderr], [], [], min(remaining, 1.0))
+        if ready:
+            line = cf_proc.stderr.readline()
+            if not line:
+                break
+            collected.append(line.strip())
+            m = url_re.search(line)
+            if m:
+                tunnel_url = m.group(1)
+                break
 
     if tunnel_url:
         console.print(f"\n  [bold green]Public URL (open on your phone):[/bold green]")
@@ -147,21 +181,68 @@ def _launch_tunnel_background(console: Console) -> None:
                 console.print(f"\n{qr}")
         except Exception:
             pass
-        console.print(
-            f"  [dim]Tunnel running in background (PID {proc.pid}). "
-            f"Log: {_TUNNEL_LOG}[/dim]"
-        )
-    else:
-        console.print("  [red]Could not get tunnel URL after 30s.[/red]")
+        # Detach cloudflared stderr so it doesn't block
         try:
-            content = _TUNNEL_LOG.read_text()
-            if content.strip():
-                for line in content.strip().splitlines()[-5:]:
-                    console.print(f"  [dim]{line}[/dim]")
+            cf_proc.stderr.close()
         except Exception:
             pass
+        console.print(
+            f"  [dim]Tunnel PID {cf_proc.pid} | Server on :{port}[/dim]"
+        )
+        # Fork a keepalive process that holds the server alive
+        _fork_server_keepalive(port, cf_proc.pid)
+    else:
+        console.print("  [red]Could not get tunnel URL after 30s.[/red]")
+        for line in collected[-5:]:
+            console.print(f"  [dim]{line}[/dim]")
+        cf_proc.terminate()
         console.print("  [dim]Run 'ricet mobile tunnel' manually.[/dim]")
-        proc.terminate()
+
+
+def _fork_server_keepalive(port: int, cf_pid: int) -> None:
+    """Fork a tiny background process that keeps the mobile server alive.
+
+    The server runs in a daemon thread of the parent — it dies when the parent
+    exits.  This fork keeps a minimal Python process alive (with its own server
+    instance) so the tunnel has something to connect to.  It also watches for
+    cloudflared death and exits if that happens.
+    """
+    import os
+    import sys
+
+    pid = os.fork()
+    if pid != 0:
+        # Parent: continue normally (will exit after init/start finishes)
+        return
+
+    # --- Child process (daemon) ---
+    os.setsid()  # new session
+    # Close inherited stdio
+    devnull = os.open(os.devnull, os.O_RDWR)
+    os.dup2(devnull, 0)
+    os.dup2(devnull, 1)
+    os.dup2(devnull, 2)
+    os.close(devnull)
+
+    try:
+        from core.mobile import MobileServer
+        import time
+
+        srv = MobileServer()
+        srv.serve(host="127.0.0.1", port=port, tls=False)
+    except Exception:
+        pass  # port may still be held by parent briefly; that's OK
+
+    # Stay alive, watching for cloudflared
+    import time
+    import signal
+
+    while True:
+        try:
+            os.kill(cf_pid, 0)  # check if cloudflared is alive
+        except OSError:
+            break  # cloudflared died, exit
+        time.sleep(10)
 
 
 @app.command()

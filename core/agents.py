@@ -164,6 +164,10 @@ def append_agent_output(agent_type: str, line: str) -> None:
     _agent_output_buffers[agent_type].append(line)
     # File-backed (cross-process access for mobile server)
     try:
+        # Rotate if >1 MB — keep last half
+        if _SHARED_OUTPUT_FILE.exists() and _SHARED_OUTPUT_FILE.stat().st_size > 1_000_000:
+            keep = _SHARED_OUTPUT_FILE.read_text().splitlines()[-500:]
+            _SHARED_OUTPUT_FILE.write_text("\n".join(keep) + "\n")
         with open(_SHARED_OUTPUT_FILE, "a") as f:
             f.write(json.dumps({"a": agent_type, "l": line}) + "\n")
     except Exception:

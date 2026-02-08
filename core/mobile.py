@@ -1125,7 +1125,7 @@ def start_tunnel(port: int = 8777) -> subprocess.Popen:
     return proc
 
 
-def parse_tunnel_url(proc: subprocess.Popen, timeout: float = 15.0) -> str:
+def parse_tunnel_url(proc: subprocess.Popen, timeout: float = 30.0) -> str:
     """Read cloudflared stderr until the public URL appears."""
     import re
     import select
