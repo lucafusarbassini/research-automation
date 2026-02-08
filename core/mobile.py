@@ -24,7 +24,7 @@ import threading
 import time
 import uuid
 from datetime import datetime, timezone
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
@@ -705,7 +705,7 @@ def start_server(
 
     _mobile_server = MobileServer(auth=auth, tls_manager=tlsm if tls else None)
     handler_class = _make_handler(_mobile_server)
-    _server_instance = HTTPServer((host, port), handler_class)
+    _server_instance = ThreadingHTTPServer((host, port), handler_class)
 
     if tls and tlsm is not None:
         ssl_ctx = tlsm.create_ssl_context()
