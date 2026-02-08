@@ -332,12 +332,11 @@ def generate_citation_key(author: str, year: str) -> str:
 
 
 def search_paperboat(query: str, *, run_cmd=None) -> list[dict]:
-    """Search PaperBoat for recent cross-discipline papers.
+    """Search PaperBoat (paperboatch.com) for recent cross-discipline papers.
 
-    PaperBoat scans thousands of journals daily. This function uses
-    Claude to query PaperBoat's public interface and extract results.
-    Falls back to Gemini (which has native web access) when Claude
-    cannot reach the web.
+    Uses Claude Opus 4.6 (which can access websites) to visit the actual
+    PaperBoat website.  Falls back to Gemini (which also has web access).
+    NEVER hallucates -- returns only papers actually found on the site.
 
     Args:
         query: Research topic to search.
@@ -346,19 +345,25 @@ def search_paperboat(query: str, *, run_cmd=None) -> list[dict]:
     Returns:
         List of paper dicts with title, authors, year, abstract, url.
     """
-    from core.claude_helper import call_with_web_fallback
+    from core.claude_helper import call_claude, call_gemini
 
     prompt = (
-        "Search PaperBoat (https://paperboatch.com/) for recent academic papers "
-        f'matching: "{query}"\n\n'
-        "PaperBoat is a cross-discipline paper discovery service that updates daily. "
-        "Return a JSON array of up to 5 papers with fields: "
-        '{"title": "...", "authors": "...", "year": "...", "abstract": "1-2 sentences", '
-        '"url": "https://..."}\n'
-        "If you cannot access PaperBoat, use your knowledge of recent papers instead. "
-        "Reply with JSON array only."
+        f'Visit https://paperboatch.com/ and search for: "{query}"\n\n'
+        "PaperBoat is a real cross-discipline paper discovery website.\n"
+        "You MUST actually visit the website and return ONLY papers found there.\n"
+        "DO NOT invent, hallucinate, or guess papers. If you cannot access the\n"
+        "website or find no results, return an empty JSON array: []\n\n"
+        "Return a JSON array of papers found, each with fields:\n"
+        '  {"title": "...", "authors": "...", "year": "...", '
+        '"abstract": "1-2 sentences", "url": "https://..."}\n\n'
+        "Reply with JSON array only. If site unreachable, reply: []"
     )
-    raw = call_with_web_fallback(prompt, run_cmd=run_cmd)
+
+    # Opus 4.6 can access websites directly
+    raw = call_claude(prompt, model="opus", timeout=90, run_cmd=run_cmd)
+    if raw is None:
+        # Gemini also has web access
+        raw = call_gemini(prompt, run_cmd=run_cmd)
     if raw is None:
         return []
     result = _extract_json_array(raw)
@@ -374,11 +379,11 @@ def search_and_cite(
     max_results: int = 5,
     run_cmd=None,
 ) -> list[dict]:
-    """Search literature via Claude and append results to .bib file.
+    """Search literature using MCP paper-search tools and append to .bib.
 
-    Uses Claude to search PubMed/arXiv (via available MCPs or web knowledge),
-    extract metadata, and format as BibTeX entries.  Falls back to Gemini
-    (which has native web access) when Claude cannot reach the web.
+    Instructs Claude to use its paper-search-mcp, arxiv-mcp-server, or
+    scientific-papers-mcp tools to find REAL papers from arXiv, PubMed,
+    Semantic Scholar, etc.  NEVER hallucates.
 
     Args:
         query: Search query (e.g., "transformer protein folding 2024").
@@ -387,25 +392,31 @@ def search_and_cite(
         run_cmd: Optional callable for testing.
 
     Returns:
-        List of dicts with keys: key, title, authors, year, doi, bibtex.
+        List of dicts with keys: key, title, authors, year, doi.
     """
-    from core.claude_helper import call_with_web_fallback
+    from core.claude_helper import call_claude
 
     if bib_file is None:
         bib_file = Path("paper/references.bib")
 
     prompt = (
-        f"Search for {max_results} relevant academic papers matching this query:\n\n"
-        f'  "{query}"\n\n'
-        "For each paper, provide a JSON array of objects with these fields:\n"
+        f'Find {max_results} real academic papers matching: "{query}"\n\n'
+        "CRITICAL INSTRUCTIONS:\n"
+        "- Use your paper-search tools (paper-search-mcp, arxiv-mcp-server,\n"
+        "  scientific-papers-mcp) to search real academic databases (arXiv,\n"
+        "  PubMed, Semantic Scholar, OpenAlex, bioRxiv).\n"
+        "- Return ONLY papers that actually exist with real, verifiable DOIs.\n"
+        "- DO NOT invent, hallucinate, or guess any paper metadata.\n"
+        "- If no tools are available or no papers found, return: []\n\n"
+        "Return a JSON array with fields:\n"
         '  {"title": "...", "authors": "LastName, First and ...", '
-        '"year": "2024", "journal": "...", "doi": "...", '
+        '"year": "2024", "journal": "...", "doi": "10.xxxx/...", '
         '"entry_type": "article"}\n\n'
-        "Focus on recent, highly-cited, peer-reviewed papers. "
-        "Reply with the JSON array only, no markdown fences."
+        "Reply with JSON array only."
     )
 
-    raw = call_with_web_fallback(prompt, run_cmd=run_cmd)
+    # Sonnet: good MCP tool use, faster than Opus
+    raw = call_claude(prompt, model="sonnet", timeout=90, run_cmd=run_cmd)
     if raw is None:
         return []
     results = _extract_json_array(raw)
@@ -420,10 +431,9 @@ def search_and_cite(
             paper.get("authors", "Unknown"),
             paper.get("year", "2024"),
         )
-        # Deduplicate: check if key already in bib
         existing = list_citations(bib_file) if bib_file.exists() else []
         if key in existing:
-            key = f"{key}b"  # Simple dedup suffix
+            key = f"{key}b"
             if key in existing:
                 continue
 
@@ -435,6 +445,7 @@ def search_and_cite(
             year=paper.get("year", ""),
             journal=paper.get("journal", ""),
             doi=paper.get("doi", ""),
+            url=paper.get("url", ""),
             bib_file=bib_file,
         )
         added.append({"key": key, **paper})

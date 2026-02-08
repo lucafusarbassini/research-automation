@@ -20,8 +20,8 @@ CLAUDE_CLI_MODEL = "claude-3-5-haiku-20241022"
 # Model aliases for callers that need a specific tier
 CLAUDE_MODEL_ALIASES: dict[str, str] = {
     "haiku": CLAUDE_CLI_MODEL,
-    "sonnet": "claude-sonnet-4-20250514",
-    "opus": "claude-opus-4-5-20251101",
+    "sonnet": "claude-sonnet-4-5-20250929",
+    "opus": "claude-opus-4-6",
 }
 
 

@@ -324,13 +324,17 @@ def check_goal_fidelity(project_path: Path, *, run_cmd=None) -> dict:
         'Reply as JSON: {"score": 0-100, "drift_areas": ["..."], '
         '"recommendations": ["..."], "aligned_areas": ["..."]}'
     )
-    result = call_claude_json(prompt, run_cmd=run_cmd)
+    result = call_claude_json(prompt, model="sonnet", timeout=60, run_cmd=run_cmd)
     if result and isinstance(result, dict):
         return result
     return {
-        "score": 50,
-        "drift_areas": ["Unable to assess (Claude unavailable)"],
-        "recommendations": [],
+        "score": -1,
+        "error": "Claude CLI unavailable — cannot assess fidelity",
+        "drift_areas": [],
+        "recommendations": [
+            "Ensure 'claude' CLI is installed and authenticated",
+            "Run: claude --version  (to check availability)",
+        ],
     }
 
 

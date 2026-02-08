@@ -2334,8 +2334,19 @@ def memory(
             from core.knowledge import search_knowledge
 
             results = search_knowledge(query)
-            for r in results[:top_k]:
-                console.print(f"  {r}")
+            if results:
+                for r in results[:top_k]:
+                    console.print(f"  {r}")
+            else:
+                encyclopedia = Path("knowledge/ENCYCLOPEDIA.md")
+                if not encyclopedia.exists() or not encyclopedia.read_text().strip():
+                    console.print(
+                        "[dim]No results. knowledge/ENCYCLOPEDIA.md is empty.\n"
+                        "  Add content with: ricet memory log-decision \"Your finding\"\n"
+                        "  Or populate it during work sessions.[/dim]"
+                    )
+                else:
+                    console.print(f"[dim]No matches for '{query}'.[/dim]")
 
     elif action == "log-decision":
         if not query:
