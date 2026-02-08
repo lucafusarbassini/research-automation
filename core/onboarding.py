@@ -1,8 +1,10 @@
 """Full onboarding workflow: questionnaire, credential collection, workspace setup."""
 
 import logging
+import platform
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -85,6 +87,101 @@ class OnboardingAnswers:
     paper_type: str = "journal-article"
     needs_website: bool = False
     needs_mobile: bool = False
+
+
+def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
+    """Auto-install critical system dependencies that ricet needs.
+
+    Installs: texlive (pdflatex), whisper, and checks Docker availability.
+    Returns mapping of dependency name -> success boolean.
+    """
+    if print_fn is None:
+        print_fn = print
+
+    results: dict[str, bool] = {}
+    system = platform.system()
+
+    # 1. LaTeX (pdflatex) - needed for paper pipeline
+    if shutil.which("pdflatex"):
+        print_fn("  pdflatex: already installed")
+        results["pdflatex"] = True
+    else:
+        print_fn("  pdflatex: installing texlive...")
+        installed = False
+        # Try conda/mamba first (no sudo needed)
+        for pkg_mgr in ("mamba", "conda"):
+            if shutil.which(pkg_mgr):
+                try:
+                    subprocess.run(
+                        [pkg_mgr, "install", "-y", "-c", "conda-forge", "texlive-core"],
+                        capture_output=True, timeout=300,
+                    )
+                    if shutil.which("pdflatex"):
+                        print_fn(f"  pdflatex: installed via {pkg_mgr}")
+                        installed = True
+                        break
+                except Exception:
+                    pass
+        # Fallback to apt on Linux
+        if not installed and system == "Linux":
+            try:
+                subprocess.run(
+                    ["sudo", "apt-get", "install", "-y", "texlive-full"],
+                    capture_output=True, timeout=600,
+                )
+                installed = shutil.which("pdflatex") is not None
+            except Exception:
+                pass
+        if not installed:
+            hint = "mamba install -c conda-forge texlive-core"
+            if system == "Linux":
+                hint += "  OR  sudo apt install texlive-full"
+            print_fn(f"  pdflatex: could not auto-install (try: {hint})")
+        results["pdflatex"] = installed
+
+    # 2. Make - needed for paper Makefile
+    if shutil.which("make"):
+        results["make"] = True
+    elif system == "Linux":
+        try:
+            subprocess.run(
+                ["sudo", "apt-get", "install", "-y", "make"],
+                capture_output=True, timeout=60,
+            )
+            results["make"] = shutil.which("make") is not None
+        except Exception:
+            results["make"] = False
+    else:
+        results["make"] = False
+
+    # 3. Docker check (don't auto-install, just report)
+    if shutil.which("docker"):
+        print_fn("  docker: available")
+        results["docker"] = True
+    else:
+        print_fn("  docker: not installed (needed for overnight mode)")
+        print_fn("    Install: https://docs.docker.com/get-docker/")
+        results["docker"] = False
+
+    # 4. Whisper (speech-to-text) - try pip install
+    try:
+        import whisper  # noqa: F401
+        print_fn("  whisper: already installed")
+        results["whisper"] = True
+    except ImportError:
+        print_fn("  whisper: installing openai-whisper...")
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "openai-whisper"],
+                capture_output=True, timeout=300,
+            )
+            results["whisper"] = True
+            print_fn("  whisper: installed successfully")
+        except Exception:
+            print_fn("  whisper: could not auto-install (try: pip install openai-whisper)")
+            results["whisper"] = False
+
+    return results
 
 
 def validate_prerequisites(

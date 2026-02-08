@@ -60,8 +60,22 @@ class TLSManager:
         self.generate_certs()
 
     def generate_certs(self) -> None:
-        """Generate a new self-signed certificate and private key."""
+        """Generate a new self-signed certificate and private key.
+
+        Includes Subject Alternative Names for localhost, 127.0.0.1, and the
+        machine's LAN IP so browsers accept the certificate without hostname
+        mismatch errors.
+        """
         self.certs_dir.mkdir(parents=True, exist_ok=True)
+        # Build SAN list so the cert is valid for localhost + LAN IP
+        san_entries = ["DNS:localhost", "IP:127.0.0.1"]
+        try:
+            lan_ip = _get_local_ip()
+            if lan_ip and lan_ip not in ("127.0.0.1", "0.0.0.0"):
+                san_entries.append(f"IP:{lan_ip}")
+        except Exception:
+            pass
+        san_value = ",".join(san_entries)
         subprocess.run(
             [
                 "openssl",
@@ -77,7 +91,9 @@ class TLSManager:
                 "365",
                 "-nodes",
                 "-subj",
-                "/CN=ricet-mobile",
+                "/CN=localhost",
+                "-addext",
+                f"subjectAltName={san_value}",
             ],
             check=True,
             capture_output=True,

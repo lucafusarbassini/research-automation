@@ -124,6 +124,20 @@ def init(
     if system_info["conda"]:
         console.print("  Conda:   [green]Available[/green]")
 
+    # --- Step 1b: Auto-install system dependencies ---
+    console.print("\n[bold cyan]Step 1b: Checking & installing system dependencies...[/bold cyan]")
+    try:
+        from core.onboarding import auto_install_system_deps
+
+        dep_results = auto_install_system_deps(
+            print_fn=lambda msg: console.print(f"[dim]{msg}[/dim]")
+        )
+        installed = sum(1 for v in dep_results.values() if v)
+        total = len(dep_results)
+        console.print(f"  [green]{installed}/{total} system dependencies ready[/green]")
+    except Exception as exc:
+        console.print(f"  [yellow]System dependency check skipped: {exc}[/yellow]")
+
     # --- Step 2: Install claude-flow ---
     console.print("\n[bold cyan]Step 2: Setting up claude-flow...[/bold cyan]")
     cf_ok = auto_install_claude_flow()
@@ -441,6 +455,28 @@ def init(
             "  [yellow]Docker setup incomplete - some features may not work. "
             "You can retry by rebuilding the image.[/yellow]"
         )
+
+    # --- Step 8: Install priority MCP servers ---
+    console.print(
+        "\n[bold cyan]Step 8: Installing priority MCP servers...[/bold cyan]"
+    )
+    try:
+        from core.mcps import install_priority_mcps
+
+        mcp_results = install_priority_mcps()
+        mcp_ok = sum(1 for v in mcp_results.values() if v)
+        mcp_total = len(mcp_results)
+        if mcp_total > 0:
+            console.print(
+                f"  [green]{mcp_ok}/{mcp_total} priority MCPs installed[/green]"
+            )
+            for name, ok in mcp_results.items():
+                status = "[green]OK[/green]" if ok else "[yellow]SKIP[/yellow]"
+                console.print(f"    {status} {name}")
+        else:
+            console.print("  [dim]No priority MCPs configured[/dim]")
+    except Exception as exc:
+        console.print(f"  [yellow]MCP installation skipped: {exc}[/yellow]")
 
     # --- Done ---
     console.print(f"\n[bold green]Project ready![/bold green]")
@@ -1984,6 +2020,21 @@ def mobile(
         try:
             info = mobile_server.serve(host=host, port=port, tls=tls)
             console.print(f"[green]{info}[/green]")
+            console.print("[dim]Press Ctrl+C to stop the server.[/dim]")
+            # Block the main thread so the daemon server thread stays alive.
+            import signal
+
+            try:
+                signal.pause()
+            except AttributeError:
+                # signal.pause() not available on Windows; fallback to sleep loop
+                import time
+
+                while True:
+                    time.sleep(3600)
+        except KeyboardInterrupt:
+            mobile_server.stop()
+            console.print("\n[green]Mobile server stopped.[/green]")
         except Exception as exc:
             console.print(f"[red]Failed to start server: {exc}[/red]")
             raise typer.Exit(1)
@@ -2055,7 +2106,20 @@ def website(
         console.print("[green]Website deployed.[/green]")
     elif action == "preview":
         console.print("[bold]Starting preview server...[/bold]")
-        site_manager.preview()
+        url = site_manager.preview()
+        console.print(f"[green]Preview running at {url}[/green]")
+        console.print("[dim]Press Ctrl+C to stop.[/dim]")
+        import signal
+
+        try:
+            signal.pause()
+        except AttributeError:
+            import time
+
+            while True:
+                time.sleep(3600)
+        except KeyboardInterrupt:
+            console.print("\n[green]Preview server stopped.[/green]")
     else:
         console.print(f"[red]Unknown action: {action}[/red]")
         console.print("Available: init, build, deploy, preview")
