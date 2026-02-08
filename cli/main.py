@@ -2032,7 +2032,27 @@ def mobile(
     if action in ("serve", "start"):
         console.print("[bold]Starting mobile server...[/bold]")
         try:
-            info = mobile_server.serve(host=host, port=port, tls=tls)
+            try:
+                info = mobile_server.serve(host=host, port=port, tls=tls)
+            except OSError as exc:
+                if "Address already in use" in str(exc):
+                    console.print(
+                        f"[yellow]Port {port} already in use — "
+                        f"stopping old server...[/yellow]"
+                    )
+                    import subprocess as _sp
+
+                    _sp.run(
+                        f"fuser -k {port}/tcp",
+                        shell=True,
+                        capture_output=True,
+                    )
+                    import time as _tw
+
+                    _tw.sleep(0.5)
+                    info = mobile_server.serve(host=host, port=port, tls=tls)
+                else:
+                    raise
             console.print(f"[green]{info}[/green]")
             scheme = "https" if tls else "http"
             console.print(f"\n[bold]Local/tunnel access (no auth needed):[/bold]")
@@ -2064,7 +2084,6 @@ def mobile(
             try:
                 signal.pause()
             except AttributeError:
-                # signal.pause() not available on Windows; fallback to sleep loop
                 import time
 
                 while True:
@@ -2109,6 +2128,33 @@ def mobile(
         try:
             info = mobile_server.serve(host="127.0.0.1", port=port, tls=False)
             console.print(f"[green]{info}[/green]")
+        except OSError as exc:
+            if "Address already in use" in str(exc):
+                console.print(
+                    f"[yellow]Port {port} already in use — "
+                    f"stopping old server first...[/yellow]"
+                )
+                # Kill existing process on the port
+                import subprocess as _sp
+
+                _sp.run(
+                    f"fuser -k {port}/tcp",
+                    shell=True, capture_output=True,
+                )
+                import time as _tw
+
+                _tw.sleep(0.5)
+                try:
+                    info = mobile_server.serve(
+                        host="127.0.0.1", port=port, tls=False
+                    )
+                    console.print(f"[green]{info}[/green]")
+                except Exception as exc2:
+                    console.print(f"[red]Still failed: {exc2}[/red]")
+                    raise typer.Exit(1)
+            else:
+                console.print(f"[red]Failed to start server: {exc}[/red]")
+                raise typer.Exit(1)
         except Exception as exc:
             console.print(f"[red]Failed to start server: {exc}[/red]")
             raise typer.Exit(1)

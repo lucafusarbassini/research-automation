@@ -202,6 +202,54 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
             print_fn("  whisper: could not auto-install (try: pip install openai-whisper)")
             results["whisper"] = False
 
+    # 6. cloudflared - needed for mobile phone access through firewalls
+    if shutil.which("cloudflared"):
+        print_fn("  cloudflared: already installed")
+        results["cloudflared"] = True
+    else:
+        cf_bin = Path.home() / ".local" / "bin" / "cloudflared"
+        if cf_bin.exists():
+            print_fn(f"  cloudflared: already installed at {cf_bin}")
+            results["cloudflared"] = True
+        else:
+            print_fn("  cloudflared: installing...")
+            try:
+                import urllib.request
+
+                arch = platform.machine()
+                arch_map = {"x86_64": "amd64", "aarch64": "arm64", "arm64": "arm64"}
+                arch_slug = arch_map.get(arch, "amd64")
+                url = (
+                    f"https://github.com/cloudflare/cloudflared/releases/latest"
+                    f"/download/cloudflared-linux-{arch_slug}"
+                )
+                cf_bin.parent.mkdir(parents=True, exist_ok=True)
+                urllib.request.urlretrieve(url, str(cf_bin))
+                import os as _os
+
+                _os.chmod(cf_bin, 0o755)
+                print_fn(f"  cloudflared: installed at {cf_bin}")
+                results["cloudflared"] = True
+            except Exception:
+                print_fn("  cloudflared: could not auto-install (needed for ricet mobile tunnel)")
+                results["cloudflared"] = False
+
+    # 7. qrcode Python library - needed for mobile QR codes
+    try:
+        import qrcode  # noqa: F401
+
+        results["qrcode"] = True
+    except ImportError:
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "qrcode"],
+                capture_output=True, timeout=60,
+            )
+            print_fn("  qrcode: installed")
+            results["qrcode"] = True
+        except Exception:
+            results["qrcode"] = False
+
     return results
 
 
