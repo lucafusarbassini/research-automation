@@ -84,12 +84,31 @@ def init(
     no_env: bool = typer.Option(
         False, "--no-env", help="Skip conda/mamba environment creation"
     ),
+    update: bool = typer.Option(
+        False, "--update", help="Update an existing project (re-enter credentials, refresh templates)"
+    ),
 ):
-    """Initialize a new research project with full onboarding."""
+    """Initialize a new research project with full onboarding.
+
+    Use --update to refresh an existing project: re-enter credentials,
+    update templates and sandbox infrastructure, without recreating the
+    project from scratch.
+    """
     project_path = path / project_name
+
+    if update:
+        if not project_path.exists():
+            console.print(f"[red]Error: {project_path} does not exist. Cannot --update.[/red]")
+            raise typer.Exit(1)
+        _init_update(project_path, project_name, skip_repo=skip_repo)
+        return
 
     if project_path.exists():
         console.print(f"[red]Error: {project_path} already exists[/red]")
+        console.print(
+            "[dim]To update an existing project, use: "
+            f"ricet init {project_name} --update[/dim]"
+        )
         raise typer.Exit(1)
 
     console.print(f"[bold]Creating project: {project_name}[/bold]")
@@ -201,6 +220,40 @@ def init(
         console.print(
             "  [dim]No credentials entered (can be added later in secrets/.env)[/dim]"
         )
+
+    # --- Step 3c: Detailed project description (BEFORE project creation) ---
+    # The goal drives environment packages, folder structure, TODOs, and LaTeX.
+    console.print("\n[bold cyan]Step 3c: Project description[/bold cyan]")
+    console.print(
+        "  [dim]Describe your project in detail. This drives package selection,\n"
+        "  folder structure, agent behavior, and paper scaffold. Be thorough\n"
+        "  (research question, methodology, expected outcomes, constraints).\n"
+        "  Type your description, then press Enter twice (empty line) to finish.[/dim]"
+    )
+    console.print()
+    goal_lines: list[str] = []
+    try:
+        while True:
+            line = input("  > ")
+            if line == "" and goal_lines and goal_lines[-1] == "":
+                goal_lines.pop()  # remove trailing blank
+                break
+            goal_lines.append(line)
+    except EOFError:
+        pass  # piped input ends here
+
+    user_goal = "\n".join(goal_lines).strip()
+    if not user_goal:
+        user_goal = f"Research project: {project_name}"
+        console.print(f"  [dim]Using default: {user_goal}[/dim]")
+    else:
+        console.print(
+            f"  [green]Goal captured ({len(user_goal)} chars, "
+            f"{len(user_goal.split())} words)[/green]"
+        )
+
+    # Store the detailed goal in answers so downstream steps use it
+    answers.goal = user_goal
 
     # --- Step 4: Create project structure ---
     console.print("\n[bold cyan]Step 4: Creating project...[/bold cyan]")
@@ -353,41 +406,10 @@ def init(
     else:
         console.print("  [dim]LaTeX scaffold: paper/ already populated[/dim]")
 
-    # --- Step 4b: Detailed project description → GOAL.md ---
-    console.print("\n[bold cyan]Step 4b: Project description[/bold cyan]")
-    console.print(
-        "  [dim]Describe your project in detail. This drives scaffolding,\n"
-        "  agent behavior, and paper structure. Be thorough (research question,\n"
-        "  methodology, expected outcomes, constraints). Type your description,\n"
-        "  then press Enter twice (empty line) to finish.[/dim]"
-    )
-    console.print()
-    goal_lines: list[str] = []
-    try:
-        while True:
-            line = input("  > ")
-            if line == "" and goal_lines and goal_lines[-1] == "":
-                goal_lines.pop()  # remove trailing blank
-                break
-            goal_lines.append(line)
-    except EOFError:
-        pass  # piped input ends here
-
-    user_goal = "\n".join(goal_lines).strip()
-    if not user_goal:
-        user_goal = f"Research project: {project_name}"
-        console.print(f"  [dim]Using default: {user_goal}[/dim]")
-    else:
-        console.print(
-            f"  [green]Goal captured ({len(user_goal)} chars, "
-            f"{len(user_goal.split())} words)[/green]"
-        )
-
-    # Write GOAL.md with user's description
+    # Write GOAL.md with user's detailed description (collected in Step 3c)
     goal_file = project_path / "knowledge" / "GOAL.md"
     if goal_file.exists():
         goal_content = goal_file.read_text()
-        # Replace the template placeholder with user's actual description
         for placeholder in (
             "<!-- User provides during init -->",
             "<!-- WRITE YOUR PROJECT DESCRIPTION HERE -->",
@@ -411,6 +433,7 @@ def init(
 
     # --- Step 5: GitHub repo creation ---
     repo_url = ""
+    _gh_pat = credentials.get("GITHUB_PERSONAL_ACCESS_TOKEN", "")
     if not skip_repo:
         console.print("\n[bold cyan]Step 5: GitHub repository[/bold cyan]")
         create_repo = _prompt("Create a GitHub repo for this project? (yes/no)", "yes")
@@ -418,7 +441,9 @@ def init(
             private = _prompt("Private repo? (yes/no)", "yes")
             is_private = private.lower() in ("yes", "y")
             console.print(f"  Creating {'private' if is_private else 'public'} repo...")
-            repo_url = create_github_repo(project_name, private=is_private)
+            repo_url = create_github_repo(
+                project_name, private=is_private, github_token=_gh_pat
+            )
             if repo_url:
                 answers.github_repo = repo_url
                 console.print(f"  [green]Repo created: {repo_url}[/green]")
@@ -428,8 +453,12 @@ def init(
                 _configure_github_repo_from_goal(project_path, project_name, repo_url)
             else:
                 console.print(
-                    "  [yellow]Could not create repo. "
-                    "Install gh CLI and run: gh auth login[/yellow]"
+                    "  [yellow]Could not create repo. You can create it later:[/yellow]"
+                )
+                console.print("  [dim]  1. gh auth login[/dim]")
+                console.print(f"  [dim]  2. gh repo create {project_name} --private[/dim]")
+                console.print(
+                    "  [dim]  (The project will continue without a remote repo)[/dim]"
                 )
 
     # --- Step 6: Initialize git ---
@@ -465,28 +494,43 @@ def init(
     except Exception as exc:
         logger.debug("Could not register project: %s", exc)
 
-    # --- Step 7: Docker setup for overnight mode ---
+    # --- Step 7: Docker + sandbox setup for overnight mode ---
     console.print(
-        "\n[bold cyan]Step 7: Setting up Docker for overnight mode...[/bold cyan]"
+        "\n[bold cyan]Step 7: Setting up Docker sandbox for overnight mode...[/bold cyan]"
     )
     docker_result = setup_docker_for_overnight(
         project_path,
         print_fn=lambda msg: console.print(f"[dim]{msg}[/dim]"),
     )
+
+    # Deploy sandbox infrastructure regardless of Docker availability
+    # (the shell scripts and Dockerfiles are always useful to have)
+    from core.sandbox import setup_sandbox
+
+    sandbox_ok = setup_sandbox(
+        project_path,
+        print_fn=lambda msg: console.print(f"  [dim]{msg}[/dim]"),
+    )
+    if sandbox_ok:
+        console.print(
+            "  [green]Sandbox infrastructure deployed (sandbox/)[/green]"
+        )
+
     if docker_result.get("test_passed"):
         console.print(
             "  [green]Docker is ready - overnight mode fully configured[/green]"
         )
     elif docker_result.get("skipped"):
         console.print(
-            "  [yellow]Docker not available - overnight mode will require "
-            "Docker to be installed before use.[/yellow]"
+            "  [dim]Docker not available (not required for project init).[/dim]"
         )
-        console.print("  [dim]Install Docker, then run: ricet overnight[/dim]")
+        console.print(
+            "  [dim]You'll need Docker when running: ricet overnight[/dim]"
+        )
     else:
         console.print(
-            "  [yellow]Docker setup incomplete - some features may not work. "
-            "You can retry by rebuilding the image.[/yellow]"
+            "  [yellow]Docker setup incomplete. "
+            "You can retry later when needed for overnight mode.[/yellow]"
         )
 
     # --- Step 8: Register MCP servers in .claude/settings.json ---
@@ -536,6 +580,151 @@ def init(
             "\n  [yellow]Install Docker to enable safe overnight mode: "
             "https://docs.docker.com/get-docker/[/yellow]"
         )
+
+
+def _init_update(
+    project_path: Path,
+    project_name: str,
+    *,
+    skip_repo: bool = False,
+) -> None:
+    """Update an existing ricet project without recreating from scratch.
+
+    Re-enters credentials, refreshes templates and sandbox infrastructure,
+    and optionally reconfigures the GitHub repo.
+    """
+    console.print(f"[bold]Updating project: {project_name}[/bold]")
+    console.print(f"[dim]Path: {project_path}[/dim]\n")
+
+    # --- Load existing settings ---
+    settings_file = project_path / "config" / "settings.yml"
+    existing_settings = {}
+    if settings_file.exists():
+        import yaml
+
+        existing_settings = yaml.safe_load(settings_file.read_text()) or {}
+        console.print(f"  [green]Loaded existing settings[/green]")
+
+    # --- Re-collect credentials ---
+    console.print("\n[bold cyan]Credentials update[/bold cyan]")
+    console.print("  [dim]Press Enter to keep existing values, or type new ones.[/dim]")
+
+    # Load existing credentials
+    env_file = project_path / "secrets" / ".env"
+    existing_creds: dict[str, str] = {}
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, val = line.partition("=")
+                existing_creds[key.strip()] = val.strip()
+
+    # Show which credentials exist and let user update
+    updated_creds: dict[str, str] = dict(existing_creds)
+    cred_keys = [
+        ("ANTHROPIC_API_KEY", "Anthropic API key"),
+        ("GITHUB_PERSONAL_ACCESS_TOKEN", "GitHub Personal Access Token"),
+        ("OPENAI_API_KEY", "OpenAI API key (optional)"),
+        ("HUGGINGFACE_TOKEN", "HuggingFace token (optional)"),
+        ("WANDB_API_KEY", "Weights & Biases key (optional)"),
+    ]
+
+    for key, label in cred_keys:
+        existing = existing_creds.get(key, "")
+        if existing:
+            masked = existing[:4] + "..." + existing[-4:] if len(existing) > 8 else "****"
+            new_val = input(f"  {label} [{masked}]: ")
+        else:
+            new_val = input(f"  {label} [not set]: ")
+
+        if new_val.strip():
+            updated_creds[key] = new_val.strip()
+
+    # Write updated credentials
+    if updated_creds:
+        (project_path / "secrets").mkdir(exist_ok=True)
+        write_env_file(project_path, updated_creds)
+        n_updated = sum(
+            1 for k in updated_creds
+            if updated_creds[k] != existing_creds.get(k, "")
+        )
+        console.print(f"  [green]{n_updated} credential(s) updated[/green]")
+
+    # --- Refresh sandbox infrastructure ---
+    console.print("\n[bold cyan]Refreshing sandbox infrastructure...[/bold cyan]")
+    from core.sandbox import setup_sandbox
+
+    sandbox_ok = setup_sandbox(
+        project_path,
+        print_fn=lambda msg: console.print(f"  [dim]{msg}[/dim]"),
+    )
+    if sandbox_ok:
+        console.print("  [green]Sandbox infrastructure updated[/green]")
+
+    # --- Refresh agent templates ---
+    console.print("\n[bold cyan]Refreshing agent templates...[/bold cyan]")
+    agents_src = TEMPLATE_DIR / ".claude" / "agents"
+    agents_dst = project_path / ".claude" / "agents"
+    if agents_src.exists():
+        agents_dst.mkdir(parents=True, exist_ok=True)
+        updated_agents = 0
+        for f in agents_src.iterdir():
+            if f.is_file():
+                dst_file = agents_dst / f.name
+                # Only update if template is newer or file doesn't exist
+                if not dst_file.exists() or f.stat().st_mtime > dst_file.stat().st_mtime:
+                    shutil.copy2(f, dst_file)
+                    updated_agents += 1
+        console.print(f"  [green]{updated_agents} agent template(s) refreshed[/green]")
+
+    # --- Ensure state files exist ---
+    state_dir = project_path / "state"
+    state_dir.mkdir(exist_ok=True)
+    state_templates = Path(__file__).parent.parent / "templates" / "state"
+    for state_file in ("MEMORY.md", "SYSTEM.md"):
+        dst = state_dir / state_file
+        src = state_templates / state_file
+        if not dst.exists() and src.exists():
+            shutil.copy2(src, dst)
+            console.print(f"  [dim]Created state/{state_file}[/dim]")
+
+    # --- Ensure required directories ---
+    for dirname in ("experiments", "reports/figures", "backups"):
+        (project_path / dirname).mkdir(parents=True, exist_ok=True)
+
+    # --- GitHub repo (optional) ---
+    if not skip_repo:
+        console.print("\n[bold cyan]GitHub configuration[/bold cyan]")
+        existing_repo = existing_settings.get("github_repo", "")
+        if existing_repo:
+            console.print(f"  [dim]Current repo: {existing_repo}[/dim]")
+        reconfigure = input("  Reconfigure GitHub repo? (y/N): ").strip().lower()
+        if reconfigure in ("y", "yes"):
+            _gh_pat = updated_creds.get("GITHUB_PERSONAL_ACCESS_TOKEN", "")
+            repo_url = create_github_repo(
+                project_name, private=True, github_token=_gh_pat
+            )
+            if repo_url:
+                console.print(f"  [green]Repo: {repo_url}[/green]")
+
+    # --- Docker check ---
+    console.print("\n[bold cyan]Docker check...[/bold cyan]")
+    docker_result = setup_docker_for_overnight(
+        project_path,
+        print_fn=lambda msg: console.print(f"  [dim]{msg}[/dim]"),
+    )
+    if docker_result.get("test_passed"):
+        console.print("  [green]Docker ready[/green]")
+    elif docker_result.get("skipped"):
+        console.print("  [dim]Docker not available (optional)[/dim]")
+    else:
+        console.print("  [yellow]Docker setup incomplete[/yellow]")
+
+    # --- Done ---
+    console.print(f"\n[bold green]Project updated![/bold green]")
+    console.print(f"  cd {project_path}")
+    console.print("  ricet start          # Resume interactive session")
+    console.print("  ricet overnight      # Launch overnight mode")
 
 
 def _configure_github_repo_from_goal(
@@ -889,6 +1078,7 @@ def start(
 def overnight(
     task_file: Path = typer.Option(Path("state/TODO.md"), help="Task file to execute"),
     iterations: int = typer.Option(20, help="Max iterations"),
+    timeout_min: int = typer.Option(60, "--timeout", "-t", help="Timeout per iteration in minutes"),
     no_docker: bool = typer.Option(
         False,
         "--no-docker",
@@ -900,6 +1090,7 @@ def overnight(
             "Only use this if you fully understand the risks."
         ),
     ),
+    hours: int = typer.Option(10, "--hours", help="Sandbox watchdog timeout in hours"),
 ):
     """Run overnight autonomous mode (requires Docker for safety).
 
@@ -907,21 +1098,33 @@ def overnight(
     means Claude can execute any command without confirmation. Docker provides
     a safety sandbox so that these commands cannot damage your host system.
 
+    The sandbox uses an isolated Docker container with:
+    - Read-only project mount (agent works on a copy)
+    - Per-iteration timeout (kills stuck iterations)
+    - Watchdog timer (auto-shutdown after N hours)
+    - Auto-commit after every iteration (nothing is lost)
+    - Patch-based extraction (review changes before applying)
+
     Docker is REQUIRED by default. If you are an advanced user who understands
     the risks, you may pass --no-docker to bypass this requirement.
     """
-    from core.devops import (
-        build_ricet_image,
-        ensure_docker_ready,
+    from core.sandbox import (
+        is_sandbox_running,
+        launch_overnight_loop,
+        sandbox_exists,
+        setup_sandbox,
+        start_sandbox,
     )
 
-    # Detect whether we are already running inside the ricet container
+    # Detect whether we are already running inside the sandbox container
     _inside_container = (
         Path("/.dockerenv").exists() or Path("/run/.containerenv").exists()
     )
 
     if not no_docker and not _inside_container:
-        # Docker is required - validate the full stack
+        # Docker is required - use the sandbox infrastructure
+        from core.devops import ensure_docker_ready
+
         docker_status = ensure_docker_ready()
 
         if not docker_status["docker_installed"]:
@@ -947,46 +1150,56 @@ def overnight(
             console.print(docker_status["error"])
             raise typer.Exit(1)
 
-        if not docker_status["image_available"]:
-            console.print(
-                "[yellow]Docker image 'ricet:latest' not found. "
-                "Building it now...[/yellow]"
-            )
-            if not build_ricet_image():
-                console.print(
-                    "[red]Failed to build Docker image. "
-                    "Check the output above.[/red]"
-                )
+        project_path = Path.cwd().resolve()
+
+        # Set up sandbox infrastructure if not already present
+        if not sandbox_exists(project_path):
+            console.print("[yellow]Setting up sandbox infrastructure...[/yellow]")
+            if not setup_sandbox(
+                project_path,
+                print_fn=lambda msg: console.print(f"  [dim]{msg}[/dim]"),
+            ):
+                console.print("[red]Failed to set up sandbox.[/red]")
                 raise typer.Exit(1)
-            console.print("[green]Docker image built successfully.[/green]")
+            console.print("[green]Sandbox infrastructure ready.[/green]")
 
-        # All checks passed - launch inside Docker
-        console.print("[bold]Launching overnight run in Docker sandbox...[/bold]")
-        project_dir = str(Path.cwd().resolve())
-        claude_dir = str(Path.home() / ".claude")
+        # Start sandbox if not running
+        if not is_sandbox_running(project_path):
+            console.print("[bold]Starting sandbox container...[/bold]")
+            if not start_sandbox(
+                project_path,
+                timeout_hours=hours,
+                print_fn=lambda msg: console.print(f"  {msg}"),
+            ):
+                console.print("[red]Failed to start sandbox.[/red]")
+                raise typer.Exit(1)
 
-        docker_cmd = [
-            "docker",
-            "run",
-            "--rm",
-            "-it",
-            "-v",
-            f"{project_dir}:/workspace",
-            "-v",
-            f"{claude_dir}:/home/ricet/.claude:ro",
-            "-w",
-            "/workspace",
-            "--memory=8g",
-            "--cpus=8",
-            "ricet:latest",
-            "ricet",
-            "overnight",
-            "--iterations",
-            str(iterations),
-        ]
+        # Launch the overnight loop inside the sandbox
+        console.print(
+            f"\n[bold]Launching overnight loop: {iterations} iterations, "
+            f"{timeout_min}m per iteration, {hours}h watchdog[/bold]"
+        )
+        if not launch_overnight_loop(
+            project_path,
+            iterations=iterations,
+            timeout_min=timeout_min,
+            print_fn=lambda msg: console.print(f"  {msg}"),
+        ):
+            console.print("[red]Failed to launch overnight loop.[/red]")
+            raise typer.Exit(1)
 
-        result = subprocess.run(docker_cmd)
-        raise typer.Exit(result.returncode)
+        console.print("\n[bold green]Overnight mode running in sandbox.[/bold green]")
+        console.print("")
+        console.print("[bold]Monitor:[/bold]")
+        console.print("  ricet sandbox logs           # Recent output")
+        console.print("  ricet sandbox status         # Container status")
+        console.print("  ricet sandbox backup         # Sync results to host")
+        console.print("")
+        console.print("[bold]When done:[/bold]")
+        console.print("  ricet sandbox extract        # Get work as patch")
+        console.print("  ricet sandbox extract --apply # Extract and apply patch")
+        console.print("  ricet sandbox stop           # Stop the container")
+        return
 
     if no_docker and not _inside_container:
         console.print(
@@ -1262,6 +1475,214 @@ def overnight(
         console.print(f"[green]Review report saved: {report_path}[/green]")
     except Exception as exc:
         console.print(f"[yellow]Could not generate review report: {exc}[/yellow]")
+
+
+# ---------------------------------------------------------------------------
+# Sandbox subcommands
+# ---------------------------------------------------------------------------
+
+sandbox_app = typer.Typer(help="Manage the overnight sandbox container.")
+app.add_typer(sandbox_app, name="sandbox")
+
+
+@sandbox_app.command("setup")
+def sandbox_setup_cmd(
+    dind: bool = typer.Option(False, "--dind", help="Use Docker-in-Docker variant"),
+):
+    """Set up sandbox infrastructure in the current project."""
+    from core.sandbox import setup_sandbox
+
+    project_path = Path.cwd().resolve()
+    ok = setup_sandbox(
+        project_path,
+        dind=dind,
+        print_fn=lambda msg: console.print(f"  {msg}"),
+    )
+    if ok:
+        console.print("[green]Sandbox infrastructure ready.[/green]")
+        console.print("")
+        console.print("[bold]Next steps:[/bold]")
+        console.print("  ricet sandbox start          # Build and start container")
+        console.print("  ricet overnight              # Launch overnight loop")
+    else:
+        console.print("[red]Sandbox setup failed.[/red]")
+        raise typer.Exit(1)
+
+
+@sandbox_app.command("start")
+def sandbox_start_cmd(
+    hours: int = typer.Option(10, "--hours", "-h", help="Watchdog timeout in hours"),
+):
+    """Build and start the sandbox container."""
+    from core.sandbox import start_sandbox
+
+    project_path = Path.cwd().resolve()
+    ok = start_sandbox(
+        project_path,
+        timeout_hours=hours,
+        print_fn=lambda msg: console.print(f"  {msg}"),
+    )
+    if ok:
+        console.print("[green]Sandbox started.[/green]")
+        console.print("")
+        console.print("[bold]Commands:[/bold]")
+        console.print("  ricet overnight              # Launch overnight loop")
+        console.print("  ricet sandbox logs           # Watch output")
+        console.print("  ricet sandbox status         # Check status")
+        console.print("  ricet sandbox stop           # Stop the container")
+    else:
+        console.print("[red]Failed to start sandbox.[/red]")
+        raise typer.Exit(1)
+
+
+@sandbox_app.command("stop")
+def sandbox_stop_cmd():
+    """Stop the sandbox container."""
+    from core.sandbox import stop_sandbox
+
+    project_path = Path.cwd().resolve()
+    ok = stop_sandbox(
+        project_path,
+        print_fn=lambda msg: console.print(f"  {msg}"),
+    )
+    if not ok:
+        console.print("[red]Failed to stop sandbox.[/red]")
+        raise typer.Exit(1)
+    console.print("")
+    console.print("[dim]To extract work before cleanup: ricet sandbox extract[/dim]")
+    console.print(
+        "[dim]To remove persistent volumes: ricet sandbox destroy[/dim]"
+    )
+
+
+@sandbox_app.command("status")
+def sandbox_status_cmd():
+    """Show sandbox status."""
+    from core.sandbox import sandbox_status
+
+    project_path = Path.cwd().resolve()
+    st = sandbox_status(project_path)
+
+    if not st["setup"]:
+        console.print("[yellow]Sandbox not set up. Run: ricet sandbox setup[/yellow]")
+        return
+
+    console.print(f"[bold]Container:[/bold] {st['container_name']}")
+    if st["running"]:
+        console.print(f"[bold]Status:[/bold] [green]Running[/green] ({st['uptime']})")
+        if st["last_commit"]:
+            console.print(f"[bold]Last commit:[/bold] {st['last_commit']}")
+    else:
+        console.print("[bold]Status:[/bold] [dim]Stopped[/dim]")
+
+
+@sandbox_app.command("logs")
+def sandbox_logs_cmd(
+    lines: int = typer.Option(50, "--lines", "-n", help="Number of lines to show"),
+    follow: bool = typer.Option(False, "--follow", "-f", help="Follow output (live)"),
+):
+    """Show sandbox Claude output logs."""
+    from core.sandbox import _load_sandbox_env, is_sandbox_running, watch_sandbox_logs
+
+    project_path = Path.cwd().resolve()
+
+    if not is_sandbox_running(project_path):
+        console.print("[yellow]Sandbox is not running.[/yellow]")
+        raise typer.Exit(1)
+
+    if follow:
+        # Use docker exec tail -f directly for live following
+        from core.devops import run_docker
+
+        env = _load_sandbox_env(project_path)
+        container_name = env["CONTAINER_NAME"]
+        try:
+            run_docker(
+                [
+                    "docker", "exec", container_name,
+                    "tail", "-f", "/agent-logs/claude-output.log",
+                ],
+                timeout=None,
+            )
+        except KeyboardInterrupt:
+            pass
+    else:
+        output = watch_sandbox_logs(project_path, lines=lines)
+        console.print(output)
+
+
+@sandbox_app.command("extract")
+def sandbox_extract_cmd(
+    apply: bool = typer.Option(False, "--apply", help="Apply patch to project after extraction"),
+):
+    """Extract work from sandbox as a git patch."""
+    from core.sandbox import extract_work
+
+    project_path = Path.cwd().resolve()
+    patch = extract_work(
+        project_path,
+        apply_patch=apply,
+        print_fn=lambda msg: console.print(f"  {msg}"),
+    )
+    if patch:
+        console.print(f"\n[green]Patch saved: {patch}[/green]")
+    else:
+        console.print("[dim]No changes to extract.[/dim]")
+
+
+@sandbox_app.command("backup")
+def sandbox_backup_cmd(
+    interval: int = typer.Option(0, "--interval", "-i", help="Continuous mode: minutes between backups (0 = single backup)"),
+):
+    """Sync sandbox state files and results to host.
+
+    Without --interval, runs a single backup. With --interval N, runs
+    continuously every N minutes (Ctrl+C to stop).
+    """
+    from core.sandbox import run_backup, start_auto_backup
+
+    project_path = Path.cwd().resolve()
+
+    if interval > 0:
+        start_auto_backup(
+            project_path,
+            interval_min=interval,
+            print_fn=lambda msg: console.print(f"  {msg}"),
+        )
+    else:
+        ok = run_backup(
+            project_path,
+            print_fn=lambda msg: console.print(f"  {msg}"),
+        )
+        if ok:
+            console.print("[green]Backup complete.[/green]")
+        else:
+            console.print("[yellow]Backup failed.[/yellow]")
+
+
+@sandbox_app.command("destroy")
+def sandbox_destroy_cmd():
+    """Stop sandbox and remove all persistent volumes.
+
+    WARNING: This destroys ALL workspace data inside the sandbox.
+    Make sure to extract work first with 'ricet sandbox extract'.
+    """
+    from core.sandbox import destroy_sandbox
+
+    console.print("[bold red]WARNING: This will destroy all sandbox data![/bold red]")
+    console.print("Run 'ricet sandbox extract' first to save your work.")
+    confirm = typer.confirm("Proceed?", default=False)
+    if not confirm:
+        console.print("Aborted.")
+        raise typer.Exit(0)
+
+    project_path = Path.cwd().resolve()
+    ok = destroy_sandbox(
+        project_path,
+        print_fn=lambda msg: console.print(f"  {msg}"),
+    )
+    if not ok:
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -1985,7 +2406,7 @@ def paper(
                     else:
                         console.print(
                             "[red]pdftotext failed. Install poppler-utils: "
-                            "sudo apt install poppler-utils[/red]"
+                            "mamba install -c conda-forge poppler[/red]"
                         )
                         raise typer.Exit(1)
                 except _sp.TimeoutExpired:
@@ -1994,8 +2415,8 @@ def paper(
             else:
                 console.print(
                     "[red]PDF reference requires pdftotext. Install with:[/red]\n"
-                    "  sudo apt install poppler-utils  # Debian/Ubuntu\n"
-                    "  brew install poppler            # macOS"
+                    "  mamba install -c conda-forge poppler  # recommended\n"
+                    "  brew install poppler                  # macOS"
                 )
                 raise typer.Exit(1)
         else:
@@ -3403,7 +3824,7 @@ def voice(
         )
         console.print("  2. Whisper not installed: pip install openai-whisper")
         console.print(
-            "  3. No recorder: sudo apt install alsa-utils (Linux)"
+            "  3. No recorder: mamba install -c conda-forge alsa-utils (Linux)"
         )
         console.print("")
         console.print("[bold]Alternatives for remote servers:[/bold]")

@@ -52,9 +52,8 @@ def check_latex_dependencies(*, verbose: bool = False) -> tuple[bool, list[str]]
         if system == "Linux":
             messages.append(
                 "Install with:\n"
-                "  sudo apt install texlive-full  # Debian/Ubuntu\n"
-                "  sudo dnf install texlive-scheme-full  # Fedora\n"
-                "  sudo pacman -S texlive  # Arch"
+                "  mamba install -c conda-forge texlive-core  # recommended (no root)\n"
+                "  Or ask sysadmin: apt install texlive-full"
             )
         elif system == "Darwin":
             messages.append(

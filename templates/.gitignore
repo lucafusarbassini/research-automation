@@ -66,5 +66,10 @@ Thumbs.db
 state/snapshots/
 state/.notification_throttle.json
 
+# Sandbox (overnight mode)
+sandbox/.env
+sandbox/patches/
+sandbox/backups/
+
 # Local workspace
 local/

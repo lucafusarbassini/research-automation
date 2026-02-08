@@ -108,7 +108,6 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
     else:
         print_fn("  pdflatex: installing texlive...")
         installed = False
-        # Try conda/mamba first (no sudo needed)
         for pkg_mgr in ("mamba", "conda"):
             if shutil.which(pkg_mgr):
                 try:
@@ -122,37 +121,30 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
                         break
                 except Exception:
                     pass
-        # Fallback to apt on Linux
-        if not installed and system == "Linux":
-            try:
-                subprocess.run(
-                    ["sudo", "apt-get", "install", "-y", "texlive-full"],
-                    capture_output=True, timeout=600,
-                )
-                installed = shutil.which("pdflatex") is not None
-            except Exception:
-                pass
         if not installed:
-            hint = "mamba install -c conda-forge texlive-core"
-            if system == "Linux":
-                hint += "  OR  sudo apt install texlive-full"
-            print_fn(f"  pdflatex: could not auto-install (try: {hint})")
+            print_fn("  pdflatex: not found (try: mamba install -c conda-forge texlive-core)")
         results["pdflatex"] = installed
 
     # 2. Make - needed for paper Makefile
     if shutil.which("make"):
         results["make"] = True
-    elif system == "Linux":
-        try:
-            subprocess.run(
-                ["sudo", "apt-get", "install", "-y", "make"],
-                capture_output=True, timeout=60,
-            )
-            results["make"] = shutil.which("make") is not None
-        except Exception:
-            results["make"] = False
     else:
-        results["make"] = False
+        installed = False
+        for pkg_mgr in ("mamba", "conda"):
+            if shutil.which(pkg_mgr):
+                try:
+                    subprocess.run(
+                        [pkg_mgr, "install", "-y", "-c", "conda-forge", "make"],
+                        capture_output=True, timeout=60,
+                    )
+                    if shutil.which("make"):
+                        installed = True
+                        break
+                except Exception:
+                    pass
+        if not installed:
+            print_fn("  make: not found (try: mamba install -c conda-forge make)")
+        results["make"] = installed
 
     # 3. ffmpeg - needed by whisper for audio decoding
     if shutil.which("ffmpeg"):
@@ -466,21 +458,78 @@ def _auto_install_gh(*, run_cmd=None) -> bool:
     return False
 
 
+def _gh_auth_with_token(token: str) -> bool:
+    """Authenticate gh CLI using a PAT. Returns True on success."""
+    try:
+        result = subprocess.run(
+            ["gh", "auth", "login", "--with-token"],
+            input=token,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0:
+            logger.info("gh authenticated with PAT")
+            return True
+        logger.warning("gh auth --with-token failed: %s", result.stderr.strip())
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        logger.warning("gh auth --with-token error: %s", exc)
+    return False
+
+
+def _gh_auth_interactive() -> bool:
+    """Run interactive browser-based OAuth login. Gets full repo scopes."""
+    try:
+        print("  Opening browser for GitHub login (grants full repo access)...")
+        result = subprocess.run(
+            ["gh", "auth", "login", "-h", "github.com", "-p", "ssh",
+             "-w"],  # -w = web/browser flow
+            timeout=120,
+        )
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
+def _gh_is_authenticated() -> bool:
+    """Return True if gh can actually reach the API (not just has a token)."""
+    try:
+        result = subprocess.run(
+            ["gh", "api", "user", "-q", ".login"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        return result.returncode == 0 and bool(result.stdout.strip())
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
+def _gh_get_username() -> str:
+    """Get the authenticated GitHub username."""
+    try:
+        result = subprocess.run(
+            ["gh", "api", "user", "-q", ".login"],
+            capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return ""
+
+
 def create_github_repo(
     project_name: str,
     *,
     private: bool = True,
+    github_token: str = "",
     run_cmd=None,
 ) -> str:
     """Create a GitHub repository using the gh CLI.
 
-    Args:
-        project_name: Name for the new repository.
-        private: Whether to create a private repo.
-        run_cmd: Optional callable for testing.
-
-    Returns:
-        The repo URL if successful, empty string otherwise.
+    If the token lacks repo-creation scope, falls back to interactive
+    browser-based OAuth which automatically gets the right permissions.
     """
     if run_cmd is None:
 
@@ -500,25 +549,18 @@ def create_github_repo(
             logger.warning("gh CLI not available. Skipping repo creation.")
             return ""
 
-    # Check if gh is authenticated; if not, try interactive login
-    try:
-        auth_check = run_cmd(["gh", "auth", "status"])
-        if auth_check.returncode != 0:
-            logger.info("gh CLI not authenticated. Attempting gh auth login...")
-            try:
-                login_result = subprocess.run(
-                    ["gh", "auth", "login"],
-                    timeout=120,
-                )
-                if login_result.returncode != 0:
-                    logger.warning("gh auth login failed. Skipping repo creation.")
+    # Ensure gh is authenticated — use user's PAT if available
+    if not _gh_is_authenticated():
+        if github_token:
+            logger.info("gh not authenticated — logging in with user's PAT...")
+            if not _gh_auth_with_token(github_token):
+                logger.warning("PAT auth failed, trying browser login...")
+                if not _gh_auth_interactive():
                     return ""
-            except (FileNotFoundError, subprocess.TimeoutExpired):
-                logger.warning("gh auth login timed out. Skipping repo creation.")
+        else:
+            logger.info("gh not authenticated — trying browser login...")
+            if not _gh_auth_interactive():
                 return ""
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        logger.warning("gh CLI not available. Skipping repo creation.")
-        return ""
 
     # Create repo
     visibility = "--private" if private else "--public"
@@ -527,18 +569,39 @@ def create_github_repo(
             ["gh", "repo", "create", project_name, visibility]
         )
         if result.returncode == 0:
-            # Extract URL from output
             output = result.stdout.strip()
             for line in output.splitlines():
                 if "github.com" in line:
                     return line.strip()
-            # Fallback: construct URL
-            user_result = run_cmd(["gh", "api", "user", "-q", ".login"])
-            if user_result.returncode == 0:
-                username = user_result.stdout.strip()
+            username = _gh_get_username()
+            if username:
                 return f"https://github.com/{username}/{project_name}"
             return output
-        logger.warning("gh repo create failed: %s", result.stderr.strip())
+
+        err = result.stderr.strip()
+        logger.warning("gh repo create failed: %s", err)
+
+        # Token lacks scope — re-auth with browser OAuth (full permissions)
+        if "not accessible" in err or "401" in err or "Bad credentials" in err:
+            print(f"  Token lacks repo-creation scope — re-authenticating...")
+            if _gh_auth_interactive():
+                retry = run_cmd(
+                    ["gh", "repo", "create", project_name, visibility]
+                )
+                if retry.returncode == 0:
+                    output = retry.stdout.strip()
+                    for line in output.splitlines():
+                        if "github.com" in line:
+                            return line.strip()
+                    username = _gh_get_username()
+                    if username:
+                        return f"https://github.com/{username}/{project_name}"
+                    return output
+
+        if "already exists" in err:
+            username = _gh_get_username()
+            if username:
+                return f"https://github.com/{username}/{project_name}"
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
         logger.warning("Could not create GitHub repo: %s", exc)
 
@@ -1918,15 +1981,41 @@ def setup_docker_for_overnight(
         return result
 
     if not docker_status["daemon_running"]:
-        print_fn(
-            "\n  Docker is installed but the daemon is not running.\n"
-            "  Start Docker and run 'ricet init' again to set up overnight mode.\n"
-            "  Linux: sudo systemctl start docker\n"
-            "  macOS/Windows: Launch Docker Desktop"
-        )
-        result["docker_available"] = False
-        result["skipped"] = True
-        return result
+        # Try to start the daemon without sudo (rootless Docker, user systemd)
+        import platform as _plat
+
+        _started = False
+        if _plat.system() == "Linux":
+            print_fn("  Docker daemon not running — attempting to start...")
+            # Try user-level systemd first, then rootless dockerd
+            for start_cmd in (
+                ["systemctl", "--user", "start", "docker"],
+                ["dockerd-rootless-setuptool.sh", "install"],
+            ):
+                try:
+                    sr = subprocess.run(
+                        start_cmd, capture_output=True, timeout=30
+                    )
+                    if sr.returncode == 0:
+                        import time as _time
+
+                        _time.sleep(3)
+                        docker_status = ensure_docker_ready()
+                        if docker_status["daemon_running"]:
+                            print_fn("  Docker daemon started successfully.")
+                            _started = True
+                            break
+                except Exception:
+                    pass
+        if not _started:
+            print_fn(
+                "\n  Docker is installed but the daemon is not running.\n"
+                "  Ask your sysadmin to start it, or use rootless Docker:\n"
+                "  https://docs.docker.com/engine/security/rootless/"
+            )
+            result["docker_available"] = False
+            result["skipped"] = True
+            return result
 
     result["docker_available"] = True
 

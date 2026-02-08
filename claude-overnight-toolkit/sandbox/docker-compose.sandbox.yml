@@ -1,0 +1,55 @@
+# =============================================================================
+# Claude Agent Overnight Sandbox — Docker Compose
+# =============================================================================
+# SETUP: Before first use, copy and edit the .env file:
+#   cp .env.example .env
+#   # Edit .env with your API key
+#
+# DOCKERFILE: By default uses Dockerfile.python. For Docker-in-Docker,
+# change the dockerfile line below and add `privileged: true`.
+# =============================================================================
+
+services:
+  sandbox:
+    build:
+      context: .
+      dockerfile: Dockerfile.python    # Change to Dockerfile.dind if needed
+    container_name: ${CONTAINER_NAME:-my-sandbox}
+    # privileged: true                  # Uncomment for Docker-in-Docker
+    environment:
+      - SANDBOX_TIMEOUT_HOURS=${SANDBOX_TIMEOUT_HOURS:-10}
+      - CONTAINER_NAME=${CONTAINER_NAME:-my-sandbox}
+    volumes:
+      # Project source (read-only, copied to workspace on start)
+      - ../:/project-source:ro
+      # Claude credentials (read-only, copied with chown on start)
+      - ${HOME}/.claude:/claude-source:ro
+      # Persistent workspace (survives container restarts)
+      - sandbox-workspace:/workspace
+      # Persistent logs
+      - sandbox-logs:/agent-logs
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 16G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    networks:
+      - sandbox-net
+    restart: "no"
+    healthcheck:
+      test: ["CMD", "test", "-f", "/agent-logs/sandbox.log"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  sandbox-net:
+    driver: bridge
+    internal: false   # Needs internet for Claude API, pip install, etc.
+
+volumes:
+  sandbox-workspace:
+  sandbox-logs:

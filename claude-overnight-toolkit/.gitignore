@@ -1,0 +1,5 @@
+sandbox/.env
+sandbox/patches/
+sandbox/backups/
+__pycache__/
+*.pyc

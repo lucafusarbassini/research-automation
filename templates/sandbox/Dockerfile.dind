@@ -1,0 +1,54 @@
+# =============================================================================
+# ricet Overnight Sandbox — Docker-in-Docker variant
+# =============================================================================
+# For projects that need to run Docker commands inside the sandbox
+# (e.g., docker-compose pipelines, containerized databases, etc.)
+# =============================================================================
+
+FROM docker:27-dind
+
+# Install system dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    python3 \
+    py3-pip \
+    py3-virtualenv \
+    nodejs \
+    npm \
+    shadow \
+    su-exec \
+    coreutils \
+    tini
+
+# Install Poetry
+RUN pip3 install --break-system-packages poetry
+
+# Install Claude CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
+# Create a non-root user for the agent
+RUN addgroup -g 1000 agent && \
+    adduser -D -u 1000 -G agent -s /bin/bash agent && \
+    addgroup agent docker 2>/dev/null || true
+
+# Create working directories
+RUN mkdir -p /workspace /agent-logs && \
+    chown -R agent:agent /workspace /agent-logs
+
+# Copy entrypoint and helper scripts
+COPY sandbox-entrypoint.sh /usr/local/bin/sandbox-entrypoint.sh
+COPY watchdog.sh /usr/local/bin/watchdog.sh
+RUN chmod +x /usr/local/bin/sandbox-entrypoint.sh /usr/local/bin/watchdog.sh
+
+# Default environment
+ENV SANDBOX_TIMEOUT_HOURS=8 \
+    WORKSPACE=/workspace \
+    AGENT_LOGS=/agent-logs \
+    HOME=/home/agent \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /workspace
+
+ENTRYPOINT ["tini", "--", "/usr/local/bin/sandbox-entrypoint.sh"]

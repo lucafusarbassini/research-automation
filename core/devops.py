@@ -11,6 +11,59 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Docker group activation helper
+# ---------------------------------------------------------------------------
+# On many systems (HPC, shared servers), the user is in the 'docker' group
+# but the current shell session wasn't started after group addition.
+# `sg docker -c "cmd"` activates the group for a single command.
+
+_USE_SG_DOCKER: bool | None = None  # cached after first check
+
+
+def _docker_needs_sg() -> bool:
+    """Return True if docker commands need `sg docker -c '...'` wrapper."""
+    global _USE_SG_DOCKER
+    if _USE_SG_DOCKER is not None:
+        return _USE_SG_DOCKER
+    # Try direct docker first
+    try:
+        r = subprocess.run(
+            ["docker", "info"], capture_output=True, timeout=10,
+        )
+        if r.returncode == 0:
+            _USE_SG_DOCKER = False
+            return False
+    except Exception:
+        pass
+    # Check if sg docker works
+    try:
+        r = subprocess.run(
+            ["sg", "docker", "-c", "docker info"],
+            capture_output=True, timeout=10,
+        )
+        if r.returncode == 0:
+            _USE_SG_DOCKER = True
+            logger.info("Docker access via 'sg docker' (group not in session)")
+            return True
+    except Exception:
+        pass
+    _USE_SG_DOCKER = False
+    return False
+
+
+def run_docker(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+    """Run a docker command, using sg docker if needed for permissions."""
+    if _docker_needs_sg():
+        # Wrap: sg docker -c "docker ..."
+        full_cmd = " ".join(cmd)
+        return subprocess.run(
+            ["sg", "docker", "-c", full_cmd], **kwargs,
+        )
+    return subprocess.run(cmd, **kwargs)
+
+
 # ---------------------------------------------------------------------------
 # Tool definitions for version detection
 # ---------------------------------------------------------------------------
@@ -63,10 +116,9 @@ RICET_DOCKER_IMAGE = "ricet:latest"
 
 _DOCKER_INSTALL_INSTRUCTIONS: dict[str, str] = {
     "Linux": (
-        "Install Docker on Linux:\n"
-        "  curl -fsSL https://get.docker.com | sh\n"
-        "  sudo usermod -aG docker $USER\n"
-        "  # Log out and log back in, then run: docker run hello-world"
+        "Install Docker on Linux (rootless, no sudo):\n"
+        "  https://docs.docker.com/engine/security/rootless/\n"
+        "  Or ask your sysadmin to add you to the docker group."
     ),
     "Darwin": (
         "Install Docker on macOS:\n"
@@ -130,9 +182,9 @@ def ensure_docker_ready() -> dict:
         return result
     result["docker_installed"] = True
 
-    # 2. Check daemon
+    # 2. Check daemon (uses sg docker if group not in current session)
     try:
-        proc = subprocess.run(
+        proc = run_docker(
             ["docker", "info"],
             capture_output=True,
             text=True,
@@ -140,9 +192,9 @@ def ensure_docker_ready() -> dict:
         )
         if proc.returncode != 0:
             result["error"] = (
-                "Docker is installed but the daemon is not running.\n"
-                "Start it with: sudo systemctl start docker (Linux)\n"
-                "Or launch Docker Desktop (macOS / Windows)."
+                "Docker is installed but not accessible.\n"
+                "Ask your sysadmin to add you to the docker group,\n"
+                "or use rootless Docker: https://docs.docker.com/engine/security/rootless/"
             )
             return result
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
@@ -152,7 +204,7 @@ def ensure_docker_ready() -> dict:
 
     # 3. Check ricet image
     try:
-        proc = subprocess.run(
+        proc = run_docker(
             ["docker", "image", "inspect", RICET_DOCKER_IMAGE],
             capture_output=True,
             text=True,
@@ -196,7 +248,7 @@ def build_ricet_image(dockerfile_dir: Optional[Path] = None) -> bool:
         "Building Docker image %s from %s ...", RICET_DOCKER_IMAGE, dockerfile_dir
     )
     try:
-        proc = subprocess.run(
+        proc = run_docker(
             [
                 "docker",
                 "build",
@@ -259,7 +311,7 @@ def prepare_docker_environment(project_path: Path) -> bool:
     logger.info("Installing project dependencies inside Docker container...")
 
     try:
-        proc = subprocess.run(
+        proc = run_docker(
             [
                 "docker",
                 "run",
@@ -295,7 +347,7 @@ def test_docker_setup() -> bool:
         True if the smoke test passed.
     """
     try:
-        proc = subprocess.run(
+        proc = run_docker(
             [
                 "docker",
                 "run",
@@ -328,7 +380,7 @@ class DockerManager:
     def is_available(self) -> bool:
         """Return True if the Docker daemon is reachable."""
         try:
-            proc = subprocess.run(
+            proc = run_docker(
                 ["docker", "info"],
                 capture_output=True,
                 text=True,
@@ -339,17 +391,9 @@ class DockerManager:
             return False
 
     def build(self, tag: str, dockerfile: Path = Path("Dockerfile")) -> bool:
-        """Build a Docker image.
-
-        Args:
-            tag: Image tag (e.g. "myapp:latest").
-            dockerfile: Path to the Dockerfile.
-
-        Returns:
-            True on success.
-        """
+        """Build a Docker image."""
         try:
-            proc = subprocess.run(
+            proc = run_docker(
                 [
                     "docker",
                     "build",
@@ -377,16 +421,7 @@ class DockerManager:
         ports: Optional[dict] = None,
         volumes: Optional[dict] = None,
     ) -> str:
-        """Run a container and return its ID.
-
-        Args:
-            tag: Image tag.
-            ports: Mapping of host_port -> container_port.
-            volumes: Mapping of host_path -> container_path.
-
-        Returns:
-            Container ID string, or empty string on failure.
-        """
+        """Run a container and return its ID."""
         cmd = ["docker", "run", "-d"]
         if ports:
             for host_port, container_port in ports.items():
@@ -396,7 +431,7 @@ class DockerManager:
                 cmd.extend(["-v", f"{host_path}:{container_path}"])
         cmd.append(tag)
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            proc = run_docker(cmd, capture_output=True, text=True, timeout=60)
             if proc.returncode != 0:
                 logger.error("docker run failed: %s", proc.stderr)
                 return ""
@@ -408,7 +443,7 @@ class DockerManager:
     def stop(self, container_id: str) -> bool:
         """Stop a running container."""
         try:
-            proc = subprocess.run(
+            proc = run_docker(
                 ["docker", "stop", container_id],
                 capture_output=True,
                 text=True,
@@ -421,7 +456,7 @@ class DockerManager:
     def logs(self, container_id: str, tail: int = 50) -> str:
         """Retrieve recent logs from a container."""
         try:
-            proc = subprocess.run(
+            proc = run_docker(
                 ["docker", "logs", "--tail", str(tail), container_id],
                 capture_output=True,
                 text=True,

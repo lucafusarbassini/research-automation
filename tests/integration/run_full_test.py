@@ -192,6 +192,11 @@ def test_01_init():
         "587",                      # SMTP_PORT
         smtp_user or "",            # SMTP_USER
         smtp_pass or "",            # SMTP_PASSWORD
+        # --- Step 3c: Goal description (multi-line, ends at EOF) ---
+        "Compare numerical integration methods (trapezoidal, Simpson, Monte Carlo)",
+        "on benchmark functions. Measure convergence rates and accuracy.",
+        "",                         # blank line (double-blank = end)
+        "",                         # second blank line triggers end
         # --- Step 5: GitHub repo ---
         "yes",                      # Create GitHub repo?
         "yes",                      # Private?
@@ -238,7 +243,7 @@ def test_01_init():
 
     # Init with skip-repo and notification=none (fewer prompts: no email, no SMTP)
     # Prompt sequence: notification(none), journal, paper_type, web, mobile,
-    # then 18 credentials (core+ml+publishing+cloud+integrations, NO email/slack)
+    # then 18 credentials, then Step 3c goal (multi-line), NO repo prompts.
     skip_answers = "\n".join([
         "none",              # Notification method (no email -> no SMTP prompts)
         "skip",              # Journal
@@ -251,6 +256,10 @@ def test_01_init():
         "", "", "", "", "",  # publishing (5)
         "", "", "", "",      # cloud (4)
         "", "", "",          # integrations (3)
+        # Step 3c: Goal description (EOF terminates for piped input)
+        "Test project for skip-repo init.",
+        "",                  # double-blank = end
+        "",
     ])
     log_test("1b-init-skip",
              'ricet init test-skip --skip-repo',
