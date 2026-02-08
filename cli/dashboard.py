@@ -372,6 +372,30 @@ def build_mobile_panel() -> Panel:
     return Panel(Text.from_markup(content), title="Mobile", border_style="bright_green")
 
 
+def build_verbose_agents_panel() -> Panel:
+    """Build the verbose agent output panel showing live output per agent."""
+    from core.agents import get_all_agent_outputs
+
+    outputs = get_all_agent_outputs(last_n=15)
+    lines: list[str] = []
+
+    if not outputs:
+        lines.append("[dim]No agent output yet. Start a session or overnight run.[/dim]")
+    else:
+        for agent, agent_lines in outputs.items():
+            lines.append(f"[bold red]{agent}[/bold red]")
+            for line in agent_lines:
+                lines.append(f"  [green]{line}[/green]")
+            lines.append("")
+
+    content = "\n".join(lines) if lines else "No agent output"
+    return Panel(
+        Text.from_markup(content),
+        title="Agent Output (Live)",
+        border_style="bright_red",
+    )
+
+
 def show_dashboard() -> None:
     """Display a static snapshot of the project dashboard."""
     console.clear()
@@ -423,6 +447,10 @@ def show_dashboard() -> None:
             equal=True,
         )
     )
+    console.print()
+
+    # Row 5: Verbose Agent Output (full width)
+    console.print(build_verbose_agents_panel())
 
 
 def live_dashboard(refresh_interval: float = 5.0) -> None:

@@ -61,9 +61,6 @@ def test_collect_answers_defaults():
         [
             "none",
             "skip",
-            "journal-article",
-            "no",
-            "no",
         ]
     )
     answers = collect_answers(
@@ -74,8 +71,8 @@ def test_collect_answers_defaults():
     assert answers.project_name == "test-proj"
     assert answers.compute_type == "local-cpu"
     assert answers.journal_target == ""
-    assert answers.needs_website is False
-    assert answers.needs_mobile is False
+    assert answers.needs_website is True
+    assert answers.needs_mobile is True
 
 
 def test_collect_answers_with_gpu():
@@ -83,9 +80,6 @@ def test_collect_answers_with_gpu():
         [
             "none",
             "skip",
-            "journal-article",
-            "no",
-            "no",
         ]
     )
     answers = collect_answers(
@@ -103,9 +97,6 @@ def test_collect_answers_with_email():
             "email",
             "a@b.com",
             "skip",
-            "journal-article",
-            "no",
-            "no",
         ]
     )
     answers = collect_answers(
@@ -260,14 +251,11 @@ def test_setup_claude_web_access_custom():
 
 
 def test_collect_answers_new_fields():
-    """Verify journal_target, needs_website, needs_mobile are collected."""
+    """Verify journal_target, needs_website, needs_mobile are always True."""
     responses = iter(
         [
             "none",
             "Nature",
-            "journal-article",
-            "yes",
-            "yes",
         ]
     )
     answers = collect_answers(

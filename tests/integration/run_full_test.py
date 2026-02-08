@@ -143,7 +143,7 @@ def test_01_init():
     SCRATCHPAD.mkdir(parents=True, exist_ok=True)
 
     # ricet init prompt sequence (from onboarding.py + cli/main.py):
-    # Step 3 (typer.prompt): notification, [email if email], journal, paper_type, web, mobile
+    # Step 3 (typer.prompt): notification, [email if email], journal
     # Step 3b (raw input): credentials by category (core, ml, publishing, cloud,
     #          integrations, and conditionally slack/email SMTP)
     # Step 5: create repo?, private?
@@ -160,9 +160,6 @@ def test_01_init():
         "email",                    # Notification method
         smtp_user or "",            # Notification email (only asked if method=email)
         "skip",                     # Target journal
-        "journal-article",          # Paper type
-        "no",                       # Web dashboard
-        "no",                       # Mobile access
         # --- Step 3b: Credentials (raw input()) ---
         # Core (4):
         "",                         # ANTHROPIC_API_KEY (skip - use subscription)
@@ -242,14 +239,11 @@ def test_01_init():
         print(f"  [1-init-files] {f}: {'PASS' if exists else 'FAIL'}")
 
     # Init with skip-repo and notification=none (fewer prompts: no email, no SMTP)
-    # Prompt sequence: notification(none), journal, paper_type, web, mobile,
+    # Prompt sequence: notification(none), journal,
     # then 18 credentials, then Step 3c goal (multi-line), NO repo prompts.
     skip_answers = "\n".join([
         "none",              # Notification method (no email -> no SMTP prompts)
         "skip",              # Journal
-        "journal-article",   # Paper type
-        "no",                # Web
-        "no",                # Mobile
         # 18 credential prompts (all skip):
         "", "", "", "",      # core (4)
         "", "",              # ml (2)

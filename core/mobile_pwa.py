@@ -136,6 +136,7 @@ select{appearance:none;-webkit-appearance:none}
 </div>
 <div class="tabs">
   <div class="tab active" data-tab="dashboard">Dashboard</div>
+  <div class="tab" data-tab="monitor">Monitor</div>
   <div class="tab" data-tab="tasks">Tasks</div>
   <div class="tab" data-tab="voice">Voice</div>
   <div class="tab" data-tab="settings">Settings</div>
@@ -146,8 +147,29 @@ select{appearance:none;-webkit-appearance:none}
   <div id="projectList"><div class="card"><div class="meta">Loading projects...</div></div></div>
 </div>
 
+<!-- Monitor (live agent output) -->
+<div class="panel" id="panel-monitor">
+  <div class="card">
+    <h3>Live Agent Output</h3>
+    <div id="agentOutputs" style="font-family:monospace;font-size:12px;max-height:70vh;overflow-y:auto;white-space:pre-wrap;background:#0a0a15;padding:12px;border-radius:8px;color:#4caf50">
+      Loading agent output...
+    </div>
+  </div>
+  <div class="card">
+    <h3>Resources</h3>
+    <div id="monitorResources" style="font-size:13px">Loading...</div>
+  </div>
+</div>
+
 <!-- Tasks -->
 <div class="panel" id="panel-tasks">
+  <div class="card" style="margin-bottom:16px">
+    <h3>New Project</h3>
+    <input id="newProjectName" placeholder="Project name..." style="margin-bottom:8px">
+    <textarea id="newProjectGoal" placeholder="Describe the project goal..."></textarea>
+    <button class="btn" id="createProject">Create Project</button>
+    <div id="createResult"></div>
+  </div>
   <select id="projectSelect"><option value="">Select project...</option></select>
   <textarea id="taskInput" placeholder="Describe the task..."></textarea>
   <button class="btn" id="submitTask">Submit Task</button>
@@ -316,6 +338,56 @@ select{appearance:none;-webkit-appearance:none}
     else toast('Error: ' + (data.error || 'unknown'));
   });
 
+  // Create Project
+  document.getElementById('createProject').addEventListener('click', async () => {
+    const name = document.getElementById('newProjectName').value.trim();
+    const goal = document.getElementById('newProjectGoal').value.trim();
+    if (!name || !goal) { toast('Enter project name and goal'); return; }
+    const data = await api('/project/create', {method:'POST', body: JSON.stringify({name, goal})});
+    const el = document.getElementById('createResult');
+    if (data.ok) {
+      toast('Project creating: ' + name);
+      el.innerHTML = '<div style="color:#4caf50;margin-top:8px">Project "' + esc(name) + '" is being created...</div>';
+      document.getElementById('newProjectName').value = '';
+      document.getElementById('newProjectGoal').value = '';
+      setTimeout(loadDashboard, 5000);
+    } else {
+      el.innerHTML = '<div style="color:#f44336;margin-top:8px">Error: ' + esc(data.error || 'unknown') + '</div>';
+    }
+  });
+
+  // Monitor tab - live agent output
+  async function loadMonitor() {
+    const data = await api('/agents/output');
+    const el = document.getElementById('agentOutputs');
+    if (data.ok && data.outputs) {
+      const keys = Object.keys(data.outputs);
+      if (keys.length === 0) {
+        el.textContent = 'No agent output yet. Start a session or overnight run.';
+      } else {
+        let html = '';
+        for (const agent of keys) {
+          html += '<div style="color:#e94560;font-weight:bold;margin-top:8px">[' + esc(agent) + ']</div>';
+          const lines = data.outputs[agent];
+          for (const line of lines) {
+            html += '<div style="color:#aaa">' + esc(line) + '</div>';
+          }
+        }
+        el.innerHTML = html;
+        el.scrollTop = el.scrollHeight;
+      }
+    }
+    // Resources
+    const dash = await api('/dashboard');
+    if (dash.ok && dash.resources) {
+      const r = dash.resources;
+      document.getElementById('monitorResources').innerHTML =
+        'CPU: ' + (r.cpu_percent||0) + '% | RAM: ' + (r.ram_used_gb||0).toFixed(1) + '/' + (r.ram_total_gb||0).toFixed(1) + ' GB | Disk free: ' + (r.disk_free_gb||0).toFixed(1) + ' GB';
+    }
+  }
+  setInterval(loadMonitor, 3000);
+  loadMonitor();
+
   // Settings
   async function loadSettings() {
     const data = await api('/connect-info');
@@ -341,6 +413,84 @@ select{appearance:none;-webkit-appearance:none}
   // Service worker
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 })();
+</script>
+</body>
+</html>"""
+
+DASHBOARD_HTML = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ricet Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Courier New',monospace;background:#0a0a15;color:#c0c0c0;padding:16px;min-height:100vh}
+h1{color:#e94560;font-size:20px;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px}
+h2{color:#e94560;font-size:14px;margin:12px 0 4px;text-transform:uppercase;letter-spacing:1px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+.card{background:#12122a;border:1px solid #222;border-radius:8px;padding:12px;overflow:hidden}
+.card.full{grid-column:1/-1}
+.agent-section{margin-bottom:8px}
+.agent-name{color:#e94560;font-weight:bold;font-size:12px}
+.agent-line{color:#4caf50;font-size:11px;line-height:1.4;white-space:pre-wrap;word-break:break-all}
+.resource{font-size:13px;color:#888}
+.resource span{color:#e0e0e0}
+.progress-line{font-size:12px;color:#aaa}
+.todo-line{font-size:12px;color:#ccc}
+.goal{font-size:12px;color:#bbb;max-height:120px;overflow-y:auto}
+.updated{font-size:10px;color:#555;text-align:right;margin-top:8px}
+#agentOutputArea{max-height:60vh;overflow-y:auto}
+</style>
+</head>
+<body>
+<h1>ricet Live Dashboard</h1>
+<div class="grid">
+  <div class="card"><h2>Goal</h2><div id="dGoal" class="goal">Loading...</div></div>
+  <div class="card"><h2>Resources</h2><div id="dResources" class="resource">Loading...</div></div>
+  <div class="card full"><h2>Agent Output</h2><div id="agentOutputArea"></div></div>
+  <div class="card"><h2>Progress</h2><div id="dProgress">Loading...</div></div>
+  <div class="card"><h2>TODO</h2><div id="dTodo">Loading...</div></div>
+</div>
+<div class="updated" id="dUpdated"></div>
+<script>
+async function refresh() {
+  try {
+    const r = await fetch('/dashboard');
+    const d = await r.json();
+    if (!d.ok) return;
+    document.getElementById('dGoal').textContent = d.goal || 'No goal set';
+    const res = d.resources || {};
+    document.getElementById('dResources').innerHTML =
+      'CPU: <span>' + (res.cpu_percent||0) + '%</span><br>' +
+      'RAM: <span>' + (res.ram_used_gb||0).toFixed(1) + '/' + (res.ram_total_gb||0).toFixed(1) + ' GB</span><br>' +
+      'Disk free: <span>' + (res.disk_free_gb||0).toFixed(1) + ' GB</span>';
+    const prog = d.progress || [];
+    document.getElementById('dProgress').innerHTML = prog.map(l =>
+      '<div class="progress-line">' + esc(l) + '</div>').join('') || 'No progress yet';
+    document.getElementById('dTodo').innerHTML =
+      '<div class="todo-line">' + esc(d.todo || 'No TODO') + '</div>';
+    // Agent outputs
+    const ao = d.agent_outputs || {};
+    const area = document.getElementById('agentOutputArea');
+    let html = '';
+    for (const agent of Object.keys(ao)) {
+      html += '<div class="agent-section"><div class="agent-name">[' + esc(agent) + ']</div>';
+      for (const line of ao[agent].slice(-15)) {
+        html += '<div class="agent-line">' + esc(line) + '</div>';
+      }
+      html += '</div>';
+    }
+    area.innerHTML = html || '<div class="agent-line">No agent output yet</div>';
+    area.scrollTop = area.scrollHeight;
+    document.getElementById('dUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+  } catch(e) {}
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+refresh();
+setInterval(refresh, 3000);
 </script>
 </body>
 </html>"""

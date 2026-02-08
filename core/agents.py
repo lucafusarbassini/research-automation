@@ -135,6 +135,27 @@ class Task:
 # Active agents tracker
 _active_agents: dict[str, dict] = {}
 
+# Agent output ring buffers for live monitoring
+from collections import deque
+
+_agent_output_buffers: dict[str, deque] = {}
+_AGENT_OUTPUT_MAX = 500
+
+
+def append_agent_output(agent_type: str, line: str) -> None:
+    """Append a line of output to an agent's ring buffer."""
+    if agent_type not in _agent_output_buffers:
+        _agent_output_buffers[agent_type] = deque(maxlen=_AGENT_OUTPUT_MAX)
+    _agent_output_buffers[agent_type].append(line.rstrip())
+
+
+def get_all_agent_outputs(last_n: int = 30) -> dict[str, list[str]]:
+    """Return the last *last_n* output lines per agent type."""
+    return {
+        agent: list(buf)[-last_n:]
+        for agent, buf in _agent_output_buffers.items()
+    }
+
 
 def _route_task_opus(task_description: str) -> AgentType | None:
     """Intelligent Opus-powered task routing (primary method).
@@ -319,6 +340,10 @@ def execute_agent_task(
             tokens_used=cf_result.get("tokens_used", 0),
             ended=datetime.now().isoformat(),
         )
+        # Capture output to ring buffer
+        if result.output:
+            for line in result.output.splitlines():
+                append_agent_output(agent_type.value, line)
         # Auto-verify successful agent output
         from core.verification import auto_verify_response
 
@@ -367,17 +392,35 @@ def _execute_agent_task_legacy(
         cmd.insert(1, "--dangerously-skip-permissions")
 
     result = TaskResult(agent=agent_type, task=task, status="running")
+    agent_label = agent_type.value
 
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-        result.output = proc.stdout
+        # Use Popen to stream output line-by-line into ring buffer
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
+        output_lines: list[str] = []
+        append_agent_output(agent_label, f"--- {task[:80]} ---")
+        try:
+            for line in proc.stdout:  # type: ignore[union-attr]
+                output_lines.append(line)
+                append_agent_output(agent_label, line)
+            proc.wait(timeout=600)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            result.status = "timeout"
+            result.output = "Task timed out after 600 seconds"
+            append_agent_output(agent_label, "[TIMEOUT]")
+            result.ended = datetime.now().isoformat()
+            _log_result(result)
+            return result
+
+        result.output = "".join(output_lines)
         result.status = "success" if proc.returncode == 0 else "failure"
-    except subprocess.TimeoutExpired:
-        result.status = "timeout"
-        result.output = "Task timed out after 600 seconds"
     except Exception as e:
         result.status = "failure"
         result.output = str(e)
+        append_agent_output(agent_label, f"[ERROR] {e}")
 
     result.ended = datetime.now().isoformat()
     _log_result(result)

@@ -42,9 +42,6 @@ SUPPORTED_DEPLOY_METHODS = {"github-pages", "netlify", "manual"}
 
 SUPPORTED_TEMPLATES = {"academic", "minimal"}
 
-CV_SECTIONS = ("education", "experience", "skills", "awards", "service")
-
-
 def _nav_html(pages: list[tuple[str, str]]) -> str:
     """Return an HTML nav bar from a list of (filename, label) pairs."""
     links = "".join(f'  <a href="{fn}">{label}</a>\n' for fn, label in pages)
@@ -133,7 +130,6 @@ def init_website(path: Path, template: str = "academic") -> Path:
         nav_items = [
             ("index.html", "Home"),
             ("publications.html", "Publications"),
-            ("cv.html", "CV"),
         ]
     else:
         nav_items = [("index.html", "Home")]
@@ -153,16 +149,6 @@ def init_website(path: Path, template: str = "academic") -> Path:
                 "Publications",
                 '<h1>Publications</h1>\n<div id="pub-list">\n</div>',
                 nav,
-            ),
-        )
-        cv_body_parts = [
-            f'<section id="cv-{s}">\n<h2>{s.title()}</h2>\n</section>'
-            for s in CV_SECTIONS
-        ]
-        _write_if_missing(
-            path / "cv.html",
-            _wrap_page(
-                "CV", "<h1>Curriculum Vitae</h1>\n" + "\n".join(cv_body_parts), nav
             ),
         )
 
@@ -329,42 +315,6 @@ def add_publication(bib_entry: str, project_path: Path) -> bool:
 
     pub_page.write_text(content)
     logger.info("Added publication: %s", title)
-    return True
-
-
-def update_cv(section: str, content: str, project_path: Path) -> bool:
-    """Update a section of the CV page.
-
-    The *section* name (e.g. ``'education'``) identifies the ``<section>``
-    element by its ``id`` attribute (``cv-education``).
-
-    Returns True on success, False if the CV page does not exist.
-    """
-    project_path = Path(project_path)
-    cv_page = project_path / "cv.html"
-    if not cv_page.exists():
-        return False
-
-    section_id = f"cv-{section}"
-    html = cv_page.read_text()
-
-    # Find the section and replace its inner content
-    pattern = rf'(<section id="{section_id}">)\s*<h2>[^<]*</h2>\s*(.*?)(</section>)'
-    replacement = rf"\1\n<h2>{section.title()}</h2>\n{content}\n\3"
-    new_html, count = re.subn(pattern, replacement, html, flags=re.DOTALL)
-
-    if count == 0:
-        # Section not found; append a new one before </body>
-        new_section = (
-            f'<section id="{section_id}">\n'
-            f"<h2>{section.title()}</h2>\n"
-            f"{content}\n"
-            "</section>\n"
-        )
-        new_html = html.replace("</body>", new_section + "</body>")
-
-    cv_page.write_text(new_html)
-    logger.info("Updated CV section: %s", section)
     return True
 
 

@@ -362,6 +362,10 @@ class MobileServer:
         self._routes[("GET", "/project/status")] = self._handle_get_project_status
         self._routes[("POST", "/project/task")] = self._handle_post_project_task
         self._routes[("GET", "/connect-info")] = self._handle_get_connect_info
+        self._routes[("POST", "/project/create")] = self._handle_create_project
+        self._routes[("GET", "/dashboard")] = self._handle_get_dashboard
+        self._routes[("GET", "/agents/output")] = self._handle_get_agent_outputs
+        self._routes[("GET", "/dashboard/html")] = self._handle_get_dashboard_html
 
     @property
     def routes(self) -> dict[tuple[str, str], RouteHandler]:
@@ -532,6 +536,192 @@ class MobileServer:
             ],
         }
 
+    def _handle_create_project(self, body: Optional[dict]) -> dict:
+        """Create a new ricet project from mobile/web."""
+        name = (body or {}).get("name", "").strip()
+        goal = (body or {}).get("goal", "").strip()
+        if not name:
+            return {"ok": False, "error": "missing_project_name"}
+        if not goal:
+            return {"ok": False, "error": "missing_goal"}
+
+        # Sanitize name
+        import re as _re
+
+        name = _re.sub(r"[^a-zA-Z0-9_-]", "-", name).strip("-")[:60]
+        if not name:
+            return {"ok": False, "error": "invalid_project_name"}
+
+        # Launch init in background thread
+        import threading as _thr
+
+        def _run_init():
+            try:
+                _run_project_init(name, goal, self._registry)
+            except Exception as exc:
+                logger.error("Mobile project init failed: %s", exc)
+
+        _thr.Thread(target=_run_init, daemon=True, name=f"init-{name}").start()
+        return {"ok": True, "project": name, "status": "creating"}
+
+    def _handle_get_dashboard(self, body: Optional[dict]) -> dict:
+        """Return comprehensive dashboard data as JSON."""
+        data: dict = {"ok": True}
+
+        # Goal
+        goal_path = Path("knowledge/GOAL.md")
+        data["goal"] = goal_path.read_text()[:500] if goal_path.exists() else ""
+
+        # Progress
+        progress_path = Path("state/PROGRESS.md")
+        if progress_path.exists():
+            lines = progress_path.read_text().strip().splitlines()
+            data["progress"] = lines[-20:]
+        else:
+            data["progress"] = []
+
+        # TODO
+        todo_path = Path("state/TODO.md")
+        data["todo"] = todo_path.read_text()[:1000] if todo_path.exists() else ""
+
+        # Agent status
+        try:
+            from core.agents import get_active_agents_status, get_all_agent_outputs
+
+            data["agents"] = get_active_agents_status()
+            data["agent_outputs"] = get_all_agent_outputs(last_n=30)
+        except Exception:
+            data["agents"] = []
+            data["agent_outputs"] = {}
+
+        # Resources
+        try:
+            from core.resources import monitor_resources
+
+            snap = monitor_resources()
+            data["resources"] = {
+                "cpu_percent": snap.cpu_percent,
+                "ram_used_gb": snap.ram_used_gb,
+                "ram_total_gb": snap.ram_total_gb,
+                "disk_free_gb": snap.disk_free_gb,
+            }
+        except Exception:
+            data["resources"] = {}
+
+        # Sessions
+        sessions_dir = Path("state/sessions")
+        sessions = []
+        if sessions_dir.is_dir():
+            for f in sorted(sessions_dir.glob("*.json"))[-10:]:
+                try:
+                    sessions.append(json.loads(f.read_text()))
+                except Exception:
+                    pass
+        data["sessions"] = sessions
+
+        # Projects
+        data["projects"] = self._registry.list_projects()
+
+        return data
+
+    def _handle_get_agent_outputs(self, body: Optional[dict]) -> dict:
+        """Return verbose agent output buffers."""
+        try:
+            from core.agents import get_all_agent_outputs
+
+            return {"ok": True, "outputs": get_all_agent_outputs(last_n=50)}
+        except Exception as exc:
+            return {"ok": True, "outputs": {}, "note": str(exc)}
+
+    def _handle_get_dashboard_html(self, body: Optional[dict]) -> dict:
+        """Serve standalone dashboard HTML page."""
+        from core.mobile_pwa import DASHBOARD_HTML
+
+        return {"ok": True, "_html": DASHBOARD_HTML}
+
+
+def _run_project_init(
+    name: str, goal: str, registry: "ProjectRegistry"
+) -> None:
+    """Run project init in a background thread (called from mobile)."""
+    import shutil
+    import subprocess
+
+    from core.credential_store import load_global_credentials
+    from core.onboarding import (
+        OnboardingAnswers,
+        setup_workspace,
+        write_env_file,
+        write_goal_file,
+        write_settings,
+    )
+
+    base_dir = Path.home() / "research"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    project_path = base_dir / name
+
+    if project_path.exists():
+        logger.warning("Project %s already exists at %s", name, project_path)
+        return
+
+    # Copy templates
+    template_dir = Path(__file__).resolve().parent.parent / "templates"
+    if template_dir.exists():
+        shutil.copytree(template_dir, project_path, dirs_exist_ok=True)
+    else:
+        project_path.mkdir(parents=True, exist_ok=True)
+
+    # Fill answers with defaults
+    answers = OnboardingAnswers(
+        project_name=name,
+        goal=goal,
+        needs_website=True,
+        needs_mobile=True,
+    )
+
+    # Setup workspace
+    setup_workspace(project_path)
+    write_settings(project_path, answers)
+    write_goal_file(project_path, answers)
+
+    # Write goal to GOAL.md
+    goal_file = project_path / "knowledge" / "GOAL.md"
+    if goal_file.exists():
+        content = goal_file.read_text()
+        for ph in ("<!-- User provides during init -->", "<!-- WRITE YOUR PROJECT DESCRIPTION HERE -->"):
+            content = content.replace(ph, goal)
+        goal_file.write_text(content)
+
+    # Use global credentials
+    global_creds = load_global_credentials()
+    if global_creds:
+        write_env_file(project_path, global_creds)
+
+    # Git init + commit
+    try:
+        subprocess.run(
+            "git init && git add -A && git commit -m 'Initial ricet project (created from mobile)'",
+            shell=True,
+            cwd=project_path,
+            capture_output=True,
+            timeout=30,
+        )
+    except Exception:
+        pass
+
+    # Register in project registry
+    try:
+        registry.register(
+            name=name,
+            path=str(project_path),
+            project_type="general",
+            description=goal[:100],
+        )
+    except Exception as exc:
+        logger.warning("Could not register project: %s", exc)
+
+    logger.info("Mobile project init complete: %s at %s", name, project_path)
+
 
 # ---------------------------------------------------------------------------
 # URL generation
@@ -640,7 +830,11 @@ def _make_handler(mobile: MobileServer) -> type:
             resp = mobile.dispatch(
                 "GET", self.path, headers=headers, client_ip=client_ip
             )
-            self._send_json(resp)
+            # If response contains _html, serve as raw HTML page
+            if "_html" in resp:
+                self._send_html(resp["_html"])
+            else:
+                self._send_json(resp)
 
         def do_POST(self) -> None:
             length = int(self.headers.get("Content-Length", 0))

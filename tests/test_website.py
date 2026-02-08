@@ -12,7 +12,6 @@ from core.website import (
     deploy_site,
     init_website,
     preview_site,
-    update_cv,
     update_page,
 )
 
@@ -28,7 +27,6 @@ def test_init_website_academic(tmp_path: Path):
     assert (project / "index.html").exists()
     assert (project / "css" / "style.css").exists()
     assert (project / "publications.html").exists()
-    assert (project / "cv.html").exists()
     # Site config should be written
     config = json.loads((project / "site.json").read_text())
     assert config["template"] == "academic"
@@ -40,9 +38,8 @@ def test_init_website_minimal(tmp_path: Path):
     assert project.exists()
     assert (project / "index.html").exists()
     assert (project / "css" / "style.css").exists()
-    # Minimal template should NOT have publications or cv pages
+    # Minimal template should NOT have publications page
     assert not (project / "publications.html").exists()
-    assert not (project / "cv.html").exists()
 
 
 def test_init_website_idempotent(tmp_path: Path):
@@ -182,28 +179,7 @@ def test_add_publication_no_page(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# 8. update_cv
-# ---------------------------------------------------------------------------
-
-
-def test_update_cv(tmp_path: Path):
-    """update_cv updates a section of the CV page."""
-    project_path = init_website(tmp_path / "site", template="academic")
-    result = update_cv("education", "<li>PhD, MIT, 2025</li>", project_path)
-    assert result is True
-    content = (project_path / "cv.html").read_text()
-    assert "PhD, MIT, 2025" in content
-
-
-def test_update_cv_no_page(tmp_path: Path):
-    """update_cv returns False when cv.html does not exist."""
-    project_path = init_website(tmp_path / "site", template="minimal")
-    result = update_cv("education", "stuff", project_path)
-    assert result is False
-
-
-# ---------------------------------------------------------------------------
-# 9. preview_site
+# 8. preview_site
 # ---------------------------------------------------------------------------
 
 

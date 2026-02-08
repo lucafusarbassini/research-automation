@@ -39,7 +39,7 @@ FOLDER_READMES: dict[str, str] = {
     "uploads/personal": (
         "# Personal Materials\n\n"
         "Upload personal materials for style imprinting and context.\n\n"
-        "Examples: your published papers, CV, writing samples, lab notes.\n"
+        "Examples: your published papers, writing portfolio, writing samples, lab notes.\n"
     ),
 }
 
@@ -85,8 +85,8 @@ class OnboardingAnswers:
     credentials: dict[str, str] = field(default_factory=dict)
     journal_target: str = ""
     paper_type: str = "journal-article"
-    needs_website: bool = False
-    needs_mobile: bool = False
+    needs_website: bool = True
+    needs_mobile: bool = True
 
 
 def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
@@ -760,31 +760,10 @@ def collect_answers(
     if answers.journal_target == "skip":
         answers.journal_target = ""
 
-    # --- Paper type ---
-    paper_type_resp = prompt_fn(
-        "Paper type (journal-article, conference-paper, thesis-chapter, "
-        "technical-report, review-paper)",
-        "journal-article",
-    )
-    valid_paper_types = {
-        "journal-article",
-        "conference-paper",
-        "thesis-chapter",
-        "technical-report",
-        "review-paper",
-    }
-    if paper_type_resp in valid_paper_types:
-        answers.paper_type = paper_type_resp
-    else:
-        answers.paper_type = "journal-article"
-
-    # --- Website dashboard ---
-    website_resp = prompt_fn("Do you need a web dashboard? (yes/no)", "no")
-    answers.needs_website = website_resp.lower() in ("yes", "y", "true", "1")
-
-    # --- Mobile access ---
-    mobile_resp = prompt_fn("Do you need mobile access? (yes/no)", "no")
-    answers.needs_mobile = mobile_resp.lower() in ("yes", "y", "true", "1")
+    # Paper type, website, and mobile are always default-enabled
+    answers.paper_type = "journal-article"
+    answers.needs_website = True
+    answers.needs_mobile = True
 
     return answers
 
@@ -828,7 +807,7 @@ def print_folder_map(project_path: Path) -> list[str]:
         "  ├── reference/papers/   ← background papers (PDF, etc.)",
         "  ├── reference/code/     ← reference code, scripts, notebooks",
         "  ├── uploads/data/       ← datasets (large files auto-gitignored)",
-        "  ├── uploads/personal/   ← your papers, CV, writing samples",
+        "  ├── uploads/personal/   ← your papers, writing portfolio, samples",
         "  ├── knowledge/GOAL.md   ← your research description (EDIT THIS)",
         "  ├── secrets/.env        ← credentials (never committed)",
         "  └── config/settings.yml ← project configuration",
@@ -1148,6 +1127,11 @@ def collect_credentials(
     if print_fn is None:
         print_fn = print
 
+    # Load global credentials for pre-fill
+    from core.credential_store import load_global_credentials, mask_value
+
+    global_creds = load_global_credentials()
+
     credentials: dict[str, str] = {}
 
     # Determine which categories to ask
@@ -1157,6 +1141,8 @@ def collect_credentials(
     if answers.notification_method == "email":
         active_cats.add("email")
 
+    if global_creds:
+        print_fn("  Global credentials found. Press Enter to keep existing value.")
     print_fn("  Press Enter to skip any credential you don't have yet.")
 
     last_cat = ""
@@ -1170,10 +1156,17 @@ def collect_credentials(
             last_cat = category
         # Show guidance before each prompt
         print_fn(f"  {how_to_url}")
+        # Show masked global value if available
+        global_val = global_creds.get(var, "")
+        if global_val:
+            print_fn(f"  [global: {mask_value(global_val)}]")
         value = prompt_fn(f"{description} ({var})", "").strip()
         # Treat "skip" as empty
         if value and value.lower() != "skip":
             credentials[var] = value
+        elif global_val:
+            # Use global credential when user presses Enter
+            credentials[var] = global_val
 
     return credentials
 

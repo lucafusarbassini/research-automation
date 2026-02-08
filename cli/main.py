@@ -216,6 +216,18 @@ def init(
     )
     if credentials:
         console.print(f"  [green]{len(credentials)} credential(s) collected[/green]")
+        # Offer to save globally
+        try:
+            save_resp = _prompt("Save credentials globally for future projects? (yes/no)", "yes")
+            if save_resp.lower() in ("yes", "y", "true", "1"):
+                from core.credential_store import save_global_credentials
+
+                save_global_credentials(credentials)
+                console.print(
+                    "  [green]Credentials saved to ~/.ricet/credentials.env[/green]"
+                )
+        except (EOFError, KeyboardInterrupt):
+            pass
     else:
         console.print(
             "  [dim]No credentials entered (can be added later in secrets/.env)[/dim]"
@@ -358,9 +370,23 @@ def init(
     # Create state directories
     (project_path / "state" / "sessions").mkdir(parents=True, exist_ok=True)
 
+    # Write GOAL.md with user's detailed description BEFORE generating TODOs/folders
+    goal_file = project_path / "knowledge" / "GOAL.md"
+    if goal_file.exists():
+        goal_content = goal_file.read_text()
+        for placeholder in (
+            "<!-- User provides during init -->",
+            "<!-- WRITE YOUR PROJECT DESCRIPTION HERE -->",
+        ):
+            if placeholder in goal_content:
+                goal_content = goal_content.replace(placeholder, user_goal)
+        goal_file.write_text(goal_content)
+    else:
+        goal_file.parent.mkdir(parents=True, exist_ok=True)
+        goal_file.write_text(f"# Project Goal\n\n## Description\n\n{user_goal}\n")
+
     # Generate goal-aware TODO items and project-specific folders
-    goal_file_for_todo = project_path / "knowledge" / "GOAL.md"
-    _goal_text = goal_file_for_todo.read_text() if goal_file_for_todo.exists() else ""
+    _goal_text = user_goal
 
     # Goal-aware TODO: ask Claude for specific actionable items
     todo_items = generate_goal_todos(_goal_text)
@@ -406,20 +432,7 @@ def init(
     else:
         console.print("  [dim]LaTeX scaffold: paper/ already populated[/dim]")
 
-    # Write GOAL.md with user's detailed description (collected in Step 3c)
-    goal_file = project_path / "knowledge" / "GOAL.md"
-    if goal_file.exists():
-        goal_content = goal_file.read_text()
-        for placeholder in (
-            "<!-- User provides during init -->",
-            "<!-- WRITE YOUR PROJECT DESCRIPTION HERE -->",
-        ):
-            if placeholder in goal_content:
-                goal_content = goal_content.replace(placeholder, user_goal)
-        goal_file.write_text(goal_content)
-    else:
-        goal_file.parent.mkdir(parents=True, exist_ok=True)
-        goal_file.write_text(f"# Project Goal\n\n## Description\n\n{user_goal}\n")
+    # (GOAL.md already written above, before TODO/folder generation)
 
     # Write claude-flow config
     cf_config_src = TEMPLATE_DIR / "config" / "claude-flow.json"
@@ -554,6 +567,48 @@ def init(
             console.print("  [dim]No priority MCPs configured[/dim]")
     except Exception as exc:
         console.print(f"  [yellow]MCP installation skipped: {exc}[/yellow]")
+
+    # --- Step 9: Start mobile access with cloudflared tunnel ---
+    console.print("\n[bold cyan]Step 9: Starting mobile access...[/bold cyan]")
+    try:
+        from core.mobile import (
+            MobileAuth,
+            generate_qr_terminal,
+            parse_tunnel_url,
+            start_server,
+            start_tunnel,
+        )
+
+        auth = MobileAuth()
+        start_server(host="0.0.0.0", port=8777, auth=auth, tls=False)
+        console.print("  [green]Mobile server started on port 8777[/green]")
+        try:
+            tunnel_proc = start_tunnel(port=8777)
+            tunnel_url = parse_tunnel_url(tunnel_proc, timeout=20)
+            if tunnel_url:
+                token = auth.generate_token(label=f"init-{project_name}")
+                full_url = f"{tunnel_url}?token={token}"
+                console.print(f"  [bold green]Public URL: {full_url}[/bold green]")
+                qr = generate_qr_terminal(full_url)
+                if qr:
+                    console.print(qr)
+                console.print(
+                    "  [dim]Scan the QR code or open the URL on your phone to access ricet.[/dim]"
+                )
+            else:
+                console.print(
+                    "  [yellow]Could not establish tunnel. "
+                    "Run 'ricet mobile start' later.[/yellow]"
+                )
+        except Exception as tunnel_exc:
+            console.print(
+                f"  [yellow]Tunnel not started: {tunnel_exc}[/yellow]"
+            )
+            console.print(
+                "  [dim]You can start it later with: ricet mobile start[/dim]"
+            )
+    except Exception as exc:
+        console.print(f"  [yellow]Mobile access skipped: {exc}[/yellow]")
 
     # --- Done ---
     console.print(f"\n[bold green]Project ready![/bold green]")
@@ -1002,24 +1057,59 @@ def start(
 
     # Load project settings
     settings = load_settings(Path.cwd())
-    features = settings.get("features", {})
 
-    # Start mobile server if enabled
-    if features.get("mobile"):
+    # Load and merge global credentials into environment
+    try:
+        from core.credential_store import load_global_credentials, merge_credentials
+
+        global_creds = load_global_credentials()
+        if global_creds:
+            # Load project-level secrets
+            env_file = Path.cwd() / "secrets" / ".env"
+            project_creds: dict[str, str] = {}
+            if env_file.exists():
+                for line in env_file.read_text().splitlines():
+                    line = line.strip()
+                    if line and "=" in line and not line.startswith("#"):
+                        k, _, v = line.partition("=")
+                        if k.strip() and v.strip():
+                            project_creds[k.strip()] = v.strip()
+            merged = merge_credentials(global_creds, project_creds)
+            for k, v in merged.items():
+                os.environ.setdefault(k, v)
+            console.print(
+                f"[dim]Loaded {len(merged)} credential(s) (global + project)[/dim]"
+            )
+    except Exception:
+        pass
+
+    # Always start mobile server + tunnel
+    try:
+        from core.mobile import mobile_server, start_tunnel, parse_tunnel_url
+
+        mobile_server.start()
+        url = mobile_server.get_url()
+        console.print(f"[green]Mobile server: {url}[/green]")
+        # Start cloudflared tunnel
         try:
-            from core.mobile import mobile_server
+            tunnel_proc = start_tunnel(port=8777)
+            tunnel_url = parse_tunnel_url(tunnel_proc, timeout=20)
+            if tunnel_url:
+                console.print(f"[bold green]Public URL: {tunnel_url}[/bold green]")
+                from core.mobile import generate_qr_terminal
 
-            mobile_server.start()
-            url = mobile_server.get_url()
-            console.print(f"[green]Mobile server: {url}[/green]")
-        except Exception as exc:
-            console.print(f"[yellow]Mobile server not started: {exc}[/yellow]")
+                qr = generate_qr_terminal(tunnel_url)
+                if qr:
+                    console.print(qr)
+        except Exception as tunnel_exc:
+            console.print(f"[dim]Tunnel not started: {tunnel_exc}[/dim]")
+    except Exception as exc:
+        console.print(f"[yellow]Mobile server not started: {exc}[/yellow]")
 
-    # Show dashboard URL if website enabled
-    if features.get("website"):
-        console.print(
-            "[dim]Web dashboard enabled. Run 'ricet website preview' in another terminal.[/dim]"
-        )
+    # Show dashboard URL
+    console.print(
+        "[dim]Web dashboard enabled. Run 'ricet website preview' in another terminal.[/dim]"
+    )
 
     # Reindex linked repos for cross-repo RAG
     try:
