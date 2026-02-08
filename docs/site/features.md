@@ -1315,7 +1315,7 @@ Live verification status of all ricet commands, tested against real projects.
 | # | Command | Status | What it tests |
 |---|---------|--------|---------------|
 | 7 | `ricet fidelity` | :white_check_mark: | Alignment check vs GOAL.md |
-| 8 | `ricet memory search "hamilton"` | :hourglass: | Vector/text search in encyclopedia |
+| 8 | `ricet memory search "hamilton"` | :construction: | Vector/text search in encyclopedia |
 | 9 | `ricet memory log-decision "Use RK4..."` | :white_check_mark: | Decision logging |
 | 10 | `ricet memory stats` | :white_check_mark: | Encyclopedia size/stats |
 | 11 | `ricet memory export` | :white_check_mark: | Export knowledge |
@@ -1325,7 +1325,7 @@ Live verification status of all ricet commands, tested against real projects.
 | # | Command | Status | What it tests |
 |---|---------|--------|---------------|
 | 12 | `ricet cite "Runge-Kutta methods..."` | :white_check_mark: | PubMed/arXiv search, BibTeX generation |
-| 13 | `ricet discover "AAV9 Gene Therapy..."` | :hourglass: | PaperBoat cross-discipline search |
+| 13 | `ricet discover "AAV9 Gene Therapy..."` | :construction: | PaperBoat cross-discipline search |
 | 14 | `ricet browse "https://..."` | :white_check_mark: | URL text extraction |
 
 ### Phase 4: Development & Code
@@ -1343,25 +1343,25 @@ Live verification status of all ricet commands, tested against real projects.
 | # | Command | Status | What it tests |
 |---|---------|--------|---------------|
 | 20 | `ricet queue submit -p "Implement..."` | :white_check_mark: | Task queuing |
-| 21 | `ricet queue status` | :hourglass: | Queue status (with mobile inputs) |
-| 22 | `ricet overnight --iterations 1` | :hourglass: | Autonomous mode with Docker sandbox |
+| 21 | `ricet queue status` | :construction: | Queue status (with mobile inputs) |
+| 22 | `ricet overnight --iterations 1` | :construction: | Autonomous mode with Docker sandbox |
 | 23 | `ricet maintain` | :white_check_mark: | Daily maintenance pass |
 
 ### Phase 6: Paper Pipeline
 
 | # | Command | Status | What it tests |
 |---|---------|--------|---------------|
-| 24 | `ricet paper build` | :hourglass: | LaTeX compilation |
-| 25 | `ricet paper check` | :hourglass: | Paper quality check |
-| 26 | `ricet paper adapt-style` | :hourglass: | Style transfer |
+| 24 | `ricet paper build` | :construction: | LaTeX compilation |
+| 25 | `ricet paper check` | :construction: | Paper quality check |
+| 26 | `ricet paper adapt-style` | :construction: | Style transfer |
 
 ### Phase 7: Reproducibility
 
 | # | Command | Status | What it tests |
 |---|---------|--------|---------------|
-| 27 | `ricet repro log --run-id exp1 --params '{...}'` | :hourglass: | Experiment logging |
-| 28 | `ricet repro list` | :hourglass: | List tracked runs |
-| 29 | `ricet repro hash --path data/` | :hourglass: | Dataset SHA-256 checksums |
+| 27 | `ricet repro log --run-id exp1 --params '{...}'` | :construction: | Experiment logging |
+| 28 | `ricet repro list` | :construction: | List tracked runs |
+| 29 | `ricet repro hash --path data/` | :construction: | Dataset SHA-256 checksums |
 
 ### Phase 8: Mobile & Voice
 
@@ -1373,7 +1373,7 @@ Live verification status of all ricet commands, tested against real projects.
 
 | # | Command | Status | What it tests |
 |---|---------|--------|---------------|
-| 33 | `ricet mcp-search "slack connecting mcp"` | :hourglass: | Search 1300+ MCP index |
+| 33 | `ricet mcp-search "slack connecting mcp"` | :white_check_mark: | Search 1300+ MCP index |
 | 34 | `ricet mcp-create physics-benchmark` | :construction: | Custom MCP creation |
 
 ### Phase 10: Multi-Project & Git
@@ -1391,7 +1391,7 @@ Live verification status of all ricet commands, tested against real projects.
 
 | # | Command | Status | What it tests |
 |---|---------|--------|---------------|
-| 41 | `ricet website init && ricet website build` | :hourglass: | Project website + GitHub Pages |
+| 41 | `ricet website init && ricet website build` | :construction: | Project website + GitHub Pages |
 | 42 | `ricet publish medium` | :construction: | Social media publishing |
 | 43 | `ricet infra check` | :white_check_mark: | Docker/CI/CD status |
 | 44 | `ricet docs` | :white_check_mark: | Auto-generate documentation |
@@ -1401,17 +1401,17 @@ Live verification status of all ricet commands, tested against real projects.
 
 | # | Command | Status | What it tests |
 |---|---------|--------|---------------|
-| 46 | `ricet audit` | :hourglass: | Half-baked feature scan (Claude-powered) |
-| 47 | `ricet fresh-audit` | :hourglass: | Zero-context code review |
-| 48 | `ricet review-claude-md` | :hourglass: | CLAUDE.md behavioral review |
+| 46 | `ricet audit` | :white_check_mark: | Half-baked feature scan (Claude-powered) |
+| 47 | `ricet fresh-audit` | :white_check_mark: | Zero-context code review |
+| 48 | `ricet review-claude-md` | :construction: | CLAUDE.md behavioral review |
 | 49 | `ricet auto add-routine --name nightly` | :construction: | Scheduled autonomous routines |
 
 ### Phase 13: Presentations
 
 | # | Command | Status | What it tests |
 |---|---------|--------|---------------|
-| 50 | `ricet slides setup` | :hourglass: | Slide infrastructure setup |
-| 51 | `ricet slides create --title "..."` | :hourglass: | Claude agent writes slide script |
-| 52 | `ricet slides build` | :hourglass: | Generate PPTX with AI schematics |
+| 50 | `ricet slides setup` | :construction: | Slide infrastructure setup |
+| 51 | `ricet slides create --title "..."` | :construction: | Claude agent writes slide script |
+| 52 | `ricet slides build` | :construction: | Generate PPTX with AI schematics |
 
-**Legend:** :white_check_mark: Verified | :hourglass: Pending verification | :construction: Work in progress
+**Legend:** :white_check_mark: Verified working | :construction: Work in progress / needs fix

@@ -360,7 +360,7 @@ def search_paperboat(query: str, *, run_cmd=None) -> list[dict]:
     )
 
     # Opus 4.6 can access websites directly
-    raw = call_claude(prompt, model="opus", timeout=90, run_cmd=run_cmd)
+    raw = call_claude(prompt, model="opus", timeout=300, run_cmd=run_cmd)
     if raw is None:
         # Gemini also has web access
         raw = call_gemini(prompt, run_cmd=run_cmd)

@@ -1405,7 +1405,7 @@ def overnight(
                 )
                 if _retry.returncode == 0:
                     # sg docker works — re-exec ourselves under the docker group
-                    import sys
+                    import os, sys
 
                     console.print(
                         "[green]Docker group available. Re-launching...[/green]"
@@ -2397,12 +2397,23 @@ def memory(
             )
             from core.knowledge import search_knowledge
 
-            results = search_knowledge(query)
+            # Resolve encyclopedia path against active project
+            _enc = Path("knowledge/ENCYCLOPEDIA.md")
+            try:
+                from core.project_registry import ProjectRegistry
+
+                _preg = ProjectRegistry()
+                _aproj = _preg.get_active_project()
+                if _aproj and _aproj.get("path"):
+                    _enc = Path(_aproj["path"]) / "knowledge" / "ENCYCLOPEDIA.md"
+            except Exception:
+                pass
+            results = search_knowledge(query, encyclopedia_path=_enc)
             if results:
                 for r in results[:top_k]:
                     console.print(f"  {r}")
             else:
-                encyclopedia = Path("knowledge/ENCYCLOPEDIA.md")
+                encyclopedia = _enc
                 if not encyclopedia.exists() or not encyclopedia.read_text().strip():
                     console.print(
                         "[dim]No results. knowledge/ENCYCLOPEDIA.md is empty.\n"

@@ -43,3 +43,6 @@ outputs/
 # Website build artifacts
 _build/
 site.json
+
+# Generated slide decks
+slides_output/
