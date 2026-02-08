@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import subprocess
+import tempfile
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -70,20 +71,33 @@ def _extract_result_text(stdout: str) -> str | None:
     return text if text else None
 
 
+# Tools that are ALWAYS allowed in every call_claude invocation.
+_BASELINE_TOOLS = ["WebSearch", "WebFetch"]
+
+# Prompts larger than this (bytes) are piped via stdin instead of passed as
+# a command-line argument to avoid the OS ``ARG_MAX`` limit (E2BIG).
+_MAX_ARG_PROMPT = 100_000  # 100 KB
+
+
 def call_claude(
     prompt: str,
     *,
     model: str | None = None,
     timeout: int = 30,
+    allowed_tools: list[str] | None = None,
     run_cmd=None,
 ) -> str | None:
     """Call Claude CLI with *prompt* and return the response text.
+
+    WebSearch and WebFetch are always allowed.  Callers can grant
+    additional tools via *allowed_tools* (e.g. MCP tools).
 
     Args:
         prompt: The prompt text.
         model: Optional model alias (``"haiku"``, ``"sonnet"``, ``"opus"``)
                or a full model ID.  Defaults to :data:`CLAUDE_CLI_MODEL`.
         timeout: Subprocess timeout in seconds.
+        allowed_tools: Extra tool names to allow beyond WebSearch/WebFetch.
         run_cmd: Optional ``callable(cmd_list) -> CompletedProcess``
                  override for testing.
 
@@ -94,21 +108,43 @@ def call_claude(
         CLAUDE_MODEL_ALIASES.get(model, model) if model else CLAUDE_CLI_MODEL
     )
 
+    # Merge baseline tools with caller-supplied extras
+    tools = list(_BASELINE_TOOLS)
+    if allowed_tools:
+        for t in allowed_tools:
+            if t not in tools:
+                tools.append(t)
+
     if run_cmd is None:
         if not _claude_cli_available():
             return None
 
-        def run_cmd(cmd: list[str]) -> subprocess.CompletedProcess:
+        def run_cmd(cmd: list[str], **kw) -> subprocess.CompletedProcess:
             return subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
+                **kw,
             )
 
     try:
-        result = run_cmd(
-            [
+        prompt_bytes = len(prompt.encode("utf-8"))
+        if prompt_bytes > _MAX_ARG_PROMPT:
+            # Large prompt: pipe via stdin to avoid OS ARG_MAX / E2BIG.
+            # Without -p and with stdin piped, Claude enters pipe mode.
+            cmd = [
+                "claude",
+                "--output-format",
+                "text",
+                "--model",
+                resolved_model,
+                "--allowedTools",
+                ",".join(tools),
+            ]
+            result = run_cmd(cmd, input=prompt)
+        else:
+            cmd = [
                 "claude",
                 "-p",
                 prompt,
@@ -116,8 +152,10 @@ def call_claude(
                 "text",
                 "--model",
                 resolved_model,
+                "--allowedTools",
+                ",".join(tools),
             ]
-        )
+            result = run_cmd(cmd)
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
         # Try extracting from JSON envelope (in case --output-format json was used)
@@ -125,8 +163,15 @@ def call_claude(
             extracted = _extract_result_text(result.stdout)
             if extracted:
                 return extracted
+        # Log failure details for debugging
+        if result.returncode != 0:
+            logger.warning(
+                "Claude CLI failed (rc=%d): %s",
+                result.returncode,
+                result.stderr[:200] if result.stderr else "(no stderr)",
+            )
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
-        logger.debug("Claude CLI unavailable: %s", exc)
+        logger.warning("Claude CLI unavailable: %s", exc)
     return None
 
 

@@ -401,13 +401,14 @@ def search_and_cite(
 
     prompt = (
         f'Find {max_results} real academic papers matching: "{query}"\n\n'
-        "CRITICAL INSTRUCTIONS:\n"
-        "- Use your paper-search tools (paper-search-mcp, arxiv-mcp-server,\n"
-        "  scientific-papers-mcp) to search real academic databases (arXiv,\n"
-        "  PubMed, Semantic Scholar, OpenAlex, bioRxiv).\n"
-        "- Return ONLY papers that actually exist with real, verifiable DOIs.\n"
-        "- DO NOT invent, hallucinate, or guess any paper metadata.\n"
-        "- If no tools are available or no papers found, return: []\n\n"
+        "INSTRUCTIONS:\n"
+        "1. Use WebSearch to search PubMed (pubmed.ncbi.nlm.nih.gov) for this query.\n"
+        "   PubMed is the PRIMARY source — always search it first.\n"
+        "2. Also search arXiv, Semantic Scholar, or Google Scholar if relevant.\n"
+        "3. Use WebFetch on result pages to get paper details (DOI, authors, year).\n"
+        "4. Return ONLY papers you actually found with real, verifiable DOIs.\n"
+        "5. DO NOT invent, hallucinate, or guess any paper metadata.\n"
+        "6. If no papers found, return: []\n\n"
         "Return a JSON array with fields:\n"
         '  {"title": "...", "authors": "LastName, First and ...", '
         '"year": "2024", "journal": "...", "doi": "10.xxxx/...", '
@@ -415,8 +416,7 @@ def search_and_cite(
         "Reply with JSON array only."
     )
 
-    # Sonnet: good MCP tool use, faster than Opus
-    raw = call_claude(prompt, model="sonnet", timeout=90, run_cmd=run_cmd)
+    raw = call_claude(prompt, model="sonnet", timeout=120, run_cmd=run_cmd)
     if raw is None:
         return []
     results = _extract_json_array(raw)

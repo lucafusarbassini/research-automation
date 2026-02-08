@@ -432,14 +432,38 @@ def suggest_and_install_mcp(
         if confirm.lower() not in ("yes", "y"):
             return False
 
-    # Install
-    _run = run_cmd or (lambda cmd: subprocess.run(cmd, shell=True, check=True))
+    # Register in .claude/settings.json (don't RUN the server — Claude
+    # Code starts MCPs lazily when it needs their tools).
     try:
-        _run(install_cmd)
-        _print(f"  Installed {name}")
+        settings_path = Path.cwd() / ".claude" / "settings.json"
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        settings: dict = {}
+        if settings_path.exists():
+            settings = json.loads(settings_path.read_text())
+
+        mcp_servers = settings.setdefault("mcpServers", {})
+        if name not in mcp_servers:
+            # Parse the install command to extract npx args
+            # e.g. "npx -y slack-mcp-server" → command: npx, args: ["-y", "slack-mcp-server"]
+            parts = install_cmd.split()
+            if parts and parts[0] == "npx":
+                mcp_servers[name] = {
+                    "command": "npx",
+                    "args": parts[1:],
+                }
+            else:
+                mcp_servers[name] = {
+                    "command": parts[0] if parts else install_cmd,
+                    "args": parts[1:] if len(parts) > 1 else [],
+                }
+            settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+            _print(f"  Registered {name} in .claude/settings.json")
+            _print(f"  Claude Code will start it automatically when needed.")
+        else:
+            _print(f"  {name} already registered in .claude/settings.json")
         return True
-    except (subprocess.CalledProcessError, Exception) as exc:
-        _print(f"  Install failed: {exc}")
+    except Exception as exc:
+        _print(f"  Registration failed: {exc}")
         return False
 
 

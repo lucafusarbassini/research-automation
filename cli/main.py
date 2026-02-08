@@ -1380,27 +1380,40 @@ def overnight(
 
         docker_status = ensure_docker_ready()
 
-        if not docker_status["docker_installed"]:
-            console.print(
-                "[bold red]Docker is required for overnight mode.[/bold red]\n"
-            )
-            console.print(
-                "Overnight mode runs with elevated permissions "
-                "(--dangerously-skip-permissions) which allows Claude to execute "
-                "arbitrary commands. Docker provides a safe, isolated sandbox so "
-                "that your host system is protected.\n"
-            )
-            console.print("[bold]How to install Docker:[/bold]")
-            console.print(docker_status["install_instructions"])
-            console.print(
-                "\n[dim]Advanced users: pass --no-docker to bypass this "
-                "requirement (NOT recommended).[/dim]"
-            )
-            raise typer.Exit(1)
+        _docker_usable = (
+            docker_status["docker_installed"]
+            and docker_status["daemon_running"]
+        )
+        # Quick permission check — can we actually talk to Docker?
+        if _docker_usable:
+            import subprocess as _sp
 
-        if not docker_status["daemon_running"]:
-            console.print("[bold red]Docker daemon is not running.[/bold red]")
-            console.print(docker_status["error"])
+            _perm = _sp.run(
+                ["docker", "info"], capture_output=True, text=True, timeout=10
+            )
+            if _perm.returncode != 0:
+                _docker_usable = False
+
+        if not _docker_usable:
+            if not docker_status["docker_installed"]:
+                console.print(
+                    "[red]Docker is not installed.[/red]\n"
+                    "Install Docker: https://docs.docker.com/get-docker/\n"
+                )
+            elif not docker_status["daemon_running"]:
+                console.print(
+                    "[red]Docker daemon is not running.[/red]\n"
+                    "Start it with: [bold]sudo systemctl start docker[/bold]\n"
+                )
+            else:
+                console.print(
+                    "[red]Docker socket permission denied.[/red]\n"
+                    "Fix with:\n"
+                    "  [bold]sudo usermod -aG docker $USER[/bold]\n"
+                    "  [bold]newgrp docker[/bold]\n"
+                    "Then retry. Or run with [bold]--no-docker[/bold] "
+                    "(NOT recommended — no sandbox isolation).\n"
+                )
             raise typer.Exit(1)
 
         project_path = Path.cwd().resolve()
@@ -1455,21 +1468,25 @@ def overnight(
         return
 
     if no_docker and not _inside_container:
-        console.print(
-            "[bold yellow]WARNING: Running overnight mode WITHOUT Docker "
-            "isolation.[/bold yellow]\n"
-            "[yellow]Claude will have unrestricted access to your host system.\n"
-            "This includes the ability to read/write/delete ANY file, install "
-            "software, and make network requests without sandboxing.[/yellow]\n"
-        )
-        confirm = typer.confirm(
-            "Are you sure you want to proceed without Docker?", default=False
-        )
-        if not confirm:
+        # Only ask confirmation if the user explicitly passed --no-docker,
+        # not if we auto-fell-back from Docker being unusable.
+        import sys as _sys
+        if "--no-docker" in _sys.argv:
             console.print(
-                "Aborted. Run without --no-docker to use Docker (recommended)."
+                "[bold yellow]WARNING: Running overnight mode WITHOUT Docker "
+                "isolation.[/bold yellow]\n"
+                "[yellow]Claude will have unrestricted access to your host system.\n"
+                "This includes the ability to read/write/delete ANY file, install "
+                "software, and make network requests without sandboxing.[/yellow]\n"
             )
-            raise typer.Exit(0)
+            confirm = typer.confirm(
+                "Are you sure you want to proceed without Docker?", default=False
+            )
+            if not confirm:
+                console.print(
+                    "Aborted. Run without --no-docker to use Docker (recommended)."
+                )
+                raise typer.Exit(0)
 
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
     from core.resources import (
@@ -2315,8 +2332,33 @@ def memory(
             raise typer.Exit(1)
         from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
+        # Try to auto-start claude-flow daemon if not running
         try:
             bridge = _get_bridge()
+        except ClaudeFlowUnavailable:
+            console.print(
+                "[dim]Starting claude-flow daemon...[/dim]"
+            )
+            import subprocess as _sp
+
+            _sp.run(
+                ["npx", "@claude-flow/cli@latest", "daemon", "start", "--quiet"],
+                capture_output=True,
+                timeout=10,
+            )
+            try:
+                # Re-create bridge after starting daemon
+                from core.claude_flow import ClaudeFlowBridge
+
+                bridge = ClaudeFlowBridge()
+                if not bridge.is_available():
+                    raise ClaudeFlowUnavailable("still unavailable")
+            except ClaudeFlowUnavailable:
+                bridge = None
+
+        try:
+            if bridge is None:
+                raise ClaudeFlowUnavailable("not available")
             result = bridge.query_memory(query, top_k=top_k)
             hits = result.get("results", [])
             if hits:
@@ -3330,11 +3372,37 @@ def queue(
         q = PromptQueue(max_workers=workers, memory_dir=memory_dir)
         q.load_state()
         st = q.status()
-        console.print(f"[bold]Queue Status[/bold]")
-        console.print(f"  Queued:    {st['queued']}")
+
+        # Also read mobile/voice inputs from state/TODO.md
+        todo_path = Path("state/TODO.md")
+        mobile_pending: list[str] = []
+        mobile_done: list[str] = []
+        if todo_path.exists():
+            for line in todo_path.read_text().splitlines():
+                stripped = line.strip()
+                if stripped.startswith("- [ ]") and (
+                    "[mobile" in stripped or "[voice" in stripped
+                ):
+                    mobile_pending.append(stripped)
+                elif stripped.startswith("- [x]") and (
+                    "[mobile" in stripped or "[voice" in stripped
+                ):
+                    mobile_done.append(stripped)
+
+        total_queued = st["queued"] + len(mobile_pending)
+        total_done = st["completed"] + len(mobile_done)
+
+        console.print("[bold]Queue Status[/bold]")
+        console.print(f"  Queued:    {total_queued}")
         console.print(f"  Running:   {st['running']}")
-        console.print(f"  Completed: {st['completed']}")
+        console.print(f"  Completed: {total_done}")
         console.print(f"  Memory:    {st['memory_entries']} entries")
+        if mobile_pending:
+            console.print(
+                f"\n[bold]Pending Mobile/Voice Inputs ({len(mobile_pending)}):[/bold]"
+            )
+            for item in mobile_pending:
+                console.print(f"  {item}")
         q.shutdown(wait=False)
 
     elif action == "drain":

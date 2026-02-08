@@ -471,19 +471,31 @@ class MobileServer:
         logger.info("Voice task queued: %s — %s", task_id, text[:80])
         return {"ok": True, "task_id": task_id, "source": "voice"}
 
-    @staticmethod
-    def _persist_task_to_todo(prompt: str, source: str = "mobile") -> None:
-        """Append a task to state/TODO.md so ricet overnight can pick it up."""
-        todo_path = Path("state") / "TODO.md"
+    def _persist_task_to_todo(self, prompt: str, source: str = "mobile") -> None:
+        """Append a task to state/TODO.md so ricet overnight can pick it up.
+
+        Uses the active project path from the registry so it works regardless
+        of the server process's current working directory.
+        """
+        base = Path.cwd()
+        try:
+            active = self._registry.get_active_project()
+            if active and active.get("path"):
+                base = Path(active["path"])
+        except Exception:
+            pass
+        todo_path = base / "state" / "TODO.md"
         try:
             todo_path.parent.mkdir(parents=True, exist_ok=True)
             if not todo_path.exists():
                 todo_path.write_text("# TODO\n\n")
             with open(todo_path, "a") as f:
                 f.write(f"- [ ] [{source}] {prompt}\n")
-            logger.info("Task persisted to %s", todo_path)
+            logger.info("Task persisted to %s", todo_path.resolve())
         except Exception as exc:
-            logger.warning("Could not persist task to TODO.md: %s", exc)
+            logger.warning(
+                "Could not persist task to %s: %s", todo_path.resolve(), exc
+            )
 
     def _handle_get_progress(self, body: Optional[dict]) -> dict:
         recent = self._tasks[-10:] if self._tasks else []
