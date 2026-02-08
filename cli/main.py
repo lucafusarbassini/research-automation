@@ -1392,6 +1392,28 @@ def overnight(
                 ["docker", "info"], capture_output=True, text=True, timeout=10
             )
             if _perm.returncode != 0:
+                # Try switching to the docker group (doesn't need sudo)
+                console.print(
+                    "[yellow]Docker socket permission denied. "
+                    "Trying newgrp docker...[/yellow]"
+                )
+                _retry = _sp.run(
+                    ["sg", "docker", "-c", "docker info"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if _retry.returncode == 0:
+                    # sg docker works — re-exec ourselves under the docker group
+                    import sys
+
+                    console.print(
+                        "[green]Docker group available. Re-launching...[/green]"
+                    )
+                    os.execvp(
+                        "sg",
+                        ["sg", "docker", "-c", " ".join(sys.argv)],
+                    )
                 _docker_usable = False
 
         if not _docker_usable:
@@ -1408,10 +1430,10 @@ def overnight(
             else:
                 console.print(
                     "[red]Docker socket permission denied.[/red]\n"
-                    "Fix with:\n"
+                    "Your user is not in the 'docker' group. Ask an admin:\n"
                     "  [bold]sudo usermod -aG docker $USER[/bold]\n"
-                    "  [bold]newgrp docker[/bold]\n"
-                    "Then retry. Or run with [bold]--no-docker[/bold] "
+                    "Then log out and back in (or run [bold]newgrp docker[/bold]).\n"
+                    "Or run with [bold]--no-docker[/bold] "
                     "(NOT recommended — no sandbox isolation).\n"
                 )
             raise typer.Exit(1)
@@ -4188,11 +4210,44 @@ def audit():
 
     project_path = Path.cwd()
     console.print("[bold]Auditing project for half-baked features...[/bold]")
-    issues = audit_feature_completeness(project_path)
 
-    if issues:
-        console.print(f"\n[bold yellow]Found {len(issues)} issue(s):[/bold yellow]")
-        for issue in issues:
+    # Phase 1: fast heuristic scan
+    heuristic_issues = audit_feature_completeness(project_path)
+
+    # Phase 2: Claude deep audit (reads code, finds logic issues)
+    console.print("[dim]Running Claude deep audit...[/dim]")
+    from core.verification import fresh_agent_audit
+
+    claude_result = fresh_agent_audit(project_path)
+    claude_issues = claude_result.get("issues", [])
+
+    # Merge results
+    all_issues: list[dict] = []
+    for issue in heuristic_issues:
+        all_issues.append(issue)
+    for issue in claude_issues:
+        all_issues.append(
+            {
+                "file": issue.get("category", "general"),
+                "line": 0,
+                "issue": f"[{issue.get('severity', '?')}] {issue.get('description', '')}",
+            }
+        )
+
+    score = claude_result.get("score", "?")
+    console.print(f"\n[bold]Quality Score: {score}/10[/bold]")
+
+    strengths = claude_result.get("strengths", [])
+    if strengths:
+        console.print("\n[bold]Strengths:[/bold]")
+        for s in strengths:
+            console.print(f"  [green]+ {s}[/green]")
+
+    if all_issues:
+        console.print(
+            f"\n[bold yellow]Found {len(all_issues)} issue(s):[/bold yellow]"
+        )
+        for issue in all_issues:
             console.print(
                 f"  [dim]{issue['file']}:{issue['line']}[/dim] {issue['issue']}"
             )
@@ -4247,7 +4302,7 @@ def review_claude_md_cmd():
 
     if simplified is None:
         console.print(
-            "[dim]CLAUDE.md not found or already under 200 lines. Nothing to do.[/dim]"
+            "[dim]CLAUDE.md not found or Claude unavailable.[/dim]"
         )
         return
 

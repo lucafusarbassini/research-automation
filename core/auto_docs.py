@@ -437,16 +437,29 @@ def review_claude_md(project_path: Path, *, run_cmd=None) -> str | None:
         return None
 
     text = claude_md.read_text()
-    if len(text.splitlines()) <= 200:
-        return None  # Already concise
+    num_lines = len(text.splitlines())
+
+    if num_lines > 200:
+        task = (
+            f"It has grown too large ({num_lines} lines). Simplify it to under "
+            "200 lines while preserving all essential agent instructions, tool "
+            "configurations, and workflow rules. Remove redundancies and verbose "
+            "examples. Reply with ONLY the simplified CLAUDE.md content."
+        )
+    else:
+        task = (
+            f"It is {num_lines} lines. Review it for:\n"
+            "1. Missing or outdated instructions\n"
+            "2. Redundant or contradictory rules\n"
+            "3. Opportunities to improve agent behavior\n"
+            "4. Missing tool/workflow configurations\n"
+            "Reply with an IMPROVED version of CLAUDE.md (keep under 200 lines)."
+        )
 
     prompt = (
         "You are reviewing a CLAUDE.md agent configuration file. "
-        "It has grown too large. Simplify it to under 200 lines while "
-        "preserving all essential agent instructions, tool configurations, "
-        "and workflow rules. Remove redundancies and verbose examples. "
-        "Reply with ONLY the simplified CLAUDE.md content.\n\n"
-        f"Current CLAUDE.md ({len(text.splitlines())} lines):\n{text}"
+        f"{task}\n\n"
+        f"Current CLAUDE.md ({num_lines} lines):\n{text}"
     )
 
     result = call_claude(prompt, run_cmd=run_cmd)

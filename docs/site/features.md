@@ -1261,3 +1261,157 @@ Configure these in `secrets/.env` (prompted during `ricet init`):
 For exhaustive cross-discipline paper discovery, ricet recommends [PaperBoat](https://paperboatch.com/) -- an AI-powered service that scans thousands of journals daily and delivers personalized paper matches. Useful as a background SOTA knowledge source that updates daily across all disciplines.
 
 Referenced in the paper pipeline section of the README and available as a complement to `ricet cite` and `ricet discover` for broader literature coverage.
+
+---
+
+## Slide Maker
+
+ricet includes a built-in presentation generator that creates polished PPTX slide decks with AI-generated schematics.
+
+### Usage
+
+```bash
+# Set up slide infrastructure in your project
+ricet slides setup
+
+# Create a deck (Claude agent writes the script)
+ricet slides create \
+  --title "My Research Results" \
+  --audience "conference" \
+  --duration 15 \
+  --key-message "Our method achieves 2x speedup" \
+  --schematics 5
+
+# Build the .pptx (runs the script, generates images via Gemini)
+ricet slides build
+```
+
+The slide maker uses a two-step workflow:
+
+1. **`ricet slides create`** -- A Claude agent reads your codebase and writes a `make_slides.py` script using `slide_utils.py` helpers (7 slide templates, consistent color palette, professional layout).
+2. **`ricet slides build`** -- Runs the script, which generates AI schematics via Google Gemini (Nano Banana Pro) and assembles the final `.pptx` file.
+
+Requires `GOOGLE_API_KEY` for schematic generation.
+
+---
+
+## Feature Verification Status
+
+Live verification status of all ricet commands, tested against real projects.
+
+### Phase 1: Project Setup
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 1 | `ricet init my-physics-sim` | :white_check_mark: | Interactive wizard, scaffolding, auto-install deps, MCP install |
+| 2 | `ricet config` | :white_check_mark: | View generated settings.yml |
+| 3 | `ricet config compute` | :white_check_mark: | GPU/cluster reconfiguration |
+| 4 | `ricet status` | :white_check_mark: | Project status overview |
+| 5 | `ricet dashboard` | :white_check_mark: | Rich TUI terminal dashboard |
+| 6 | `ricet dashboard --live` | :white_check_mark: | Auto-refreshing TUI with budget monitoring |
+
+### Phase 2: Knowledge & Goals
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 7 | `ricet fidelity` | :white_check_mark: | Alignment check vs GOAL.md |
+| 8 | `ricet memory search "hamilton"` | :hourglass: | Vector/text search in encyclopedia |
+| 9 | `ricet memory log-decision "Use RK4..."` | :white_check_mark: | Decision logging |
+| 10 | `ricet memory stats` | :white_check_mark: | Encyclopedia size/stats |
+| 11 | `ricet memory export` | :white_check_mark: | Export knowledge |
+
+### Phase 3: Literature & Citations
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 12 | `ricet cite "Runge-Kutta methods..."` | :white_check_mark: | PubMed/arXiv search, BibTeX generation |
+| 13 | `ricet discover "AAV9 Gene Therapy..."` | :hourglass: | PaperBoat cross-discipline search |
+| 14 | `ricet browse "https://..."` | :white_check_mark: | URL text extraction |
+
+### Phase 4: Development & Code
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 15 | `ricet start` | :white_check_mark: | Interactive Claude session |
+| 16 | `ricet verify "RK4 has 4th-order..."` | :white_check_mark: | Fact-checking / falsification |
+| 17 | `ricet debug "python src/solver.py"` | :construction: | Auto-debug loop |
+| 18 | `ricet test-gen --file src/solver.py` | :white_check_mark: | Test generation via Claude |
+| 19 | `ricet agents` | :white_check_mark: | Agent swarm status |
+
+### Phase 5: Autonomous Execution
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 20 | `ricet queue submit -p "Implement..."` | :white_check_mark: | Task queuing |
+| 21 | `ricet queue status` | :hourglass: | Queue status (with mobile inputs) |
+| 22 | `ricet overnight --iterations 1` | :hourglass: | Autonomous mode with Docker sandbox |
+| 23 | `ricet maintain` | :white_check_mark: | Daily maintenance pass |
+
+### Phase 6: Paper Pipeline
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 24 | `ricet paper build` | :hourglass: | LaTeX compilation |
+| 25 | `ricet paper check` | :hourglass: | Paper quality check |
+| 26 | `ricet paper adapt-style` | :hourglass: | Style transfer |
+
+### Phase 7: Reproducibility
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 27 | `ricet repro log --run-id exp1 --params '{...}'` | :hourglass: | Experiment logging |
+| 28 | `ricet repro list` | :hourglass: | List tracked runs |
+| 29 | `ricet repro hash --path data/` | :hourglass: | Dataset SHA-256 checksums |
+
+### Phase 8: Mobile & Voice
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 30 | `ricet mobile tunnel` | :white_check_mark: | Phone access via cloudflared |
+
+### Phase 9: MCP Ecosystem
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 33 | `ricet mcp-search "slack connecting mcp"` | :hourglass: | Search 1300+ MCP index |
+| 34 | `ricet mcp-create physics-benchmark` | :construction: | Custom MCP creation |
+
+### Phase 10: Multi-Project & Git
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 35 | `ricet projects list` | :white_check_mark: | List registered projects |
+| 36 | `ricet worktree add experiment-euler` | :white_check_mark: | Parallel experiment branch |
+| 37 | `ricet worktree list` | :white_check_mark: | List worktrees |
+| 38 | `ricet link /path/to/other/repo` | :construction: | Cross-repo RAG |
+| 39 | `ricet two-repo init` | :white_check_mark: | Cross-repository coordination |
+| 40 | `ricet sync-learnings /path/to/other` | :construction: | Cross-project learning |
+
+### Phase 11: Publishing & Infra
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 41 | `ricet website init && ricet website build` | :hourglass: | Project website + GitHub Pages |
+| 42 | `ricet publish medium` | :construction: | Social media publishing |
+| 43 | `ricet infra check` | :white_check_mark: | Docker/CI/CD status |
+| 44 | `ricet docs` | :white_check_mark: | Auto-generate documentation |
+| 45 | `ricet package init` | :white_check_mark: | Pip package setup |
+
+### Phase 12: Quality & Audit
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 46 | `ricet audit` | :hourglass: | Half-baked feature scan (Claude-powered) |
+| 47 | `ricet fresh-audit` | :hourglass: | Zero-context code review |
+| 48 | `ricet review-claude-md` | :hourglass: | CLAUDE.md behavioral review |
+| 49 | `ricet auto add-routine --name nightly` | :construction: | Scheduled autonomous routines |
+
+### Phase 13: Presentations
+
+| # | Command | Status | What it tests |
+|---|---------|--------|---------------|
+| 50 | `ricet slides setup` | :hourglass: | Slide infrastructure setup |
+| 51 | `ricet slides create --title "..."` | :hourglass: | Claude agent writes slide script |
+| 52 | `ricet slides build` | :hourglass: | Generate PPTX with AI schematics |
+
+**Legend:** :white_check_mark: Verified | :hourglass: Pending verification | :construction: Work in progress
