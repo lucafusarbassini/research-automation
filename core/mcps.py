@@ -119,20 +119,34 @@ def _tier_name_to_num(tier_name: str) -> int:
 
 
 def get_priority_mcps() -> dict:
-    """Return the always-needed (tier-0) MCP servers.
+    """Return all MCP servers that should be installed at project startup.
 
-    These are loaded unconditionally regardless of task classification.
-    Sequential-thinking is tier-0 because structured reasoning is
-    fundamental to every research workflow.
+    Includes all tiers (0-8) from mcp-nucleus.json plus claude-flow if
+    available.  This ensures a new project has every MCP ready to go so
+    agents never stall waiting for a tool.
     """
-    priority: dict = {
-        "sequential-thinking": {
+    priority: dict = {}
+
+    # Load full config from mcp-nucleus.json
+    try:
+        config = load_mcp_config()
+        for tier_key, tier_data in config.items():
+            tier_num = _tier_name_to_num(tier_key)
+            mcps = tier_data.get("mcps", {})
+            for name, entry in mcps.items():
+                if name not in priority:  # avoid duplicates
+                    priority[name] = {**entry, "tier": tier_num}
+    except Exception as exc:
+        logger.warning("Could not load MCP config: %s", exc)
+
+    # Ensure sequential-thinking is always present (even if config fails)
+    if "sequential-thinking" not in priority:
+        priority["sequential-thinking"] = {
             "command": "npx",
             "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
             "purpose": "Structured reasoning chains for complex analysis",
             "tier": 0,
-        },
-    }
+        }
 
     # Merge claude-flow if available
     cf_config = get_claude_flow_mcp_config()
@@ -145,7 +159,10 @@ def get_priority_mcps() -> dict:
 
 
 def install_priority_mcps() -> dict[str, bool]:
-    """Install all tier-0 priority MCP servers.
+    """Install all priority MCP servers (all tiers).
+
+    For npx-based MCPs, pre-fetches the package so first invocation is fast.
+    For source-based MCPs, uses the MCP installer.
 
     Returns:
         Mapping of MCP name -> success boolean.
@@ -153,30 +170,51 @@ def install_priority_mcps() -> dict[str, bool]:
     results: dict[str, bool] = {}
     for name, cfg in get_priority_mcps().items():
         source = cfg.get("source", "")
-        if not source:
-            # For npx-based MCPs, attempt a dry-run to verify availability
+        if source:
+            results[name] = install_mcp(name, source)
+        elif cfg.get("command") == "npx":
+            # npx-based: pre-fetch the package
             cmd_parts = cfg.get("args", [])
             pkg = next((a for a in cmd_parts if not a.startswith("-")), None)
             if pkg:
-                source = pkg
+                try:
+                    subprocess.run(
+                        f"npx -y {pkg} --help",
+                        shell=True, capture_output=True, timeout=60,
+                    )
+                    results[name] = True
+                except Exception:
+                    results[name] = False
             else:
-                results[name] = True  # nothing to install for npx
-                continue
-        results[name] = install_mcp(name, source)
+                results[name] = True  # nothing to install
+        else:
+            results[name] = True  # no source or command, skip
     return results
 
 
 def install_mcp(mcp_name: str, source: str) -> bool:
-    """Install an MCP from source."""
+    """Install an MCP from source.
+
+    Handles GitHub repo references (org/repo), npm packages, and
+    gracefully skips placeholder sources like "community".
+    """
+    # Skip placeholder sources that aren't real packages
+    if source in ("community",):
+        logger.debug("Skipping %s: placeholder source '%s'", mcp_name, source)
+        return True  # not a failure, just nothing to install yet
+
     if "github.com" in source or "/" in source:
         cmd = f"npx -y @anthropic-ai/mcp-installer install {source}"
     else:
         cmd = f"npm install -g {source}"
 
     try:
-        subprocess.run(cmd, shell=True, check=True)
+        subprocess.run(
+            cmd, shell=True, check=True, capture_output=True, timeout=120,
+        )
         return True
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        logger.warning("Failed to install MCP %s from %s: %s", mcp_name, source, exc)
         return False
 
 

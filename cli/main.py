@@ -2020,7 +2020,21 @@ def mobile(
         try:
             info = mobile_server.serve(host=host, port=port, tls=tls)
             console.print(f"[green]{info}[/green]")
-            console.print("[dim]Press Ctrl+C to stop the server.[/dim]")
+            scheme = "https" if tls else "http"
+            console.print(f"\n[bold]Local access:[/bold]  {scheme}://localhost:{port}")
+            console.print(
+                f"[bold]Remote access:[/bold] ssh -L {port}:localhost:{port} "
+                f"$(whoami)@$(hostname -I 2>/dev/null | awk '{{print $1}}')"
+            )
+            if tls:
+                console.print(
+                    f"\n[dim]Tip: If your browser rejects the self-signed cert, "
+                    f"restart with --no-tls:[/dim]"
+                )
+                console.print(
+                    f"[dim]  ricet mobile start --no-tls[/dim]"
+                )
+            console.print("\n[dim]Press Ctrl+C to stop the server.[/dim]")
             # Block the main thread so the daemon server thread stays alive.
             import signal
 
