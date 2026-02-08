@@ -422,6 +422,7 @@ class MobileServer:
         task_id = uuid.uuid4().hex[:12]
         task = {"task_id": task_id, "prompt": prompt, "status": "queued"}
         self._tasks.append(task)
+        self._persist_task_to_todo(prompt)
         logger.info("Task queued: %s — %s", task_id, prompt[:80])
         return {"ok": True, "task_id": task_id, "status": "queued"}
 
@@ -462,8 +463,23 @@ class MobileServer:
             "source": "voice",
         }
         self._tasks.append(task)
+        self._persist_task_to_todo(text, source="voice")
         logger.info("Voice task queued: %s — %s", task_id, text[:80])
         return {"ok": True, "task_id": task_id, "source": "voice"}
+
+    @staticmethod
+    def _persist_task_to_todo(prompt: str, source: str = "mobile") -> None:
+        """Append a task to state/TODO.md so ricet overnight can pick it up."""
+        todo_path = Path("state") / "TODO.md"
+        try:
+            todo_path.parent.mkdir(parents=True, exist_ok=True)
+            if not todo_path.exists():
+                todo_path.write_text("# TODO\n\n")
+            with open(todo_path, "a") as f:
+                f.write(f"- [ ] [{source}] {prompt}\n")
+            logger.info("Task persisted to %s", todo_path)
+        except Exception as exc:
+            logger.warning("Could not persist task to TODO.md: %s", exc)
 
     def _handle_get_progress(self, body: Optional[dict]) -> dict:
         recent = self._tasks[-10:] if self._tasks else []
@@ -546,10 +562,27 @@ def generate_mobile_url(
 
 
 def generate_qr_terminal(url: str) -> str:
-    """Generate a QR code for the terminal using ``qrencode`` if available.
+    """Generate a QR code for the terminal.
 
-    Falls back to returning just the URL if ``qrencode`` is not installed.
+    Tries the Python ``qrcode`` library first (pip install qrcode),
+    then falls back to the ``qrencode`` CLI tool.
     """
+    # Try Python qrcode library first (no system dependency needed)
+    try:
+        import io
+
+        import qrcode  # type: ignore[import-untyped]
+
+        qr = qrcode.QRCode(border=1)
+        qr.add_data(url)
+        qr.make(fit=True)
+        buf = io.StringIO()
+        qr.print_ascii(out=buf, invert=True)
+        return buf.getvalue()
+    except ImportError:
+        pass
+
+    # Fallback to qrencode CLI
     try:
         result = subprocess.run(
             ["qrencode", "-t", "UTF8", url],
@@ -559,7 +592,7 @@ def generate_qr_terminal(url: str) -> str:
         )
         return result.stdout
     except (FileNotFoundError, subprocess.CalledProcessError):
-        return f"QR code unavailable (install qrencode). URL:\n{url}"
+        return f"QR code unavailable (pip install qrcode). URL:\n{url}"
 
 
 # ---------------------------------------------------------------------------

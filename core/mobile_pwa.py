@@ -262,8 +262,10 @@ select{appearance:none;-webkit-appearance:none}
     const path = project ? '/project/task?name=' + encodeURIComponent(project) : '/task';
     const data = await api(path, {method:'POST', body: JSON.stringify({prompt})});
     if (data.ok) {
-      toast('Task queued: ' + (data.task_id || ''));
+      toast('Task added to TODO.md (' + (data.task_id || '') + ')');
       document.getElementById('taskInput').value = '';
+      document.getElementById('taskResult').innerHTML =
+        '<div style="color:#4caf50;margin-top:8px">Task queued. Run <code>ricet overnight</code> or <code>ricet start</code> to execute.</div>';
     } else {
       toast('Error: ' + (data.error || 'unknown'));
     }

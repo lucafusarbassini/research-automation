@@ -1232,6 +1232,20 @@ def overnight(
 
 
 @app.command()
+def dashboard(
+    live: bool = typer.Option(False, "--live", "-l", help="Live-updating mode"),
+    interval: float = typer.Option(5.0, "--interval", "-i", help="Refresh interval (seconds)"),
+):
+    """Show the Rich TUI dashboard with project status panels."""
+    from cli.dashboard import live_dashboard, show_dashboard
+
+    if live:
+        live_dashboard(refresh_interval=interval)
+    else:
+        show_dashboard()
+
+
+@app.command()
 def status():
     """Show current project status."""
     from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
