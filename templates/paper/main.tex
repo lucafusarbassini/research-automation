@@ -1,223 +1,151 @@
-% =============================================================================
-%  main.tex — Research manuscript template
-% =============================================================================
+%!LW recipe=lualatex
+\documentclass[11pt, a4paper]{article}
+
+% ==============================================================================
+% MANUSCRIPT TODO LIST
+% ==============================================================================
 %
-%  Build:   make all        (or: latexmk -pdf main.tex)
-%  Clean:   make clean
-%  Watch:   make watch
+% ---- METHODS ----
+% [ ] M1: [Method section 1]
+% [ ] M2: [Method section 2]
+% [ ] M3: [Method section 3]
 %
-% =============================================================================
-\documentclass[11pt,a4paper,onecolumn]{article}
+% ---- FIGURES: FIRST DRAFT ----
+% [ ] Fig 1 draft: [Description]
+% [ ] Fig 2 draft: [Description]
+% [ ] Fig 3 draft: [Description]
+%
+% ---- FIGURES: FINALIZE ----
+% [ ] Fig 1 finalize: Polish panels, colors, annotations
+% [ ] Fig 2 finalize: Polish panels, colors, annotations
+% [ ] Fig 3 finalize: Polish panels, colors, annotations
+%
+% ---- FIGURE LEGENDS ----
+% [ ] Write legend for Fig 1
+% [ ] Write legend for Fig 2
+% [ ] Write legend for Fig 3
+%
+% ---- RESULTS SUBSECTIONS (first good draft) ----
+% [ ] R1: [Results section 1]
+% [ ] R2: [Results section 2]
+% [ ] R3: [Results section 3]
+%
+% ---- DISCUSSION ----
+% [ ] Discussion: First draft
+% [ ] Discussion: Revise and polish
+%
+% ---- SUPPLEMENTARY FIGURES ----
+% [ ] Supp Fig 1 draft: [Description]
+% [ ] Supp Fig 2 draft: [Description]
+%
+% ==============================================================================
 
-% --- Shared preamble --------------------------------------------------------
-\input{preamble}
+% ==============================================================================
+% DOCUMENT SETUP
+% ==============================================================================
+\input{preamble}    % Packages, bibliography, hyphenation
+\input{layout}      % Fonts, geometry, headers, decorations
+\input{commands}    % Article metadata, figure commands
+\input{definitions} % Math macros and shortcuts
 
-% --- Page geometry ----------------------------------------------------------
-\usepackage[
-  top    = 2.5cm,
-  bottom = 2.5cm,
-  left   = 2.5cm,
-  right  = 2.5cm,
-]{geometry}
-
-% --- Line spacing (adjust for submission) -----------------------------------
-\usepackage{setspace}
-\onehalfspacing           % Switch to \doublespacing for review copies
-
-% --- Line numbers (uncomment for review) ------------------------------------
-% \usepackage{lineno}
-% \linenumbers
-
-% =============================================================================
-%  Metadata
-% =============================================================================
-\title{%
-  \textbf{A Descriptive Title That Clearly Communicates\\
-  the Main Finding of This Study}%
-}
-
-\author{%
-  First~Author\textsuperscript{1,*},\quad
-  Second~Author\textsuperscript{2},\quad
-  Third~Author\textsuperscript{1,2}\\[6pt]
-  \small\textsuperscript{1}Department of Example, University of Somewhere,
-    City, Country\\
-  \small\textsuperscript{2}Institute of Research, Organisation, City, Country\\[4pt]
-  \small\textsuperscript{*}Corresponding author:
-    \href{mailto:first.author@example.com}{first.author@example.com}
-}
-
-\date{}  % Suppress date; journals set their own
-
-% =============================================================================
+% ==============================================================================
+% BEGIN DOCUMENT
+% ==============================================================================
 \begin{document}
-% =============================================================================
 
+\date{}
 \maketitle
-\thispagestyle{empty}  % No page number on title page
 
-% --- Abstract ---------------------------------------------------------------
-\begin{abstract}
-\noindent
-\textbf{Background.}\quad
-Provide context and motivation for the study in one to two sentences.
-%
-\textbf{Methods.}\quad
-Briefly describe the experimental or computational approach.
-%
-\textbf{Results.}\quad
-State the key findings with quantitative detail where possible.
-%
-\textbf{Conclusions.}\quad
-Summarise the implications and significance of the work.
+\vspace{-13mm}
+\begingroup
+% Hyphenation settings for abstract
+\hyphenpenalty=300
+\exhyphenpenalty=300
+\pretolerance=50
+\tolerance=2000
+\emergencystretch=1em
+\lefthyphenmin=3
+\righthyphenmin=3
 
-\medskip
-\noindent
-\textbf{Keywords:}\quad
-keyword one, keyword two, keyword three, keyword four, keyword five
-\end{abstract}
+\noindent{\semiboldfont\fontsize{10.5}{12}\selectfont
+% Abstract
+[Write your abstract here. This should be a concise summary of your work, typically 150-300 words, covering the background, methods, key findings, and conclusions.]
+}
+\par
+\endgroup
+
+\vspace{1mm}
+
+\noindent{
+\fontsize{9pt}{10pt}\selectfont \textcolor{gray}{\Letter~Correspondence to:}\\{}
+[Author initials] (\textcolor{linkblue}{email@institution.edu})
+}
+
+\vspace{-2mm}
+
+% ==============================================================================
+% MAIN CONTENT
+% ==============================================================================
+
+\linenumbers
+\begin{multicols*}{2}
+
+\setlength{\parindent}{0pt}
+\section*{Introduction}
+
+[Write your introduction here. Establish the context, explain the problem or gap in knowledge, and state your objectives.]
+
+
+
+\section*{Results}
+
+%% SUBSECTION 1
+\subsubsection{[Results subsection 1 title]}
+
+[Write your first results subsection here.]
+
+% \insertfigure{figures/Fig1.png}{Figure 1 title}{\textbf{(a)} Panel a description. \textbf{(b)} Panel b description.}
+
+
+%% SUBSECTION 2
+\subsubsection{[Results subsection 2 title]}
+
+[Write your second results subsection here.]
+
+% \insertfigure{figures/Fig2.pdf}{Figure 2 title}{\textbf{(a)} Panel a description. \textbf{(b)} Panel b description.}
+
+
+%% SUBSECTION 3
+\subsubsection{[Results subsection 3 title]}
+
+[Write your third results subsection here.]
+
+% \insertfigure{figures/Fig3.pdf}{Figure 3 title}{\textbf{(a)} Panel a description. \textbf{(b)} Panel b description.}
+
+
+
+\section*{Discussion}
+
+[Write your discussion here. Interpret your findings, compare with existing literature, discuss limitations, and suggest future directions.]
+
+
+\subsection*{Acknowledgements}
+
+We thank ...
+\end{multicols*}
+
 
 \clearpage
+\begin{multicols*}{2}
+\input{methods}
 
-% =============================================================================
-\section{Introduction}
-\label{sec:introduction}
-% =============================================================================
+\printbibliography
 
-% Opening paragraph: broad context and significance of the problem.
 
-% Second paragraph: what is currently known, with key citations
-% \citep{AuthorYear}.
+\setcounter{figure}{0}
+% \insertsupfigure{figures/sup1.ai}{Supplementary Figure 1 title.}{Description of supplementary figure panels.}
 
-% Third paragraph: the gap in knowledge or the unresolved question.
 
-% Final paragraph: state the aim and outline the approach taken.
-% ``In this work, we \ldots''
-
-\todo{Write the introduction.}
-
-% =============================================================================
-\section{Methods}
-\label{sec:methods}
-% =============================================================================
-
-\subsection{Data Collection}
-\label{sec:methods:data}
-
-% Describe datasets, cohorts, or experimental materials.
-
-\subsection{Computational Pipeline}
-\label{sec:methods:pipeline}
-
-% Describe the algorithms, models, or statistical methods.
-
-\subsection{Statistical Analysis}
-\label{sec:methods:statistics}
-
-% Describe significance tests, multiple-testing correction, etc.
-
-\todo{Write the methods.}
-
-% =============================================================================
-\section{Results}
-\label{sec:results}
-% =============================================================================
-
-\subsection{Descriptive Overview}
-\label{sec:results:overview}
-
-% Present the first set of findings with references to figures and tables.
-% Use \cref{fig:example} and \cref{tab:example} for cross-references.
-
-\subsection{Key Finding}
-\label{sec:results:key}
-
-% Present the central result with quantitative evidence.
-
-\todo{Write the results.}
-
-% --- Example figure ---------------------------------------------------------
-% \begin{figure}[htbp]
-%   \centering
-%   \includegraphics[width=0.8\textwidth]{figures/placeholder.pdf}
-%   \caption{%
-%     \textbf{Short descriptive title.}
-%     Detailed explanation of what the figure shows, including axis labels
-%     and any statistical annotations.
-%   }
-%   \label{fig:example}
-% \end{figure}
-
-% --- Example table ----------------------------------------------------------
-% \begin{table}[htbp]
-%   \centering
-%   \caption{%
-%     \textbf{Summary statistics.}
-%     Description of the table contents and any relevant notes.
-%   }
-%   \label{tab:example}
-%   \begin{tabular}{@{} l S[table-format=4.1] S[table-format=1.3] @{}}
-%     \toprule
-%     {Method} & {Score} & {$p$-value} \\
-%     \midrule
-%     Baseline   & 72.3  & 0.041 \\
-%     Our method & 89.7  & 0.001 \\
-%     \bottomrule
-%   \end{tabular}
-% \end{table}
-
-% =============================================================================
-\section{Discussion}
-\label{sec:discussion}
-% =============================================================================
-
-% Paragraph 1: Restate the main finding and its significance.
-
-% Paragraph 2: How does this compare with prior work?
-
-% Paragraph 3: Limitations and potential confounders.
-
-% Paragraph 4: Future directions.
-
-\todo{Write the discussion.}
-
-% =============================================================================
-\section{Conclusion}
-\label{sec:conclusion}
-% =============================================================================
-
-% A concise summary (one paragraph) of the contribution and outlook.
-
-\todo{Write the conclusion.}
-
-% =============================================================================
-%  Back matter
-% =============================================================================
-
-\section*{Data Availability}
-
-% State where data and code can be accessed (e.g., Zenodo, GitHub).
-
-\section*{Author Contributions}
-
-% CRediT taxonomy: Conceptualization, Methodology, Software, Validation,
-% Formal analysis, Investigation, Resources, Data curation, Writing --
-% original draft, Writing -- review \& editing, Visualisation, Supervision,
-% Project administration, Funding acquisition.
-
-\section*{Acknowledgements}
-
-% Funding agencies, compute resources, helpful discussions.
-
-\section*{Conflicts of Interest}
-
-The authors declare no competing interests.
-
-% --- Bibliography -----------------------------------------------------------
-\bibliography{references}
-
-% --- Supplementary (separate file) ------------------------------------------
-% \clearpage
-% \input{supplementary}
+\end{multicols*}
 
 \end{document}

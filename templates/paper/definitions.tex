@@ -1,0 +1,96 @@
+%%%%% Definitions
+\usepackage{amsmath}
+\DeclareMathOperator{\R}{\mathbb{R}}
+\DeclareMathOperator{\Z}{\mathbb{Z}}
+\DeclareMathOperator{\N}{\mathbb{N}}
+\DeclareMathOperator{\Q}{\mathbb{Q}}
+\DeclareMathOperator{\C}{\mathbb{C}}
+
+
+\DeclareMathOperator{\Tr}{\mathrm{Tr}}
+\DeclareMathOperator{\sgn}{\mathrm{sgn}}
+\DeclareMathOperator{\Det}{\mathrm{det}}
+
+
+\DeclareMathOperator{\erf}{\mathrm{erf}\,}
+\DeclareMathOperator{\eps}{\varepsilon}
+\DeclareMathOperator{\const}{\text{const}}
+\DeclareMathOperator{\nequiv}{\not \equiv}
+\DeclareMathOperator{\bessel}{J}
+\DeclareMathOperator{\F}{\mathcal{F}}
+\DeclareMathOperator{\J}{\mathcal{J}}
+
+\DeclareMathOperator{\BigO}{\mathcal{O}}
+
+\DeclareMathOperator{\?}{\negthickspace}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\newcommand{\cmmnt}[1]{\ignorespaces}
+
+\newcommand{\purple}[1]{{\color{purple} #1}}
+\newcommand{\red}[1]{{\color{red} #1}}
+\newcommand{\green}[1]{{\color{green} #1}}
+
+
+\newcommand{\Id}{Id}
+\newcommand{\dpartial}[2]{\ensuremath{\frac{\partial #1}{\partial #2}}}
+\newcommand{\ddiff}[2]{\ensuremath{\frac{d #1}{d #2}}}
+\newcommand{\dvector}[2]{\ensuremath{\begin{pmatrix} #1 \\ #2\end{pmatrix}}}
+\newcommand{\colvector}[2]{\ensuremath{\begin{pmatrix}#1\\#2\end{pmatrix}}}
+\newcommand{\scalar}[1]{\ensuremath{\langle #1 \rangle}}
+\newcommand{\legendre}[2]{\ensuremath{\big(\tfrac{#1}{#2}\big)}}
+\newcommand{\mean}[1]{\ensuremath{\langle #1 \rangle}}
+\newcommand{\norm}[1]{\ensuremath{\left\lVert #1 \right\rVert}}
+
+\newcommand{\Var}{\ensuremath{\text{Var}}}
+\newcommand{\Cov}{\ensuremath{\text{Cov}}}
+
+
+
+\newcommand{\sizetwo}[2]{\ensuremath{#1\!\times\!#2\xspace}}
+\newcommand{\sizethree}[3]{\ensuremath{#1\mkern-2mu\times\mkern-2mu#2\mkern-2mu\times\mkern-2mu#3\xspace}}
+
+\newcommand{\negspace}{\ensuremath{\mkern-10mu}}%
+\newcommand\abs[1]{\lvert #1 \rvert}
+\newcommand\ceil[1]{\lceil #1 \rceil}
+\newcommand\floor[1]{\lfloor #1 \rfloor}
+
+
+\makeatletter
+\DeclareRobustCommand\onedot{\futurelet\@let@token\@onedot}
+\def\@onedot{\ifx\@let@token.\else.\null\fi\xspace}
+
+\def\eg{\emph{e.g}\onedot} \def\Eg{\emph{E.g}\onedot}
+\def\ie{\emph{i.e}\onedot} \def\Ie{\emph{I.e}\onedot}
+\def\cf{\emph{cf.}\xspace} \def\Cf{\emph{Cf.}\xspace}
+
+\def\etc{\emph{etc}\onedot} \def\vs{\emph{vs}\onedot}
+\def\wrt{w.r.t\onedot} \def\dof{d.o.f\onedot}
+\def\etal{\emph{et~al}\onedot}
+\makeatother
+
+\newcommand{\um}{\ensuremath{\mu m}\xspace}
+\newcommand{\nm}{\ensuremath{nm}\xspace}
+\newcommand{\uM}{\ensuremath{\mu M}\xspace}
+\newcommand{\ug}{\ensuremath{\mu g}\xspace}
+
+
+\newcommand{\simi}{\mathord{\sim}}
+\newcommand{\NA}{\mathit{NA}}
+\newcommand{\MB}{\mathrm{MB}}
+\newcommand{\figpart}[1]{#1)}
+
+\newcommand\Fig[1]{Fig.~#1}
+\newcommand\SF[1]{Supp.~Fig.~#1}
+\newcommand\ST[1]{Supp.~Table~#1}
+\newcommand\SV[1]{Supp.~Video~#1}
+\newcommand\SM[1]{\SV{#1}}
+\newcommand\SN[1]{Supp.~Note~#1}
+\newcommand\methods[1]{Methods#1}
+\newcommand\results[1]{Results#1}
+
+
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}

@@ -613,27 +613,8 @@ def _route_to_model_keywords(
     if complexity is None:
         complexity = _classify_task_complexity_keywords(description)
 
-    complexity_to_model = {
-        TaskComplexity.SIMPLE: "claude-haiku",
-        TaskComplexity.MEDIUM: "claude-sonnet",
-        TaskComplexity.COMPLEX: "claude-opus",
-        TaskComplexity.CRITICAL: "claude-opus",
-    }
-    ideal_key = complexity_to_model[complexity]
-
-    if budget_remaining_pct < cfg.low_budget_threshold_pct:
-        chosen_key = _handle_low_budget_downgrade(
-            ideal_model_key=ideal_key,
-            cheap_model_key="claude-haiku",
-            complexity=complexity,
-            description=description,
-            budget_remaining_pct=budget_remaining_pct,
-            config=cfg,
-        )
-    else:
-        chosen_key = ideal_key
-
-    chosen_key = _enforce_floor(chosen_key, cfg.min_quality_tier)
+    # Always use Opus -- no model routing, single model policy.
+    chosen_key = "claude-opus"
     selected = DEFAULT_MODELS[chosen_key]
     logger.info(
         "MODEL SELECTED (keywords): model='%s', tier='%s', "

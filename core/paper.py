@@ -12,15 +12,15 @@ logger = logging.getLogger(__name__)
 
 # LaTeX tools required for paper compilation
 REQUIRED_LATEX_TOOLS = {
-    "pdflatex": "LaTeX compiler (core)",
-    "bibtex": "Bibliography processor",
+    "lualatex": "LaTeX compiler (LuaLaTeX for font support)",
+    "biber": "Bibliography processor (BibLaTeX backend)",
     "make": "Build system",
 }
 
 OPTIONAL_LATEX_TOOLS = {
-    "biber": "Modern bibliography processor (BibLaTeX)",
     "latexmk": "Automated LaTeX build tool",
-    "dvips": "DVI to PostScript converter",
+    "gs": "Ghostscript (PDF compression via make small)",
+    "latexdiff": "Revision diff generation",
 }
 
 
@@ -52,13 +52,13 @@ def check_latex_dependencies(*, verbose: bool = False) -> tuple[bool, list[str]]
         if system == "Linux":
             messages.append(
                 "Install with:\n"
-                "  mamba install -c conda-forge texlive-core  # recommended (no root)\n"
+                "  mamba install -c conda-forge texlive-core texlive-luatex biber\n"
                 "  Or ask sysadmin: apt install texlive-full"
             )
         elif system == "Darwin":
             messages.append(
                 "Install with:\n"
-                "  brew install --cask mactex\n"
+                "  brew install --cask mactex  # includes lualatex + biber\n"
                 "or download from https://tug.org/mactex/"
             )
         elif system == "Windows":
@@ -75,7 +75,7 @@ def check_latex_dependencies(*, verbose: bool = False) -> tuple[bool, list[str]]
 
 PAPER_DIR = Path("paper")
 FIGURES_DIR = Path("figures")
-BIB_FILE = PAPER_DIR / "references.bib"
+BIB_FILE = PAPER_DIR / "literature.bib"
 
 # Colorblind-safe palette
 COLORS = {
@@ -397,7 +397,7 @@ def search_and_cite(
     from core.claude_helper import call_claude
 
     if bib_file is None:
-        bib_file = Path("paper/references.bib")
+        bib_file = Path("paper/literature.bib")
 
     prompt = (
         f'Find {max_results} real academic papers matching: "{query}"\n\n'

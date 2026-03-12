@@ -1,0 +1,119 @@
+% This file should not be compiled standalone,
+% but included in the supplementary.tex file
+\newcommand{\ctexttmp}[3][RGB]{%
+  \begingroup
+  \definecolor{hlcolor}{#1}{#2}\sethlcolor{hlcolor}%
+  \hl{#3}%
+  \endgroup
+}
+
+\newcommand{\rtext}{\ctexttmp[RGB]{255,0,0}}
+
+\section{Supplementary Figures}
+\setcounter{figure}{0}
+
+% SUPPLFIGURE START
+\setlength{\parindent}{0pt}
+\setlength{\intextsep}{0pt}  % Adjust the value as needed
+\vspace{5pt}
+\begin{minipage}{\linewidth}
+\begin{figure}[H]
+% Uncomment below!!
+%\includegraphics[width=0.999\linewidth]{path/to/fig}%
+\setlength{\abovecaptionskip}{0pt}
+\justifying
+\myriadpro\fontsize{8pt}{9.6pt}\selectfont
+\noindent{\textbf{Supplementary Figure\suppfignumber. Figure title.} \textbf{a)} Demo figure. \textbf{b)} Demo caption too.\par}
+\caption{}\label{suppfig:demo1}%
+\end{figure}
+\end{minipage}
+\vspace{-8pt}
+\setlength{\intextsep}{12pt}
+\setlength{\abovecaptionskip}{2pt}
+% SUPPLFIGURE END
+
+% \newpage
+
+
+% SUPPLFIGURE START
+\setlength{\parindent}{0pt}
+\setlength{\intextsep}{0pt}  % Adjust the value as needed
+\vspace{5pt}
+\begin{minipage}{\linewidth}
+\begin{figure}[H]
+% Uncomment below!!
+%\includegraphics[width=0.999\linewidth]{path/to/fig}%
+\setlength{\abovecaptionskip}{0pt}
+\justifying
+\myriadpro\fontsize{8pt}{9.6pt}\selectfont
+\noindent{\textbf{Supplementary Figure\suppfignumber. Figure title.} \textbf{a)} Demo figure. \textbf{b)} Demo caption too.\par}
+\caption{}\label{suppfig:demo2}%
+\end{figure}
+\end{minipage}
+\vspace{-8pt}
+\setlength{\intextsep}{12pt}
+\setlength{\abovecaptionskip}{2pt}
+% SUPPLFIGURE END
+
+% SUPPLFIGURE START
+\setlength{\parindent}{0pt}
+\setlength{\intextsep}{0pt}  % Adjust the value as needed
+\vspace{5pt}
+\begin{minipage}{\linewidth}
+\begin{figure}[H]
+% Uncomment below!!
+%\includegraphics[width=0.999\linewidth]{path/to/fig}%
+\setlength{\abovecaptionskip}{0pt}
+\justifying
+\myriadpro\fontsize{8pt}{9.6pt}\selectfont
+\noindent{\textbf{Supplementary Figure\suppfignumber. Figure title.} \textbf{a)} Demo figure. \textbf{b)} Demo caption too.\par}
+\caption{}\label{suppfig:demo3}%
+\end{figure}
+\end{minipage}
+\vspace{-8pt}
+\setlength{\intextsep}{12pt}
+\setlength{\abovecaptionskip}{2pt}
+% SUPPLFIGURE END
+
+
+
+\section{Supplementary Tables}
+
+\input{supplementary/tables/dummy}
+\input{supplementary/tables/dummy2}
+
+
+
+
+\clearpage
+
+
+\section{Supplementary Videos}
+
+\begin{enumerate}[label={\textbf{\SV{\theenumi}:}},leftmargin=*]
+  \item \textit{Video title 1.} Short summary of the video. 
+  \item \textit{Video title 2.} Short summary of the video. 
+\end{enumerate} 
+
+% \subsection*{Related work}
+% \todo{write as paragraph}
+% \subsubsection*{Classical}
+% - StarFish~\cite{axelrod2018} - LoG/DoG \\
+% - Morphology approaches (?) - top-hat, h-maxima\\
+% - Big-FISH~\cite{imbert2022} - filtering-based approach, auto threshold setting \\
+% - RS-FISH~\cite{bahry2022} - radial symmetry, RANSAC gradient sampling for robustness
+
+% \subsubsection*{ML}
+
+% - SpotLearn~\cite{gudla2017} - Vanilla U-Net, regress dense binary masks -> segmentation\\
+% - DoGNet~\cite{kulikov2019} - Swap trainable convolutions for DoG kernels. Greedy NMS procedure is basically ours. They also regress dense binary masks at full resolution -> segmentation.\\
+% - DetNet~\cite{wollmann2019} - based on DeConv networks (isn't this just UNets?), extremely small (17k params), Dice loss. Unclear target, but seems it's binary masks/deltas. The shift $a$ in the sigmoid is just probability threshold tuning!\\
+% - graph-ISS~\cite{partel2019} - ConvNet on h-maxima extracted 5x5 patches\\
+% - deepBlink~\cite{eichenberger2021} - YOLO-like, fixed grid, predict probability of each grid cell containing a spot and predict offset from anchor\\
+% - DeepSpot~\cite{bouilhol2022} - small object detection inspired, spot enhancement using dilated convs and residual blocks, normalizes intensity of mRNA spots to easen detection \\
+
+
+% \printbibliography
+
+% \end{document}
+

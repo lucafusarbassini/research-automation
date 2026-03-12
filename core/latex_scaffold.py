@@ -1448,14 +1448,43 @@ def generate_latex_scaffold(
 
     created: dict[str, Path] = {}
 
-    # Copy base template files if not present
+    # Deploy manuscript template files (LuaLaTeX + Biber based)
     template_paper_dir = Path(__file__).parent.parent / "templates" / "paper"
-    for base_file in ("preamble.tex", "references.bib", "Makefile"):
+
+    # Core template files -- copy if not present
+    _template_files = (
+        "preamble.tex",
+        "layout.tex",
+        "commands.tex",
+        "definitions.tex",
+        "methods.tex",
+        "figures.tex",
+        "literature.bib",
+        "Makefile",
+        "make_diff.sh",
+        "main.tex",
+        "supplementary.tex",
+    )
+    for base_file in _template_files:
         dest = paper_dir / base_file
         src = template_paper_dir / base_file
-        if not dest.exists() and src.exists():
+        if (not dest.exists() or overwrite) and src.exists():
             shutil.copy2(src, dest)
             created[base_file] = dest
+
+    # Copy fonts directory (needed for LuaLaTeX)
+    fonts_src = template_paper_dir / "fonts"
+    fonts_dst = paper_dir / "fonts"
+    if not fonts_dst.exists() and fonts_src.exists():
+        shutil.copytree(fonts_src, fonts_dst)
+        created["fonts/"] = fonts_dst
+
+    # Copy supplementary subdirectory structure
+    supp_src = template_paper_dir / "supplementary"
+    supp_dst = paper_dir / "supplementary"
+    if not supp_dst.exists() and supp_src.exists():
+        shutil.copytree(supp_src, supp_dst)
+        created["supplementary/"] = supp_dst
 
     # Copy journals directory if not present
     journals_src = template_paper_dir / "journals"
@@ -1464,26 +1493,10 @@ def generate_latex_scaffold(
         shutil.copytree(journals_src, journals_dst)
         created["journals/"] = journals_dst
 
-    # Generate adaptive files
-    main_tex_path = paper_dir / "main.tex"
-    if not main_tex_path.exists() or overwrite:
-        main_tex_path.write_text(_generate_main_tex(paper_type, domain))
-        created["main.tex"] = main_tex_path
-        logger.info("Generated main.tex for %s/%s", paper_type, domain)
-
-    preamble_extra_path = paper_dir / "preamble_extra.tex"
-    if not preamble_extra_path.exists() or overwrite:
-        preamble_extra_path.write_text(_generate_preamble_extra(paper_type, domain))
-        created["preamble_extra.tex"] = preamble_extra_path
-        logger.info("Generated preamble_extra.tex for %s/%s", paper_type, domain)
-
-    supp_content = _generate_supplementary_tex(paper_type, domain)
-    if supp_content:
-        supp_path = paper_dir / "supplementary.tex"
-        if not supp_path.exists() or overwrite:
-            supp_path.write_text(supp_content)
-            created["supplementary.tex"] = supp_path
-            logger.info("Generated supplementary.tex for %s/%s", paper_type, domain)
+    # Make diff script executable
+    diff_script = paper_dir / "make_diff.sh"
+    if diff_script.exists():
+        diff_script.chmod(0o755)
 
     return created
 

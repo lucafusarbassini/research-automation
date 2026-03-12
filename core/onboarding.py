@@ -101,29 +101,30 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
     results: dict[str, bool] = {}
     system = platform.system()
 
-    # 1. LaTeX (pdflatex) - needed for paper pipeline
-    if shutil.which("pdflatex"):
-        print_fn("  pdflatex: already installed")
-        results["pdflatex"] = True
+    # 1. LaTeX (lualatex + biber) - needed for paper pipeline
+    if shutil.which("lualatex") and shutil.which("biber"):
+        print_fn("  lualatex + biber: already installed")
+        results["lualatex"] = True
     else:
-        print_fn("  pdflatex: installing texlive...")
+        print_fn("  lualatex/biber: installing texlive...")
         installed = False
         for pkg_mgr in ("mamba", "conda"):
             if shutil.which(pkg_mgr):
                 try:
                     subprocess.run(
-                        [pkg_mgr, "install", "-y", "-c", "conda-forge", "texlive-core"],
+                        [pkg_mgr, "install", "-y", "-c", "conda-forge",
+                         "texlive-core", "texlive-luatex", "biber"],
                         capture_output=True, timeout=300,
                     )
-                    if shutil.which("pdflatex"):
-                        print_fn(f"  pdflatex: installed via {pkg_mgr}")
+                    if shutil.which("lualatex"):
+                        print_fn(f"  lualatex: installed via {pkg_mgr}")
                         installed = True
                         break
                 except Exception:
                     pass
         if not installed:
-            print_fn("  pdflatex: not found (try: mamba install -c conda-forge texlive-core)")
-        results["pdflatex"] = installed
+            print_fn("  lualatex: not found (try: mamba install -c conda-forge texlive-core texlive-luatex biber)")
+        results["lualatex"] = installed
 
     # 2. Make - needed for paper Makefile
     if shutil.which("make"):
@@ -175,6 +176,45 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
         print_fn("  docker: not installed (needed for overnight mode)")
         print_fn("    Install: https://docs.docker.com/get-docker/")
         results["docker"] = False
+
+    # 5b. screen - needed for background sessions and remote phone access
+    if shutil.which("screen"):
+        print_fn("  screen: available")
+        results["screen"] = True
+    else:
+        print_fn("  screen: installing...")
+        installed = False
+        if system == "Linux":
+            for pkg_mgr_cmd in (
+                ["sudo", "apt-get", "install", "-y", "screen"],
+                ["sudo", "yum", "install", "-y", "screen"],
+                ["sudo", "dnf", "install", "-y", "screen"],
+            ):
+                try:
+                    subprocess.run(
+                        pkg_mgr_cmd,
+                        capture_output=True, timeout=60,
+                    )
+                    if shutil.which("screen"):
+                        print_fn("  screen: installed")
+                        installed = True
+                        break
+                except Exception:
+                    pass
+        elif system == "Darwin":
+            if shutil.which("brew"):
+                try:
+                    subprocess.run(
+                        ["brew", "install", "screen"],
+                        capture_output=True, timeout=60,
+                    )
+                    if shutil.which("screen"):
+                        installed = True
+                except Exception:
+                    pass
+        if not installed and not shutil.which("screen"):
+            print_fn("  screen: not found (install with your package manager)")
+        results["screen"] = installed or bool(shutil.which("screen"))
 
     # 5. Whisper (speech-to-text) - try pip install
     try:

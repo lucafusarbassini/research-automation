@@ -799,6 +799,29 @@ def init(
             "https://docs.docker.com/get-docker/[/yellow]"
         )
 
+    # --- Background & remote access guide ---
+    console.print("")
+    console.print("[bold cyan]Running ricet in the background[/bold cyan]")
+    console.print("")
+    console.print("  To run overnight sessions that survive disconnects:")
+    console.print("")
+    console.print(f"    1. Start a screen session:    [bold]screen -S {project_name}[/bold]")
+    console.print(f"    2. Enter your project:        [bold]cd {project_name}[/bold]")
+    console.print("    3. Launch Claude:              [bold]claude[/bold]")
+    console.print("    4. Ask Claude to run overnight:")
+    console.print("       [dim]> run ricet overnight --iterations 30[/dim]")
+    console.print("    5. Detach from screen:         [bold]Ctrl+A, then D[/bold]")
+    console.print("")
+    console.print("  To reattach later:")
+    console.print(f"    [bold]screen -r {project_name}[/bold]")
+    console.print("")
+    console.print(
+        "  [bold green]Did you know that you can now remotely control Claude\n"
+        "  running on workstations from your phone?[/bold green] After launching\n"
+        "  a Claude session in screen, just type [bold]/remote-session[/bold] in Claude\n"
+        "  and use the link it provides!"
+    )
+
 
 def _init_update(
     project_path: Path,

@@ -1,0 +1,77 @@
+% ==============================================================================
+% COMMANDS - Article metadata and figure insertion commands
+% ==============================================================================
+
+% ==============================================================================
+% ARTICLE METADATA
+% ==============================================================================
+\newcommand{\articletitle}{[Your Manuscript Title Here]}
+% Alternative titles:
+% - [Alternative title 1]
+% - [Alternative title 2]
+
+\newcommand{\firstauthor}{[First]}
+\newcommand{\firstauthorsurname}{[Author]}
+
+% ==============================================================================
+% TITLE FORMATTING
+% ==============================================================================
+\title{\vspace{-7mm}\raggedright\fontsize{23}{23}\selectfont\bfseries \articletitle \vspace{-6mm}}
+
+% ==============================================================================
+% AUTHORS AND AFFILIATIONS
+% ==============================================================================
+\author[1]{First Author}
+\author[1]{Second Author}
+\author[2]{Third Author}
+\author[1]{Corresponding Author\textsuperscript{\textcolor{gray}{\Letter},}}
+\setlength{\affilsep}{1.em}
+\affil[1]{Department, Institution, City, Country}
+\affil[2]{Department, Institution, City, Country}
+
+% ==============================================================================
+% FIGURE INSERTION COMMANDS
+% ==============================================================================
+
+% Main figure
+\newcommand{\insertfigure}[3]{%
+  \end{multicols*}
+  \setlength{\parindent}{0pt}
+  \setlength{\intextsep}{0pt}
+  \vspace{-5pt}
+  \begin{minipage}{\linewidth}
+  \begin{figure}[H]
+  \includegraphics[width=0.999\linewidth]{#1}
+  \setlength{\abovecaptionskip}{0pt}
+  \justifying
+  \myriadpro\fontsize{8pt}{9.6pt}\selectfont
+  \caption{\textbf{#2} #3}
+  \end{figure}
+  \end{minipage}
+  \vspace{-8pt}
+  \setlength{\intextsep}{12pt}
+  \setlength{\abovecaptionskip}{2pt}
+  \begin{multicols*}{2}
+}
+
+% Supplementary figure
+\newcommand{\insertsupfigure}[3]{%
+  \end{multicols*}
+  \setlength{\parindent}{0pt}
+  \setlength{\intextsep}{0pt}
+  \vspace{-5pt}
+  \begin{minipage}{\linewidth}
+  \renewcommand{\figurename}{Supplementary Figure}
+  \begin{figure}[H]
+  \includegraphics[width=0.999\linewidth]{#1}
+  \setlength{\abovecaptionskip}{0pt}
+  \justifying
+  \myriadpro\fontsize{8pt}{9.6pt}\selectfont
+  \caption{\textbf{#2} #3}
+  \end{figure}
+  \end{minipage}
+  \vspace{-8pt}
+  \setlength{\intextsep}{12pt}
+  \setlength{\abovecaptionskip}{2pt}
+  \begin{multicols*}{2}
+}
