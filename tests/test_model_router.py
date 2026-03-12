@@ -150,14 +150,14 @@ def test_route_to_model_name_used_in_agent_execution():
 
     fake_proc = MagicMock()
     fake_proc.returncode = 0
-    fake_proc.stdout = "done"
+    fake_proc.stdout = iter(["done\n"])
+    fake_proc.wait = MagicMock()
 
-    with patch("core.agents.subprocess.run", return_value=fake_proc) as mock_run:
+    with patch("core.agents.subprocess.Popen", return_value=fake_proc) as mock_popen:
         with patch("core.agents.get_agent_prompt", return_value="prompt"):
-            # "debug the memory leak" -> COMPLEX -> claude-opus
             _execute_agent_task_legacy(AgentType.CODER, "debug the memory leak")
 
-    cmd = mock_run.call_args[0][0]
+    cmd = mock_popen.call_args[0][0]
     model_idx = cmd.index("--model")
     actual_model = cmd[model_idx + 1]
 
@@ -172,13 +172,14 @@ def test_route_to_model_haiku_for_simple_task_in_execution():
 
     fake_proc = MagicMock()
     fake_proc.returncode = 0
-    fake_proc.stdout = "done"
+    fake_proc.stdout = iter(["done\n"])
+    fake_proc.wait = MagicMock()
 
-    with patch("core.agents.subprocess.run", return_value=fake_proc) as mock_run:
+    with patch("core.agents.subprocess.Popen", return_value=fake_proc) as mock_popen:
         with patch("core.agents.get_agent_prompt", return_value="prompt"):
             _execute_agent_task_legacy(AgentType.CLEANER, "format the output list")
 
-    cmd = mock_run.call_args[0][0]
+    cmd = mock_popen.call_args[0][0]
     model_idx = cmd.index("--model")
     actual_model = cmd[model_idx + 1]
     assert actual_model == DEFAULT_MODELS["claude-haiku"].name

@@ -8,7 +8,7 @@ import subprocess
 
 import pytest
 
-from core.claude_flow import ClaudeFlowBridge, ClaudeFlowUnavailable
+from core.claude_flow import ClaudeFlowBridge, ClaudeFlowUnavailable, _get_bridge
 
 # Skip entire module if npx is not available
 pytestmark = pytest.mark.skipif(
@@ -166,13 +166,12 @@ class TestConfTestFixture:
 class TestBridgeUnavailableGracefully:
     """These tests run without claude-flow and verify graceful degradation."""
 
-    def test_bridge_unavailable_spawn(self):
-        """spawn_agent raises ClaudeFlowUnavailable when not installed."""
+    def test_bridge_unavailable(self):
+        """Bridge is always unavailable (CLI bridge disabled, MCP used instead)."""
         bridge = ClaudeFlowBridge()
-        bridge._available = False
-        # Direct _run should raise
+        assert bridge.is_available() is False
         with pytest.raises(ClaudeFlowUnavailable):
-            bridge._run("nonexistent", "command")
+            _get_bridge()
 
     def test_fallback_pattern_agents(self):
         """Verify agents module falls back gracefully."""

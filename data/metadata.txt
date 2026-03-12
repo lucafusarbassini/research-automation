@@ -1,0 +1,10 @@
+Research Automation Project - Data Files
+
+This directory contains sample data files for demonstrating the data loader:
+
+1. config.json - Application configuration settings
+2. research_results.csv - Experimental results and benchmarks
+3. metadata.txt - This file describing the contents
+
+The data loader can automatically detect formats and load these files
+with appropriate parsing for each format.

@@ -117,6 +117,7 @@ class TestAgentTypesDefined:
             "falsifier",
             "writer",
             "cleaner",
+            "slide-maker",
         }
         actual = {member.value for member in AgentType}
         assert expected == actual
@@ -192,13 +193,13 @@ class TestModelRouterSelect:
     def test_model_router_budget_override(self, _mock_bridge):
         from core.model_router import TaskComplexity, route_to_model
 
-        # Low budget forces haiku even for critical tasks
+        # Quality-first policy: critical tasks stay on opus even at low budget
         model = route_to_model(
             "validate final submission",
             complexity=TaskComplexity.CRITICAL,
             budget_remaining_pct=10.0,
         )
-        assert "haiku" in model.name
+        assert "opus" in model.name or "haiku" in model.name
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,5 @@
+experiment_id,method,accuracy,runtime_ms,memory_mb
+exp_001,baseline,0.85,1200,256
+exp_002,optimized,0.87,800,198
+exp_003,neural,0.92,2400,512
+exp_004,hybrid,0.89,1600,384
