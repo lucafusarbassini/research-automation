@@ -16,3 +16,5 @@ Edit or delete entries freely — this file is loaded into every session.
 - Never call nested claude CLI subprocess from inside a Claude Code session (CLAUDECODE env var is set)
 - Paper adapt-style style analysis heuristics are too crude for subtle lab-specific style differences
 - Do what is asked; nothing more, nothing less — do not add unrequested features or refactoring
+- attribution.commit in .claude/settings.json must say "ricet" not "claude-flow" for all ricet-based projects
+

@@ -41,11 +41,16 @@ CORRECTION_PATTERNS = [
 
 COMPILED = [re.compile(p, re.IGNORECASE) for p in CORRECTION_PATTERNS]
 
-# Things that look like rules but are too generic to log
+# Things that look like rules but must be excluded
 NOISE_PATTERNS = [
     r"^(yes|ok|okay|sure|got it|thanks|thank you|great|good|done)[.!?]?$",
-    r"^\d+[\).]",  # numbered list items by themselves
-    r"^http",
+    r"^\d+[\).]",       # numbered list items by themselves
+    r"^http",           # bare URLs
+    r"\?$",             # questions (end in ?)
+    r"^[>\s]*>",        # blockquotes / quoted text
+    r"anthropic",       # references to Anthropic docs (quoting, not user rule)
+    r"mcp tool results can be",  # Anthropic FAQ quote
+    r"recommends this",          # Anthropic recommendation being quoted
 ]
 NOISE = [re.compile(p, re.IGNORECASE) for p in NOISE_PATTERNS]
 

@@ -46,6 +46,16 @@ Captured automatically from past corrections. Obey these without question:
 - Use Opus 4.6 with default medium thinking for everything -- no model routing.
 - Batch parallel operations in a single message when possible.
 
+## On-demand context (read when relevant — never load all upfront)
+
+- **Behavioral rules for user projects**: `defaults/LEGISLATION.md` — the canonical rulebook; read it when starting any substantive task on a user project.
+- **MCP tools**: three searchable catalogs in `defaults/`:
+  - `defaults/MCP_NUCLEUS.json` — curated MCPs organized by tier and purpose
+  - `defaults/MCP_CATALOG.md` — full catalog; use `Grep` to find by keyword
+  - `defaults/raggable_mcps.md` — same, indexed for sentence-transformers RAG (`ricet memory search` finds MCPs here once indexed)
+  - Install pattern: `npx -y <package>` or add entry to `.mcp.json`
+- **Accumulated research knowledge**: `knowledge/ENCYCLOPEDIA.md` — use `ricet memory search <query>` before answering domain questions.
+
 ## Token economy
 
 - **Do not use subagents** (Agent tool) unless tasks are genuinely parallel AND each subtask takes >10 min. Simple searches, single-file edits, and quick lookups must be done directly.

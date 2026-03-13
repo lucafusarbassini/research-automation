@@ -158,12 +158,16 @@ def send_plot(
         return False
 
 
+_channel_id_cache: dict[str, str] = {}
+
+
 def _resolve_channel_id(token: str, channel_name: str) -> str:
     """Resolve a channel name to its Slack ID.
 
-    Sends a dummy chat.postMessage (which accepts names) and reads the
-    returned channel ID — avoids needing the channels:read scope.
-    Returns the name unchanged if lookup fails.
+    Uses chat.postMessage (which accepts names) to discover the ID —
+    avoids needing the channels:read scope. Result is cached for the
+    process lifetime so the discovery only happens once.
+    Returns the name unchanged if all lookups fail.
     """
     import json
     import urllib.parse
@@ -171,7 +175,10 @@ def _resolve_channel_id(token: str, channel_name: str) -> str:
 
     channel_name = channel_name.lstrip("#")
 
-    # Try conversations.list first (requires channels:read scope — may not be granted)
+    if channel_name in _channel_id_cache:
+        return _channel_id_cache[channel_name]
+
+    # Try conversations.list (requires channels:read scope — may not be granted)
     try:
         req = urllib.request.Request(
             f"{_SLACK_API}/conversations.list?limit=999&types=public_channel,private_channel",
@@ -181,11 +188,12 @@ def _resolve_channel_id(token: str, channel_name: str) -> str:
         if resp.get("ok"):
             for ch in resp.get("channels", []):
                 if ch.get("name") == channel_name:
+                    _channel_id_cache[channel_name] = ch["id"]
                     return ch["id"]
     except Exception:
         pass
 
-    # Fallback: post a temporary message and read the channel ID from response
+    # Fallback: post a message (accepts names) and read the channel ID from response
     try:
         data = urllib.parse.urlencode({"channel": channel_name, "text": "\u200b"}).encode()
         req = urllib.request.Request(
@@ -199,20 +207,24 @@ def _resolve_channel_id(token: str, channel_name: str) -> str:
         resp = json.loads(urllib.request.urlopen(req, timeout=10).read())
         if resp.get("ok"):
             ch_id = resp.get("channel", "")
-            # Delete the dummy message immediately
             ts = resp.get("ts", "")
+            # Best-effort delete of the probe message
             if ch_id and ts:
-                del_data = urllib.parse.urlencode({"channel": ch_id, "ts": ts}).encode()
-                del_req = urllib.request.Request(
-                    f"{_SLACK_API}/chat.delete",
-                    data=del_data,
-                    headers={
-                        "Authorization": f"Bearer {token}",
-                        "Content-Type": "application/x-www-form-urlencoded",
-                    },
-                )
-                urllib.request.urlopen(del_req, timeout=5)
+                try:
+                    del_data = urllib.parse.urlencode({"channel": ch_id, "ts": ts}).encode()
+                    del_req = urllib.request.Request(
+                        f"{_SLACK_API}/chat.delete",
+                        data=del_data,
+                        headers={
+                            "Authorization": f"Bearer {token}",
+                            "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                    )
+                    urllib.request.urlopen(del_req, timeout=5)
+                except Exception:
+                    pass  # delete failure is non-fatal
             if ch_id:
+                _channel_id_cache[channel_name] = ch_id
                 return ch_id
     except Exception:
         pass
