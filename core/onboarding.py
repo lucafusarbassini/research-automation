@@ -358,6 +358,11 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
         if ts_status.returncode == 0:
             print_fn("  tailscale: running")
             results["tailscale"] = True
+            # Allow non-root users to run tailscale serve (needed for ricet mobile tunnel)
+            subprocess.run(
+                ["sudo", "-n", "tailscale", "set", f"--operator={__import__('os').environ.get('USER', 'user')}"],
+                capture_output=True, timeout=5,
+            )
         else:
             # Daemon present but not authenticated — try `tailscale up`
             has_sudo = subprocess.run(

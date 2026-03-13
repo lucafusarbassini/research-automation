@@ -3093,6 +3093,7 @@ def mobile(
     host: str = typer.Option("0.0.0.0", "--host", help="Bind address"),
     no_tls: bool = typer.Option(False, "--no-tls", help="Disable TLS"),
     label: str = typer.Option("", "--label", "-l", help="Token label (for pair)"),
+    cf: bool = typer.Option(False, "--cf", help="Force Cloudflare quick tunnel (skip Tailscale)"),
 ):
     """Manage mobile companion server for secure on-the-go monitoring."""
     try:
@@ -3199,51 +3200,26 @@ def mobile(
             console.print(f"[red]Failed: {exc}[/red]")
             raise typer.Exit(1)
     elif action == "tunnel":
-        # Auto-detect access mode (priority: Tailscale > named CF tunnel > quick CF tunnel)
+        # Auto-detect access mode (priority: Tailscale serve > named CF tunnel > quick CF tunnel)
+        # Use --cf to force Cloudflare quick tunnel regardless of Tailscale availability.
         from core.mobile import get_tailscale_address
-        _ts_ip = get_tailscale_address()
+        _ts_ip = "" if cf else get_tailscale_address()
         _cf_config = Path.home() / ".cloudflared" / "config.yml"
         _named = _cf_config.exists()
-        if _ts_ip:
-            console.print(f"[bold]Starting mobile server + Tailscale access...[/bold]")
-            console.print(f"  [green]Tailscale address: http://{_ts_ip}:{port}[/green]")
-            console.print(f"  Install Tailscale on your phone → open the URL above")
-            _domain = _ts_ip
-        elif _named:
-            import re as _re
-            _cfg_text = _cf_config.read_text()
-            _domain_m = _re.search(r"hostname:\s*(\S+)", _cfg_text)
-            _domain = _domain_m.group(1) if _domain_m else "(see config.yml)"
-            console.print(f"[bold]Starting mobile server + named CF tunnel → {_domain}...[/bold]")
-        else:
-            console.print("[bold]Starting mobile server + public CF tunnel...[/bold]")
-            _domain = ""
-        # Tailscale: bind to 0.0.0.0 (direct P2P access).
-        # Cloudflare tunnel: 127.0.0.1 is fine (CF proxies to localhost).
-        _bind_host = "0.0.0.0" if _ts_ip else "127.0.0.1"
+
+        # Start mobile server on localhost (tailscale serve or CF tunnel will proxy to it)
         try:
-            info = mobile_server.serve(host=_bind_host, port=port, tls=False)
+            info = mobile_server.serve(host="127.0.0.1", port=port, tls=False)
             console.print(f"[green]{info}[/green]")
         except OSError as exc:
             if "Address already in use" in str(exc):
-                console.print(
-                    f"[yellow]Port {port} already in use — "
-                    f"stopping old server first...[/yellow]"
-                )
-                # Kill existing process on the port
+                console.print(f"[yellow]Port {port} in use — stopping old server...[/yellow]")
                 import subprocess as _sp
-
-                _sp.run(
-                    f"fuser -k {port}/tcp",
-                    shell=True, capture_output=True,
-                )
+                _sp.run(f"fuser -k {port}/tcp", shell=True, capture_output=True)
                 import time as _tw
-
                 _tw.sleep(0.5)
                 try:
-                    info = mobile_server.serve(
-                        host=_bind_host, port=port, tls=False
-                    )
+                    info = mobile_server.serve(host="127.0.0.1", port=port, tls=False)
                     console.print(f"[green]{info}[/green]")
                 except Exception as exc2:
                     console.print(f"[red]Still failed: {exc2}[/red]")
@@ -3259,8 +3235,31 @@ def mobile(
         import shutil as _sh2
 
         if _ts_ip:
-            # Tailscale: server is already reachable, no tunnel process needed
-            public_url = f"http://{_ts_ip}:{port}"
+            # Tailscale serve: daemon proxies localhost:port → tailnet HTTPS
+            # This works on any machine regardless of rp_filter/routing quirks.
+            console.print(f"[bold]Starting Tailscale serve → tailnet HTTPS...[/bold]")
+            import subprocess as _sp3
+            _ts_result = _sp3.run(
+                ["tailscale", "serve", "--bg", str(port)],
+                capture_output=True, text=True,
+            )
+            if _ts_result.returncode != 0:
+                console.print(f"[yellow]tailscale serve failed: {_ts_result.stderr.strip()}[/yellow]")
+                console.print("[yellow]Hint: run 'sudo tailscale set --operator=$USER' once to avoid sudo[/yellow]")
+                mobile_server.stop()
+                raise typer.Exit(1)
+            # Get the serve URL from tailscale status
+            _ts_status = _sp3.run(
+                ["tailscale", "status", "--json"],
+                capture_output=True, text=True,
+            )
+            import json as _json
+            try:
+                _ts_data = _json.loads(_ts_status.stdout)
+                _ts_hostname = _ts_data.get("Self", {}).get("DNSName", "").rstrip(".")
+                public_url = f"https://{_ts_hostname}"
+            except Exception:
+                public_url = f"https://<tailscale-hostname>"
             proc = None
         else:
             console.print("[dim]Setting up cloudflared tunnel...[/dim]")
