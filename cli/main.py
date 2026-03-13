@@ -331,16 +331,6 @@ def init(
     except Exception as exc:
         console.print(f"  [yellow]System dependency check skipped: {exc}[/yellow]")
 
-    # --- Step 2: Install claude-flow ---
-    console.print("\n[bold cyan]Step 2: Setting up claude-flow...[/bold cyan]")
-    cf_ok = auto_install_claude_flow()
-    if cf_ok:
-        console.print("  [green]claude-flow is ready[/green]")
-    else:
-        console.print(
-            "  [yellow]claude-flow not available (optional, install Node.js + npm)[/yellow]"
-        )
-
     # --- Step 2b: Ensure Claude auth ---
     console.print("\n[bold cyan]Step 2b: Checking Claude authentication...[/bold cyan]")
     try:
@@ -639,16 +629,6 @@ def init(
         console.print("  [dim]LaTeX scaffold: paper/ already populated[/dim]")
 
     # (GOAL.md already written above, before TODO/folder generation)
-
-    # Write claude-flow config
-    cf_config_src = TEMPLATE_DIR / "config" / "claude-flow.json"
-    if cf_config_src.exists():
-        cf_dest = project_path / "config" / "claude-flow.json"
-        cf_dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(cf_config_src, cf_dest)
-
-    # Add claude-flow MCP to settings if available
-    _inject_claude_flow_mcp(project_path)
 
     # --- Step 5: GitHub repo creation ---
     repo_url = ""
@@ -3238,8 +3218,11 @@ def mobile(
         else:
             console.print("[bold]Starting mobile server + public CF tunnel...[/bold]")
             _domain = ""
+        # Tailscale: bind to 0.0.0.0 (direct P2P access).
+        # Cloudflare tunnel: 127.0.0.1 is fine (CF proxies to localhost).
+        _bind_host = "0.0.0.0" if _ts_ip else "127.0.0.1"
         try:
-            info = mobile_server.serve(host="127.0.0.1", port=port, tls=False)
+            info = mobile_server.serve(host=_bind_host, port=port, tls=False)
             console.print(f"[green]{info}[/green]")
         except OSError as exc:
             if "Address already in use" in str(exc):
@@ -3259,7 +3242,7 @@ def mobile(
                 _tw.sleep(0.5)
                 try:
                     info = mobile_server.serve(
-                        host="127.0.0.1", port=port, tls=False
+                        host=_bind_host, port=port, tls=False
                     )
                     console.print(f"[green]{info}[/green]")
                 except Exception as exc2:
