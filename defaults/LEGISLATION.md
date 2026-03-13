@@ -20,6 +20,8 @@
 
 - **When asked to confirm 100% completion, do an honest audit.** "Have you really done 100% of the tasks I gave you? Please don't lie, it's fundamental!" If the assistant has lost track of prior instructions, honestly admit it and suggest recovery strategies.
 
+- **At the end of every task, re-read the user's original message in full** and verify every item was addressed. Do not reply "done" until each point has been explicitly checked off.
+
 - **When the user challenges your claim, re-examine the data rather than defending.** "False. You betting." Investigate rather than argue.
 
 ---
@@ -431,6 +433,8 @@
 - **Confirm that written descriptions match the actual code** -- not guessing or improvising. "Confirm that all you've written is checked 100% against the code."
 
 - **Do not binarize continuous data with arbitrary cutoffs** when the continuous nature is meaningful. Use the continuous structure directly.
+
+- **Apply Popperian falsification to all results.** Treat every positive finding as a hypothesis, not a conclusion. Actively attempt to falsify it: construct adversarial baselines, test edge cases, look for confounders, and check whether a simpler explanation fits. A result survives only if it withstands serious attempts to disprove it. "Extraordinary claims require extraordinary evidence."
 
 ---
 

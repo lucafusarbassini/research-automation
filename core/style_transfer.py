@@ -1,196 +1,178 @@
-"""Paper style transfer: analyze style, generate transformation prompts, plagiarism checks."""
+"""Paper style transfer: Claude-intelligence-driven style analysis and rewriting.
+
+The core idea: rather than measuring surface proxies (passive ratio, word endings),
+pass the raw texts to Claude and let it identify the deep stylistic dimensions that
+matter — vocabulary register, conceptual framing, sentence rhythm, hedging density,
+domain terminology, narrative sequentiality, etc.
+
+Requires the anthropic Python SDK (pip install anthropic / uv pip install anthropic).
+Works even inside a Claude Code session (uses SDK directly, not CLI subprocess).
+"""
 
 import logging
+import os
 import re
-from collections import Counter
-from dataclasses import dataclass, field
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class StyleProfile:
-    avg_sentence_length: float = 0.0
-    passive_voice_ratio: float = 0.0
-    hedging_ratio: float = 0.0
-    citation_density: float = 0.0
-    vocabulary_richness: float = 0.0
-    common_phrases: list[str] = field(default_factory=list)
-    tense: str = "mixed"  # past, present, mixed
-
-    def to_dict(self) -> dict:
-        return {
-            "avg_sentence_length": self.avg_sentence_length,
-            "passive_voice_ratio": self.passive_voice_ratio,
-            "hedging_ratio": self.hedging_ratio,
-            "citation_density": self.citation_density,
-            "vocabulary_richness": self.vocabulary_richness,
-            "common_phrases": self.common_phrases,
-            "tense": self.tense,
-        }
-
-
-_PASSIVE_MARKERS = re.compile(
-    r"\b(is|are|was|were|been|being|be)\s+\w+ed\b", re.IGNORECASE
-)
-_HEDGING_WORDS = {
-    "may",
-    "might",
-    "could",
-    "possibly",
-    "perhaps",
-    "likely",
-    "suggest",
-    "suggests",
-    "indicate",
-    "indicates",
-    "appear",
-    "appears",
-    "seem",
-    "seems",
-    "approximately",
-    "roughly",
-}
 _CITATION_PATTERN = re.compile(r"\\cite\{|\\citep\{|\\citet\{|\[\d+\]|\(.*?\d{4}\)")
 
 
-def analyze_paper_style(text: str) -> StyleProfile:
-    """Analyze the writing style of a paper or text sample.
+def _call_claude_api(prompt: str, *, model: str = "claude-sonnet-4-6", max_tokens: int = 4096) -> str | None:
+    """Call Claude via the anthropic SDK (works inside Claude Code sessions)."""
+    try:
+        import anthropic
+    except ImportError:
+        logger.warning("anthropic SDK not installed: uv pip install anthropic")
+        return None
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        # Try loading from .env
+        try:
+            from dotenv import load_dotenv
+            for candidate in [Path.cwd() / ".env", Path(__file__).parent.parent / ".env"]:
+                if candidate.exists():
+                    load_dotenv(candidate, override=False)
+                    break
+            api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        except ImportError:
+            pass
+
+    if not api_key:
+        logger.warning("ANTHROPIC_API_KEY not set")
+        return None
+
+    client = anthropic.Anthropic(api_key=api_key)
+    msg = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return msg.content[0].text if msg.content else None
+
+
+def analyze_paper_style(text: str, *, reference_label: str = "this text") -> dict:
+    """Analyze the writing style of a paper using Claude's full intelligence.
+
+    Returns a rich style profile dict with qualitative + quantitative dimensions.
+    Falls back to basic surface metrics if Claude is unavailable.
 
     Args:
-        text: The paper text to analyze.
+        text: The paper text to analyze (excerpt or full text).
+        reference_label: Human-readable label for logging.
 
     Returns:
-        StyleProfile with computed metrics.
+        Dict with style dimensions understood by generate_transformation_prompt().
     """
-    profile = StyleProfile()
-
     if not text.strip():
-        return profile
+        return {}
 
-    # Sentence analysis
-    sentences = re.split(r"[.!?]+", text)
-    sentences = [s.strip() for s in sentences if s.strip()]
-    if sentences:
-        lengths = [len(s.split()) for s in sentences]
-        profile.avg_sentence_length = round(sum(lengths) / len(lengths), 1)
+    prompt = (
+        "You are a scientific writing analyst. Analyze the writing style of the following text "
+        "and return a structured JSON object describing its style across these dimensions:\n\n"
+        "1. tense: dominant tense (\"past\", \"present\", \"mixed\" — be precise, e.g. methods/results "
+        "in past, interpretations in present counts as \"mixed\")\n"
+        "2. voice: \"active\", \"passive\", or \"mixed\" with approximate ratio\n"
+        "3. sentence_rhythm: \"short_punchy\", \"long_complex\", \"varied\"\n"
+        "4. hedging_level: \"low\", \"medium\", \"high\" — how often uncertainty is expressed\n"
+        "5. vocabulary_register: \"technical_specialist\", \"technical_broad\", \"accessible\"\n"
+        "6. narrative_style: brief description of how arguments are structured and connected\n"
+        "7. domain_markers: list of 5-10 characteristic domain-specific terms or phrases\n"
+        "8. framing_approach: how results/contributions are positioned (humble, assertive, etc.)\n"
+        "9. citation_style: \"dense\", \"moderate\", \"sparse\"\n"
+        "10. distinctive_patterns: list of 3-5 specific stylistic habits (e.g. 'uses colons to introduce evidence', "
+        "'opens paragraphs with broad claim then narrows')\n\n"
+        "Return ONLY valid JSON. No commentary before or after.\n\n"
+        f"--- TEXT ---\n{text[:8000]}\n--- END ---"
+    )
 
-    # Passive voice ratio
-    total_sentences = len(sentences) if sentences else 1
-    passive_count = len(_PASSIVE_MARKERS.findall(text))
-    profile.passive_voice_ratio = round(passive_count / total_sentences, 2)
+    raw = _call_claude_api(prompt, max_tokens=1000)
 
-    # Hedging ratio
+    if raw:
+        import json
+        # Extract JSON from response
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+
+    # Fallback: minimal surface metrics
+    logger.info("Claude unavailable for style analysis; using surface metrics")
+    return _surface_metrics(text)
+
+
+def _surface_metrics(text: str) -> dict:
+    """Minimal surface-level style metrics as fallback."""
+    sentences = [s.strip() for s in re.split(r"[.!?]+", text) if s.strip()]
     words = text.lower().split()
-    if words:
-        hedging_count = sum(1 for w in words if w.strip(".,;:()") in _HEDGING_WORDS)
-        profile.hedging_ratio = round(hedging_count / len(words), 3)
-
-    # Citation density (per sentence)
-    citation_count = len(_CITATION_PATTERN.findall(text))
-    profile.citation_density = round(citation_count / total_sentences, 2)
-
-    # Vocabulary richness (type-token ratio)
-    if words:
-        unique_words = set(w.lower().strip(".,;:()") for w in words)
-        profile.vocabulary_richness = round(len(unique_words) / len(words), 2)
-
-    # Common bigrams
-    if len(words) > 1:
-        bigrams = [f"{words[i]} {words[i+1]}" for i in range(len(words) - 1)]
-        common = Counter(bigrams).most_common(5)
-        profile.common_phrases = [phrase for phrase, _ in common]
-
-    # Tense detection
+    passive_count = len(re.findall(r"\b(is|are|was|were|been|being|be)\s+\w+ed\b", text, re.IGNORECASE))
+    hedging = {"may", "might", "could", "possibly", "perhaps", "likely", "suggest", "suggests",
+               "indicate", "indicates", "appear", "appears", "seem", "seems"}
+    hedging_count = sum(1 for w in words if w.strip(".,;:()") in hedging)
     past_markers = sum(1 for w in words if w.endswith("ed"))
-    present_markers = sum(1 for w in words if w.endswith(("s", "es")) and len(w) > 3)
-    if past_markers > present_markers * 1.5:
-        profile.tense = "past"
-    elif present_markers > past_markers * 1.5:
-        profile.tense = "present"
-    else:
-        profile.tense = "mixed"
+    pres_markers = sum(1 for w in words if w.endswith(("s", "es")) and len(w) > 3)
+    tense = "past" if past_markers > pres_markers * 1.5 else ("present" if pres_markers > past_markers * 1.5 else "mixed")
+    n = len(sentences) or 1
+    return {
+        "tense": tense,
+        "voice": f"passive_ratio={passive_count / n:.2f}",
+        "hedging_level": "high" if hedging_count / (len(words) or 1) > 0.02 else "low",
+        "avg_sentence_length": round(sum(len(s.split()) for s in sentences) / n, 1),
+        "_source": "surface_metrics_fallback",
+    }
 
-    return profile
 
-
-def generate_transformation_prompt(
-    source_profile: StyleProfile,
-    target_profile: StyleProfile,
-) -> str:
-    """Generate a prompt to transform writing from source style to target style.
+def generate_transformation_prompt(source_profile: dict, target_profile: dict) -> str:
+    """Generate a detailed Claude prompt for style transformation.
 
     Args:
-        source_profile: Current writing style.
-        target_profile: Desired writing style.
+        source_profile: Style profile of the text to rewrite.
+        target_profile: Style profile of the reference text.
 
     Returns:
-        Instruction prompt for style transformation.
+        Instruction string for Claude to transform source → target style.
     """
-    instructions = ["Transform the following text to match the target writing style:"]
+    import json
 
-    # Sentence length
-    if abs(source_profile.avg_sentence_length - target_profile.avg_sentence_length) > 3:
-        if target_profile.avg_sentence_length > source_profile.avg_sentence_length:
-            instructions.append("- Use longer, more complex sentences")
-        else:
-            instructions.append("- Use shorter, more concise sentences")
+    instructions = [
+        "Rewrite the text below to match the TARGET writing style while preserving all scientific content.\n",
+        f"TARGET STYLE PROFILE:\n{json.dumps(target_profile, indent=2)}\n",
+        f"SOURCE STYLE (for contrast):\n{json.dumps(source_profile, indent=2)}\n",
+        "TRANSFORMATION RULES:",
+        "- Match the target tense conventions exactly",
+        "- Match the target voice (active/passive balance)",
+        "- Adopt the target sentence rhythm and complexity",
+        "- Use vocabulary at the target register and domain level",
+        "- Replicate the target narrative/framing approach",
+        "- Mirror the hedging level and assertion style",
+        "- Do NOT copy phrases verbatim from the reference — transfer style only",
+        "- Preserve all scientific claims, data, and citations exactly",
+        "- Return ONLY the rewritten text, no commentary",
+    ]
 
-    # Voice
-    if target_profile.passive_voice_ratio < source_profile.passive_voice_ratio - 0.1:
-        instructions.append("- Prefer active voice over passive voice")
-    elif target_profile.passive_voice_ratio > source_profile.passive_voice_ratio + 0.1:
-        instructions.append("- Use more passive constructions where appropriate")
-
-    # Hedging
-    if target_profile.hedging_ratio > source_profile.hedging_ratio + 0.005:
-        instructions.append("- Add more hedging language (may, might, suggests)")
-    elif target_profile.hedging_ratio < source_profile.hedging_ratio - 0.005:
-        instructions.append("- Be more assertive, reduce hedging words")
-
-    # Tense
-    if target_profile.tense != source_profile.tense:
-        instructions.append(f"- Use {target_profile.tense} tense")
-
-    if len(instructions) == 1:
-        instructions.append(
-            "- The styles are similar; make minor refinements for consistency"
-        )
+    # Add specific guidance where profiles differ on key dimensions
+    if source_profile.get("tense") != target_profile.get("tense"):
+        instructions.append(f"- IMPORTANT: change tense from '{source_profile.get('tense')}' to '{target_profile.get('tense')}'")
+    if source_profile.get("hedging_level") != target_profile.get("hedging_level"):
+        instructions.append(f"- Adjust hedging: {source_profile.get('hedging_level')} → {target_profile.get('hedging_level')}")
 
     return "\n".join(instructions)
 
 
-def verify_no_plagiarism(
-    new_text: str,
-    reference_texts: list[str],
-    *,
-    threshold: int = 6,
-) -> list[dict]:
-    """Check for overlapping n-grams between new text and references.
-
-    This is a simple n-gram overlap check, not a full plagiarism detector.
-
-    Args:
-        new_text: The text to check.
-        reference_texts: List of reference texts to compare against.
-        threshold: N-gram size to check (default 6 words).
-
-    Returns:
-        List of dicts with 'ngram', 'source_index' for flagged overlaps.
-    """
-
+def verify_no_plagiarism(new_text: str, reference_texts: list[str], *, threshold: int = 6) -> list[dict]:
+    """Check for n-gram overlap between new text and references."""
     def _ngrams(text: str, n: int) -> set[str]:
         words = text.lower().split()
-        return {" ".join(words[i : i + n]) for i in range(len(words) - n + 1)}
+        return {" ".join(words[i: i + n]) for i in range(len(words) - n + 1)}
 
     new_ngrams = _ngrams(new_text, threshold)
     flags: list[dict] = []
-
     for idx, ref_text in enumerate(reference_texts):
-        ref_ngrams = _ngrams(ref_text, threshold)
-        overlap = new_ngrams & ref_ngrams
-        for ngram in overlap:
+        for ngram in new_ngrams & _ngrams(ref_text, threshold):
             flags.append({"ngram": ngram, "source_index": idx})
 
     if flags:
@@ -203,29 +185,35 @@ def rewrite_in_reference_style(
     reference_text: str,
     *,
     verify: bool = True,
-    run_cmd=None,
+    run_cmd=None,  # kept for API compatibility
 ) -> dict:
     """Rewrite source_text in the style of reference_text using Claude.
 
+    Uses Claude's full intelligence to analyze both texts and produce
+    a style-matched rewrite. Works even inside Claude Code sessions
+    (uses anthropic SDK directly, not CLI subprocess).
+
     Returns dict with keys: rewritten, source_profile, target_profile,
-    transformation_prompt, plagiarism_flags.
+    transformation_prompt, plagiarism_flags, error (if any).
     """
-    source_profile = analyze_paper_style(source_text)
-    target_profile = analyze_paper_style(reference_text)
-    transformation_prompt = generate_transformation_prompt(
-        source_profile, target_profile
-    )
+    source_profile = analyze_paper_style(source_text, reference_label="source")
+    target_profile = analyze_paper_style(reference_text, reference_label="reference")
+    transformation_prompt = generate_transformation_prompt(source_profile, target_profile)
 
     full_prompt = (
         f"{transformation_prompt}\n\n"
-        "Rewrite the following text accordingly. "
-        "Return ONLY the rewritten text, no commentary.\n\n"
-        f"--- TEXT ---\n{source_text}\n--- END ---"
+        f"--- TEXT TO REWRITE ---\n{source_text}\n--- END ---"
     )
 
-    from core.claude_helper import call_claude
+    rewritten = _call_claude_api(full_prompt, max_tokens=8192)
 
-    rewritten = call_claude(full_prompt, run_cmd=run_cmd)
+    # Fallback to CLI if SDK unavailable
+    if rewritten is None and run_cmd is None:
+        try:
+            from core.claude_helper import call_claude
+            rewritten = call_claude(full_prompt)
+        except Exception:
+            pass
 
     result: dict = {
         "source_profile": source_profile,
@@ -236,7 +224,7 @@ def rewrite_in_reference_style(
 
     if rewritten is None:
         result["rewritten"] = None
-        result["error"] = "Claude unavailable"
+        result["error"] = "Claude unavailable (set ANTHROPIC_API_KEY or run from terminal)"
         return result
 
     result["rewritten"] = rewritten

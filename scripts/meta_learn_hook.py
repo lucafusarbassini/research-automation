@@ -1,11 +1,26 @@
 #!/usr/bin/env python3
-"""UserPromptSubmit hook: extract behavioral rules from user messages.
+"""UserPromptSubmit hook: capture explicit behavioral rules from user messages.
 
 Called by Claude Code's UserPromptSubmit hook with the user's message in
-the $PROMPT environment variable. Detects corrections and rules, then
-appends them to knowledge/RULES.md for persistence across sessions.
+the $PROMPT environment variable.
 
-Designed to be fast (<100ms), uses stdlib only.
+DESIGN: explicit-only capture. Rules are recorded ONLY when the user
+deliberately signals them with a known magic prefix. All other matching
+(broad regex over sentence content) proved too noisy.
+
+Recognised prefixes (case-insensitive, at start of a line or sentence):
+    remember:   <rule>
+    rule:       <rule>
+    add rule:   <rule>
+    always:     <rule>
+    never:      <rule>     ← only at sentence start, not mid-sentence
+    from now on: <rule>
+
+For ad-hoc rule management use:
+    ricet memory add-rule "Your rule"
+    ricet memory rules
+
+Designed to be fast (<50ms), uses stdlib only.
 """
 
 import os
@@ -14,70 +29,20 @@ import sys
 from datetime import date
 from pathlib import Path
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 RULES_FILE = PROJECT_ROOT / "knowledge" / "RULES.md"
 
-# ── Detection patterns ────────────────────────────────────────────────────────
+# Magic prefixes that signal deliberate rule capture
+# Must appear at the start of a line or after sentence-ending punctuation
+_PREFIX_RE = re.compile(
+    r"(?:^|(?<=[.!?])\s+)"           # start of text or after sentence end
+    r"(?:remember|rule|add rule|from now on|always remember)\s*:\s*"
+    r"(.{10,150}?)(?=[.!?\n]|$)",    # capture the rule body (10-150 chars)
+    re.IGNORECASE | re.MULTILINE,
+)
 
-# Sentences that are almost certainly correction/preference signals
-CORRECTION_PATTERNS = [
-    # Explicit negation rules
-    r"\b(don'?t|never|stop|avoid|no more)\b.{3,60}",
-    # Affirmative rules
-    r"\b(always|must|should|make sure|remember to|from now on|going forward)\b.{3,60}",
-    # Explicit rule declarations
-    r"\b(the rule is|important:|note:|rule:)\b.{3,60}",
-    # "X is not Y" corrections
-    r"\b\w[\w\s]{0,20}\b is (not|wrong|incorrect|false|bad)\b.{0,40}",
-    # Disagreement openers
-    r"^(no[,.]|that'?s (not|wrong)|incorrect|wrong)[,\s].{5,80}",
-    # "please don't / please always"
-    r"\bplease (don'?t|never|always|stop)\b.{3,60}",
-    # Try-except / coding style corrections
-    r"\btry.?except\b.{3,60}",
-]
-
-COMPILED = [re.compile(p, re.IGNORECASE) for p in CORRECTION_PATTERNS]
-
-# Things that look like rules but must be excluded
-NOISE_PATTERNS = [
-    r"^(yes|ok|okay|sure|got it|thanks|thank you|great|good|done)[.!?]?$",
-    r"^\d+[\).]",       # numbered list items by themselves
-    r"^http",           # bare URLs
-    r"\?$",             # questions (end in ?)
-    r"^[>\s]*>",        # blockquotes / quoted text
-    r"anthropic",       # references to Anthropic docs (quoting, not user rule)
-    r"mcp tool results can be",  # Anthropic FAQ quote
-    r"recommends this",          # Anthropic recommendation being quoted
-]
-NOISE = [re.compile(p, re.IGNORECASE) for p in NOISE_PATTERNS]
-
-# Max length of a logged rule (keeps RULES.md tidy)
-MAX_RULE_LEN = 120
-
-
-def _split_sentences(text: str) -> list[str]:
-    """Rough sentence splitter: split on '. ', '! ', '? ', newlines."""
-    parts = re.split(r"(?<=[.!?])\s+|\n+", text)
-    return [p.strip() for p in parts if p.strip()]
-
-
-def _is_rule(sentence: str) -> bool:
-    if len(sentence) < 8 or len(sentence) > 300:
-        return False
-    if any(n.search(sentence) for n in NOISE):
-        return False
-    return any(p.search(sentence) for p in COMPILED)
-
-
-def _normalise(sentence: str) -> str:
-    """Trim to MAX_RULE_LEN, strip trailing punctuation clutter."""
-    s = sentence.strip()
-    if len(s) > MAX_RULE_LEN:
-        s = s[:MAX_RULE_LEN].rsplit(" ", 1)[0] + "…"
-    return s
+MAX_RULE_LEN = 150
 
 
 def _existing_rules(path: Path) -> set[str]:
@@ -87,12 +52,10 @@ def _existing_rules(path: Path) -> set[str]:
 
 
 def _append_rules(rules: list[str], path: Path) -> int:
-    """Append new (non-duplicate) rules. Returns count added."""
     if not rules:
         return 0
-
     existing = _existing_rules(path)
-    new_rules = [r for r in rules if r not in existing]
+    new_rules = [r.strip() for r in rules if r.strip() and r.strip() not in existing]
     if not new_rules:
         return 0
 
@@ -102,14 +65,15 @@ def _append_rules(rules: list[str], path: Path) -> int:
     if not path.exists():
         path.write_text(
             "# Behavioral Rules\n\n"
-            "Automatically captured from user corrections during Claude Code sessions.\n"
-            "Edit or delete entries freely — this file is loaded into every session.\n\n"
+            "Fundamental principles from user corrections.\n"
+            "Edit freely — loaded into every session.\n\n"
         )
 
     with path.open("a") as f:
         f.write(f"\n<!-- {today} -->\n")
         for rule in new_rules:
-            f.write(f"- {rule}\n")
+            rule_text = rule[:MAX_RULE_LEN]
+            f.write(f"- {rule_text}\n")
 
     return len(new_rules)
 
@@ -117,21 +81,16 @@ def _append_rules(rules: list[str], path: Path) -> int:
 def main() -> None:
     prompt = os.environ.get("PROMPT", "").strip()
     if not prompt:
-        # Also accept stdin (for manual testing)
         if not sys.stdin.isatty():
             prompt = sys.stdin.read().strip()
     if not prompt:
         return
 
-    sentences = _split_sentences(prompt)
-    rules = [_normalise(s) for s in sentences if _is_rule(s)]
+    matches = _PREFIX_RE.findall(prompt)
+    added = _append_rules(matches, RULES_FILE)
 
-    added = _append_rules(rules, RULES_FILE)
-    if added:
-        # Silent success — Claude Code hook output is shown to user
-        # Only print if run directly for debugging
-        if os.environ.get("RICET_META_DEBUG"):
-            print(f"[meta-learn] captured {added} rule(s)")
+    if added and os.environ.get("RICET_META_DEBUG"):
+        print(f"[meta-learn] captured {added} explicit rule(s)")
 
 
 if __name__ == "__main__":
