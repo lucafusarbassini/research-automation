@@ -1155,6 +1155,14 @@ CREDENTIAL_REGISTRY: list[tuple[str, str, str, str]] = [
         "publishing",
     ),
     (
+        "ZENODO_TOKEN",
+        "Zenodo access token [FREE] (permanent DOI for software, datasets, papers)",
+        "https://zenodo.org/account/settings/applications/tokens/new/\n"
+        "  Required scopes: deposit:write, deposit:actions\n"
+        "  For testing first: https://sandbox.zenodo.org/ → ZENODO_SANDBOX_TOKEN",
+        "publishing",
+    ),
+    (
         "MEDIUM_TOKEN",
         "Medium integration token [FREE] (publishing)",
         "https://medium.com/me/settings/security → Integration tokens → Get token",

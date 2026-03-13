@@ -4242,18 +4242,27 @@ def test_gen(
 
 @app.command()
 def package(
-    action: str = typer.Argument(help="Action: init, build, publish"),
+    action: str = typer.Argument(help="Action: init, build, publish, publish-test"),
 ):
-    """Prepare and publish your project as a pip package."""
+    """Prepare and publish your project as a pip package.
+
+    \b
+    ricet package init          # scaffold pyproject.toml
+    ricet package build         # build sdist + wheel with uv
+    ricet package publish       # upload to PyPI (needs PYPI_TOKEN in .env)
+    ricet package publish-test  # upload to TestPyPI first (safer)
+    """
     if action == "init":
         _package_init()
     elif action == "build":
         _package_build()
     elif action == "publish":
-        _package_publish()
+        _package_publish(test=False)
+    elif action == "publish-test":
+        _package_publish(test=True)
     else:
         console.print(f"[red]Unknown action: {action}[/red]")
-        console.print("Available: init, build, publish")
+        console.print("Available: init, build, publish, publish-test")
         raise typer.Exit(1)
 
 
@@ -4358,11 +4367,19 @@ def _package_build() -> None:
         raise typer.Exit(1)
 
 
-def _package_publish() -> None:
-    """Publish the package to PyPI using twine."""
+def _package_publish(test: bool = False) -> None:
+    """Publish the package to PyPI using uv publish (falls back to twine)."""
     import os
+    import shutil
 
-    from core.onboarding import ensure_package as _ensure_pkg
+    try:
+        from dotenv import load_dotenv
+        for env_cand in [Path.cwd() / ".env", Path.cwd() / "secrets" / ".env"]:
+            if env_cand.exists():
+                load_dotenv(env_cand, override=False)
+                break
+    except ImportError:
+        pass
 
     project_path = Path.cwd()
     dist_dir = project_path / "dist"
@@ -4373,43 +4390,155 @@ def _package_publish() -> None:
         )
         raise typer.Exit(1)
 
-    # Check for PYPI_TOKEN
-    token = os.environ.get("PYPI_TOKEN", "")
-    if not token:
-        # Try loading from secrets/.env
-        env_file = project_path / "secrets" / ".env"
-        if env_file.exists():
-            for line in env_file.read_text().splitlines():
-                if line.startswith("PYPI_TOKEN="):
-                    token = line.split("=", 1)[1].strip()
-                    break
-
+    token = os.getenv("PYPI_TOKEN", "")
     if not token:
         console.print(
-            "[red]PYPI_TOKEN not found. Set it in secrets/.env or as an environment variable.[/red]"
+            "[red]PYPI_TOKEN not set. Add to .env: PYPI_TOKEN=pypi-...[/red]"
         )
-        console.print(
-            "[dim]Get a token at: https://pypi.org/manage/account/token/[/dim]"
-        )
+        console.print("[dim]Get token: https://pypi.org/manage/account/token/[/dim]")
         raise typer.Exit(1)
 
-    # Ensure twine is available
-    _ensure_pkg("twine")
+    registry = "https://test.pypi.org/legacy/" if test else "https://upload.pypi.org/legacy/"
+    label = "TestPyPI" if test else "PyPI"
 
-    console.print("[bold]Publishing to PyPI...[/bold]")
-    result = subprocess.run(
-        ["python", "-m", "twine", "upload", "dist/*"],
-        cwd=str(project_path),
-        capture_output=True,
-        text=True,
-        env={**os.environ, "TWINE_USERNAME": "__token__", "TWINE_PASSWORD": token},
-    )
-    if result.returncode == 0:
-        console.print("[green]Package published to PyPI successfully.[/green]")
-        auto_commit("ricet package publish: published to PyPI")
+    console.print(f"[bold]Publishing to {label}...[/bold]")
+
+    # Prefer uv publish (fast, no extra dependency)
+    if shutil.which("uv"):
+        env = {**os.environ, "UV_PUBLISH_TOKEN": token}
+        cmd = ["uv", "publish", "--index-url", registry]
+        if test:
+            cmd += ["--trusted-publishing", "never"]
+        result = subprocess.run(cmd, cwd=str(project_path), capture_output=True, text=True, env=env)
     else:
-        console.print("[red]Publish failed:[/red]")
-        console.print(result.stderr[-500:] if result.stderr else result.stdout[-500:])
+        # Fallback: twine
+        subprocess.run(
+            ["pip", "install", "-q", "twine"], capture_output=True
+        )
+        result = subprocess.run(
+            ["python", "-m", "twine", "upload", "--repository-url", registry, "dist/*"],
+            cwd=str(project_path), capture_output=True, text=True,
+            env={**os.environ, "TWINE_USERNAME": "__token__", "TWINE_PASSWORD": token},
+        )
+
+    if result.returncode == 0:
+        console.print(f"[green]Package published to {label} successfully.[/green]")
+        if not test:
+            auto_commit(f"ricet package publish: published to {label}")
+    else:
+        console.print(f"[red]Publish to {label} failed:[/red]")
+        out = result.stderr or result.stdout
+        console.print(out[-600:] if out else "(no output)")
+        raise typer.Exit(1)
+
+
+@app.command()
+def zenodo(
+    action: str = typer.Argument(help="Action: deposit, upload, publish, list, status"),
+    deposition_id: str = typer.Option(None, "--id", "-i", help="Deposition ID"),
+    files: str = typer.Option("", "--files", "-f", help="Comma-separated file paths to upload"),
+    upload_type: str = typer.Option("software", "--type", "-t",
+                                     help="Upload type: software, dataset, publication"),
+    sandbox: bool = typer.Option(False, "--sandbox", help="Use sandbox.zenodo.org for testing"),
+):
+    """Publish software, datasets, and papers to Zenodo with a permanent DOI.
+
+    \b
+    Workflow:
+      ricet zenodo deposit          # create draft from project metadata
+      ricet zenodo upload --id 123 --files paper/main.pdf,dist/pkg.tar.gz
+      ricet zenodo publish --id 123 # → get DOI
+      ricet zenodo list             # list all depositions
+      ricet zenodo status --id 123  # check status
+
+    \b
+    Set in .env:
+      ZENODO_TOKEN=your-token       # from zenodo.org/account/settings/applications
+      ZENODO_SANDBOX_TOKEN=token    # for testing on sandbox.zenodo.org
+    """
+    from core.zenodo import (
+        create_deposition,
+        deposit_from_project,
+        get_deposition,
+        list_depositions,
+        publish_deposition,
+        upload_file,
+    )
+
+    env_label = "[sandbox]" if sandbox else ""
+
+    if action == "deposit":
+        console.print(f"[bold]Creating Zenodo deposition {env_label}...[/bold]")
+        file_list = [f.strip() for f in files.split(",") if f.strip()] or None
+        dep = deposit_from_project(
+            Path.cwd(), files=file_list, sandbox=sandbox, upload_type=upload_type
+        )
+        dep_id = dep["id"]
+        html = dep.get("links", {}).get("html", f"https://zenodo.org/deposit/{dep_id}")
+        console.print(f"[green]Deposition created: ID {dep_id}[/green]")
+        console.print(f"  URL: {html}")
+        console.print(f"  Status: {dep.get('state', 'draft')}")
+        console.print("")
+        console.print(f"  Next: ricet zenodo upload --id {dep_id} --files your_file.pdf")
+        console.print(f"  Then: ricet zenodo publish --id {dep_id}")
+
+    elif action == "upload":
+        if not deposition_id:
+            console.print("[red]--id is required for upload[/red]")
+            raise typer.Exit(1)
+        file_list = [f.strip() for f in files.split(",") if f.strip()]
+        if not file_list:
+            console.print("[red]--files is required for upload[/red]")
+            raise typer.Exit(1)
+        for f in file_list:
+            fp = Path(f)
+            if not fp.exists():
+                console.print(f"[red]File not found: {f}[/red]")
+                continue
+            console.print(f"  Uploading {fp.name}...")
+            result = upload_file(deposition_id, fp, sandbox=sandbox)
+            console.print(f"  [green]✓ {fp.name} ({result.get('size', '?')} bytes)[/green]")
+
+    elif action == "publish":
+        if not deposition_id:
+            console.print("[red]--id is required for publish[/red]")
+            raise typer.Exit(1)
+        console.print(f"[bold]Publishing deposition {deposition_id} {env_label}...[/bold]")
+        result = publish_deposition(deposition_id, sandbox=sandbox)
+        doi = result.get("doi", "")
+        doi_url = result.get("doi_url", "")
+        console.print(f"[green]Published![/green]")
+        console.print(f"  DOI: {doi}")
+        console.print(f"  URL: {doi_url or result.get('links', {}).get('record', '')}")
+        auto_commit(f"ricet zenodo: published deposition {deposition_id} — DOI {doi}")
+
+    elif action == "list":
+        console.print(f"[bold]Zenodo depositions {env_label}:[/bold]")
+        deps = list_depositions(sandbox=sandbox)
+        if not deps:
+            console.print("  No depositions found.")
+        for d in deps:
+            state = d.get("state", "?")
+            title = d.get("title", "(no title)")
+            doi = d.get("doi", "")
+            color = "green" if state == "done" else "yellow"
+            console.print(f"  [{color}]{d['id']}[/{color}] [{state}] {title}" + (f" — {doi}" if doi else ""))
+
+    elif action == "status":
+        if not deposition_id:
+            console.print("[red]--id is required for status[/red]")
+            raise typer.Exit(1)
+        dep = get_deposition(deposition_id, sandbox=sandbox)
+        console.print(f"[bold]Deposition {deposition_id}:[/bold]")
+        console.print(f"  Title:  {dep.get('title', '?')}")
+        console.print(f"  State:  {dep.get('state', '?')}")
+        console.print(f"  DOI:    {dep.get('doi', 'not yet assigned')}")
+        console.print(f"  Files:  {len(dep.get('files', []))}")
+        for f in dep.get("files", []):
+            console.print(f"    - {f.get('filename', '?')} ({f.get('filesize', '?')} bytes)")
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("Available: deposit, upload, publish, list, status")
         raise typer.Exit(1)
 
 

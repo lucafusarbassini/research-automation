@@ -4,6 +4,66 @@
 
 ## Decisions
 
+- [2026-03-13 09:42] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:42] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:42] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:42] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:42] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:42] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:42] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:42] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:42] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:42] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:41] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:41] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:41] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:41] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:41] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:41] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:41] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:41] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:41] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:41] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:40] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:40] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:40] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:40] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:40] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:40] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:40] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:40] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:40] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:40] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:39] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:39] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:39] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:39] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:39] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:39] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:39] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:39] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:39] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:39] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:38] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:38] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:38] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:38] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:38] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:38] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:38] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:38] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:38] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:38] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:37] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:37] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:37] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:37] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:37] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:37] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:37] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:37] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:37] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project forked-repo -- Rationale: state-modifying CLI operation completed
+- [2026-03-13 09:37] (lucafusarbassini1@gmail.com) auto-commit: ricet adopt: scaffolded project my-repo -- Rationale: state-modifying CLI operation completed
 - [2026-03-13 09:36] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
 - [2026-03-13 09:36] (lucafusarbassini1@gmail.com) auto-commit: test -- Rationale: state-modifying CLI operation completed
 - [2026-03-13 09:36] (lucafusarbassini1@gmail.com) auto-commit: test message -- Rationale: state-modifying CLI operation completed
