@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-12T16:20:11.131Z",
+  "timestamp": "2026-03-12T17:51:37.310Z",
   "projectRoot": "/home/fusar/claude/research-automation",
   "structure": {
     "hasPackageJson": false,
@@ -7,5 +7,5 @@
     "hasClaudeConfig": true,
     "hasClaudeFlow": true
   },
-  "scannedAt": 1773332411131
+  "scannedAt": 1773337897310
 }
