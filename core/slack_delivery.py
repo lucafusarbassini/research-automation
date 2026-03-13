@@ -111,24 +111,19 @@ def send_plot(
         upload_url = resp["upload_url"]
         file_id = resp["file_id"]
 
-        # Step 2: PUT bytes to upload URL (no redirect follow — 200 OK expected)
-        try:
-            import requests as _req
-
-            _req.put(upload_url, data=file_bytes,
-                     headers={"Content-Type": content_type}, timeout=60).raise_for_status()
-        except ImportError:
-            # Fallback: urllib with redirect disabled
-            class _NoRedirect(urllib.request.HTTPRedirectHandler):
-                def redirect_request(self, *a, **kw):
-                    return None
-
-            opener = urllib.request.build_opener(_NoRedirect())
-            put_req = urllib.request.Request(
-                upload_url, data=file_bytes, method="PUT",
-                headers={"Content-Type": content_type},
-            )
-            opener.open(put_req, timeout=60)
+        # Step 2: POST bytes to upload URL.
+        # CRITICAL: NO Authorization header — the URL is pre-authenticated.
+        # Adding auth causes Slack to redirect to slack.com homepage (upload fails silently).
+        import requests as _req
+        r_upload = _req.post(
+            upload_url,
+            data=file_bytes,
+            headers={"Content-Type": "application/octet-stream"},
+            allow_redirects=False,
+            timeout=60,
+        )
+        if r_upload.status_code != 200:
+            raise RuntimeError(f"Upload to upload_url failed: HTTP {r_upload.status_code} {r_upload.text[:200]}")
 
         # Step 3: complete upload and share to channel
         # Resolve channel name → ID if needed
