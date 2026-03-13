@@ -3253,6 +3253,14 @@ def mobile(
         qr = generate_qr_terminal(public_url)
         if qr:
             console.print(f"\n{qr}")
+        # Persist URL to disk so other processes / Slack notifications can read it
+        try:
+            url_file = Path.home() / ".ricet" / "tunnel_url"
+            url_file.parent.mkdir(parents=True, exist_ok=True)
+            url_file.write_text(public_url + "\n")
+            console.print(f"[dim]URL saved to {url_file}[/dim]")
+        except Exception:
+            pass
         console.print("[dim]Press Ctrl+C to stop.[/dim]")
         import signal
 
@@ -3272,10 +3280,60 @@ def mobile(
         running = "[green]running[/green]" if st["running"] else "[dim]stopped[/dim]"
         tls_s = "[green]enabled[/green]" if st["tls"] else "[dim]disabled[/dim]"
         console.print(f"Server: {running}  Port: {st['port']}  TLS: {tls_s}")
+        url_file = Path.home() / ".ricet" / "tunnel_url"
+        if url_file.exists():
+            console.print(f"Last tunnel URL: {url_file.read_text().strip()}")
+    elif action == "persist":
+        # Install a systemd user service so the server+tunnel auto-starts on login.
+        import shutil as _sh
+        import subprocess as _sp
+        ricet_bin = _sh.which("ricet")
+        if not ricet_bin:
+            console.print("[red]'ricet' not found in PATH — install it first (pip install -e .)[/red]")
+            raise typer.Exit(1)
+        log_file = Path.home() / ".ricet" / "mobile.log"
+        service_dir = Path.home() / ".config" / "systemd" / "user"
+        service_dir.mkdir(parents=True, exist_ok=True)
+        service_file = service_dir / "ricet-mobile.service"
+        screen_env = f"Environment=RICET_SCREEN_SESSION=ricet\n"
+        service_content = (
+            "[Unit]\n"
+            "Description=ricet mobile server + Cloudflare tunnel\n"
+            "After=network-online.target\n"
+            "Wants=network-online.target\n\n"
+            "[Service]\n"
+            "Type=simple\n"
+            f"ExecStart={ricet_bin} mobile tunnel --no-tls --port {port}\n"
+            "Restart=on-failure\n"
+            "RestartSec=15\n"
+            f"{screen_env}"
+            f"StandardOutput=append:{log_file}\n"
+            f"StandardError=append:{log_file}\n\n"
+            "[Install]\n"
+            "WantedBy=default.target\n"
+        )
+        service_file.write_text(service_content)
+        console.print(f"[green]Service file written:[/green] {service_file}")
+        try:
+            _sp.run(["systemctl", "--user", "daemon-reload"], check=True, capture_output=True)
+            _sp.run(["systemctl", "--user", "enable", "--now", "ricet-mobile"], check=True, capture_output=True)
+            console.print("[green]Service enabled and started.[/green]")
+        except Exception as exc:
+            console.print(f"[yellow]systemctl failed ({exc}) — start manually:[/yellow]")
+            console.print(f"  systemctl --user daemon-reload")
+            console.print(f"  systemctl --user enable --now ricet-mobile")
+        console.print(f"\nLogs:   tail -f {log_file}")
+        console.print("Status: systemctl --user status ricet-mobile")
+        console.print("Stop:   systemctl --user stop ricet-mobile")
+        console.print(
+            "\n[dim]Edit RICET_SCREEN_SESSION in the service file to match your "
+            "screen session name for live voice injection.[/dim]"
+        )
+        console.print(f"  {service_file}")
     else:
         console.print(f"[red]Unknown action: {action}[/red]")
         console.print(
-            "Available: serve, stop, pair, tunnel, connect-info, tokens, cert-regen, status"
+            "Available: serve, stop, pair, tunnel, connect-info, tokens, cert-regen, status, persist"
         )
         raise typer.Exit(1)
 

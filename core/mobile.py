@@ -342,10 +342,13 @@ class MobileServer:
         auth: Optional[MobileAuth] = None,
         registry: Optional[ProjectRegistry] = None,
         tls_manager: Optional[TLSManager] = None,
+        screen_session: Optional[str] = None,
     ) -> None:
         self._auth = auth
         self._registry = registry or ProjectRegistry()
         self._tls = tls_manager
+        # Screen session for live injection. Read from env var if not passed.
+        self._screen_session: str = screen_session or os.environ.get("RICET_SCREEN_SESSION", "")
         self._routes: dict[tuple[str, str], RouteHandler] = {}
         self._tasks: list[dict] = []
         self._register_default_routes()
@@ -424,11 +427,14 @@ class MobileServer:
     def _handle_post_task(self, body: Optional[dict]) -> dict:
         prompt = (body or {}).get("prompt", "")
         task_id = uuid.uuid4().hex[:12]
-        task = {"task_id": task_id, "prompt": prompt, "status": "queued"}
+        injected = _inject_to_screen(prompt, self._screen_session) if self._screen_session else False
+        status = "injected" if injected else "queued"
+        task = {"task_id": task_id, "prompt": prompt, "status": status}
         self._tasks.append(task)
-        self._persist_task_to_todo(prompt)
-        logger.info("Task queued: %s — %s", task_id, prompt[:80])
-        return {"ok": True, "task_id": task_id, "status": "queued"}
+        if not injected:
+            self._persist_task_to_todo(prompt)
+        logger.info("Task %s: %s — %s", status, task_id, prompt[:80])
+        return {"ok": True, "task_id": task_id, "status": status}
 
     def _handle_get_status(self, body: Optional[dict]) -> dict:
         return {
@@ -460,16 +466,14 @@ class MobileServer:
     def _handle_post_voice(self, body: Optional[dict]) -> dict:
         text = (body or {}).get("text", "")
         task_id = uuid.uuid4().hex[:12]
-        task = {
-            "task_id": task_id,
-            "prompt": text,
-            "status": "queued",
-            "source": "voice",
-        }
+        injected = _inject_to_screen(text, self._screen_session) if self._screen_session else False
+        status = "injected" if injected else "queued"
+        task = {"task_id": task_id, "prompt": text, "status": status, "source": "voice"}
         self._tasks.append(task)
-        self._persist_task_to_todo(text, source="voice")
-        logger.info("Voice task queued: %s — %s", task_id, text[:80])
-        return {"ok": True, "task_id": task_id, "source": "voice"}
+        if not injected:
+            self._persist_task_to_todo(text, source="voice")
+        logger.info("Voice %s: %s — %s", status, task_id, text[:80])
+        return {"ok": True, "task_id": task_id, "source": "voice", "injected": injected}
 
     def _persist_task_to_todo(self, prompt: str, source: str = "mobile") -> None:
         """Append a task to state/TODO.md so ricet overnight can pick it up.
@@ -895,6 +899,7 @@ def start_server(
     auth: Optional[MobileAuth] = None,
     tls: bool = True,
     tls_manager: Optional[TLSManager] = None,
+    screen_session: Optional[str] = None,
 ) -> threading.Thread:
     """Start the mobile API server in a daemon thread.
 
@@ -909,7 +914,7 @@ def start_server(
             tlsm = TLSManager()
         tlsm.ensure_certs()
 
-    _mobile_server = MobileServer(auth=auth, tls_manager=tlsm if tls else None)
+    _mobile_server = MobileServer(auth=auth, tls_manager=tlsm if tls else None, screen_session=screen_session)
     handler_class = _make_handler(_mobile_server)
     _server_instance = ThreadingHTTPServer((host, port), handler_class)
 
@@ -950,6 +955,29 @@ def is_server_running() -> bool:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def _inject_to_screen(text: str, session: str) -> bool:
+    """Inject text into a running GNU screen session as if typed at the prompt.
+
+    Uses ``screen -S <session> -X stuff "<text>\\r"``.
+    Returns True if the screen command succeeded (session exists and is reachable).
+    Safe to call even when no screen session is running — just returns False.
+    """
+    if not session:
+        return False
+    import shutil
+    import subprocess
+    if not shutil.which("screen"):
+        return False
+    result = subprocess.run(
+        ["screen", "-S", session, "-X", "stuff", f"{text}\r"],
+        capture_output=True,
+        timeout=3,
+    )
+    if result.returncode == 0:
+        logger.info("Injected %d chars into screen session '%s'", len(text), session)
+    return result.returncode == 0
 
 
 def _extract_bearer(headers: Optional[dict]) -> Optional[str]:
@@ -993,12 +1021,14 @@ class _MobileManager:
         host: str = "0.0.0.0",
         port: int = 8777,
         tls: bool = True,
+        screen_session: Optional[str] = None,
     ) -> str:
         """Start the HTTPS server. Returns fingerprint info."""
         self._auth = MobileAuth()
         self._tls = TLSManager() if tls else None
         start_server(
-            host=host, port=port, auth=self._auth, tls=tls, tls_manager=self._tls
+            host=host, port=port, auth=self._auth, tls=tls, tls_manager=self._tls,
+            screen_session=screen_session or os.environ.get("RICET_SCREEN_SESSION", ""),
         )
         fp = ""
         if self._tls:
