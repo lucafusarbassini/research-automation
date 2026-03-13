@@ -45,3 +45,10 @@ Captured automatically from past corrections. Obey these without question:
 - Never proactively create documentation files unless explicitly requested.
 - Use Opus 4.6 with default medium thinking for everything -- no model routing.
 - Batch parallel operations in a single message when possible.
+
+## Token economy
+
+- **Do not use subagents** (Agent tool) unless tasks are genuinely parallel AND each subtask takes >10 min. Simple searches, single-file edits, and quick lookups must be done directly.
+- **Do not use extended thinking** unless explicitly blocked or reasoning about a novel algorithm. Default thinking is sufficient.
+- **Keep MCP queries narrow**: always pass filters, limits, or specific IDs. Never fetch unbounded lists.
+- **Avoid redundant context reads**: if a file was just read, don't re-read it. Trust the conversation window.

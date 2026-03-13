@@ -2417,21 +2417,34 @@ def memory(
         except Exception:
             pass  # claude-flow not running or disabled — fall through to keyword search
 
+        # RAG semantic search (sentence-transformers, optional)
+        rag_hits = []
+        try:
+            from core.rag import search as rag_search
+
+            rag_hits = rag_search(query, encyclopedia_path=_enc, top_k=top_k)
+            if rag_hits:
+                console.print(f"[bold]Semantic matches ({len(rag_hits)}) [RAG]:[/bold]")
+                for h in rag_hits:
+                    console.print(f"  [{h.score:.2f}] {h.text[:120]}")
+        except Exception:
+            pass  # sentence-transformers not installed — install with: uv pip install sentence-transformers
+
         # Always merge with keyword search from encyclopedia
         from core.knowledge import search_knowledge
 
         kw_results = search_knowledge(query, encyclopedia_path=_enc)
-        # Deduplicate against HNSW hits
-        shown_hnsw = {h.get("text", "") for h in hits}
-        kw_only = [r for r in kw_results if r not in shown_hnsw]
+        # Deduplicate against HNSW and RAG hits
+        shown = {h.get("text", "") for h in hits} | {h.text for h in rag_hits}
+        kw_only = [r for r in kw_results if r not in shown]
 
         if kw_only:
-            if hits:
+            if hits or rag_hits:
                 console.print(f"[bold]Keyword matches ({len(kw_only)}):[/bold]")
             for r in kw_only[:top_k]:
                 console.print(f"  {r}")
 
-        if not hits and not kw_only:
+        if not hits and not rag_hits and not kw_only:
             if not _enc.exists():
                 console.print(
                     f"[dim]Encyclopedia not found at {_enc}.\n"
@@ -2494,6 +2507,24 @@ def memory(
                 console.print(f"  {section}: {count} entries")
         else:
             console.print("[yellow]No encyclopedia found or empty.[/yellow]")
+
+    elif action == "build-index":
+        # Build / refresh RAG semantic index for the encyclopedia
+        from core.rag import _model_available, build_index, index_stats
+
+        if not _model_available():
+            console.print(
+                "[yellow]sentence-transformers not installed.[/yellow]\n"
+                "  Install with: [bold]uv pip install sentence-transformers[/bold]"
+            )
+            raise typer.Exit(1)
+        _enc = Path("knowledge/ENCYCLOPEDIA.md")
+        rebuilt = build_index(_enc, force=("--force" in (query or "")))
+        stats = index_stats(_enc)
+        if rebuilt:
+            console.print(f"[green]RAG index built: {stats['entries']} entries[/green]")
+        else:
+            console.print(f"[dim]RAG index already up to date ({stats['entries']} entries).[/dim]")
 
     elif action == "rules":
         # Show / manage knowledge/RULES.md
