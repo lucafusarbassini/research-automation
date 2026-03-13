@@ -82,13 +82,33 @@ ricet memory "effect of learning rate on convergence"
 
 A complete LaTeX publication workflow ships with every project:
 
-- Structured `main.tex` template with standard sections
+- `main.tex` template adapted from [Albert Dominguez, Gioele La Manno & Martin Weigert's manuscript template](https://github.com/weigertlab/manuscript_lipiddevatlas)
 - BibTeX citation management with `ricet cite <query>` (search → format → append to .bib)
 - Automatic figure reference checking
 - Style analysis and transfer: `ricet paper adapt-style --reference <paper>`
-- One-command compilation: `ricet paper build`
+- One-command compilation via **tectonic** (auto-installs LaTeX packages, no TeX distribution needed):
+
+```bash
+ricet paper build
+```
 
 For exhaustive cross-discipline paper discovery, we recommend [PaperBoat](https://paperboatch.com/) — an AI-powered service that scans thousands of journals daily and delivers personalized paper matches. Useful as a background SOTA knowledge source that updates daily across all disciplines.
+
+### Remote Access & Background Sessions {#remote-access-via-mobile}
+
+Run ricet unattended on a remote workstation and control it from your phone or another machine:
+
+```bash
+# Start a named screen session on the workstation
+screen -S ricet-session
+ricet overnight --iterations 20
+# Detach: Ctrl+A D
+
+# Reconnect from anywhere
+ssh workstation "screen -r ricet-session"
+```
+
+The Cloudflare Tunnel set up during `ricet init` gives you a browser URL to monitor live output on any device. Share the QR code for instant phone access.
 
 ### Overnight Autonomous Mode
 
@@ -136,16 +156,31 @@ Seven core modules (agents, model router, auto-debug, doability, prompt suggesti
 Transform any existing GitHub repository into a ricet project:
 
 ```bash
-ricet adopt https://github.com/user/repo          # fork + clone + scaffold
-ricet adopt https://github.com/user/repo --no-fork # clone only
-ricet adopt /path/to/local/repo                    # scaffold in place
+ricet adopt https://github.com/user/repo              # fork + clone + scaffold
+ricet adopt https://github.com/user/repo --no-fork    # clone only
+ricet adopt /path/to/local/repo                        # scaffold in place
+ricet adopt https://github.com/user/repo --branch alice  # use named user branch
 ```
 
-The command forks the repo (keeping the original intact), overlays the ricet workspace structure, pre-fills `GOAL.md` from the README, and registers the project.
+The command forks the repo (keeping the original intact), overlays the ricet workspace structure, pre-fills `GOAL.md` from the README, registers the project, and creates a personal branch (auto-derived from your git email if `--branch` is omitted).
 
-### Collaborative Research
+### Collaborative Research (Multi-User Workflow)
 
-Multiple researchers can use ricet on the same repository. On `ricet start`, the system pulls the latest changes before beginning. Encyclopedia entries include user identity for attribution. Merge conflicts are minimized via `.gitattributes merge=union` on append-only files.
+Multiple researchers can collaborate on the same repo, each on their own branch:
+
+```bash
+# Each collaborator adopts the repo — gets their own branch automatically
+ricet adopt https://github.com/lab/project
+# → creates branch user-alice, user-bob, etc. from git email
+
+# Daily workflow: sync your branch with the latest
+ricet sync
+
+# Lead researcher: merge all user branches into main every morning
+ricet morning-sync
+```
+
+`morning-sync` pulls every `user-*` branch, merges it into `main` with `--no-ff`, and pushes. Conflicts are reported and skipped so nothing is lost. Encyclopedia entries include user identity for attribution. Merge conflicts on append-only files are minimized via `.gitattributes merge=union`.
 
 ### Cross-Repository RAG
 
@@ -159,6 +194,21 @@ ricet unlink my-lib                              # remove
 ```
 
 Linked repos are indexed into HNSW vector memory (with JSON fallback) and searched automatically during `ricet memory` queries. Permission boundaries ensure linked repos are read-only.
+
+### context-hub: Versioned API Docs for Agents {#context-hub}
+
+ricet integrates [context-hub](https://github.com/andrewyng/context-hub) (`chub`) — a curated, versioned API documentation registry designed for coding agents. Agents can query accurate library docs instead of hallucinating APIs.
+
+```bash
+ricet chub search openai            # discover available doc sets
+ricet chub get openai               # fetch Python API reference
+ricet chub get pandas --lang py     # language-specific variant
+ricet chub get openai --full        # complete reference (large)
+ricet chub annotate openai "use v2 endpoints"  # add a local note
+ricet chub feedback openai up       # rate docs as helpful
+```
+
+`chub` is auto-installed during `ricet init` (requires Node.js ≥ 18). Agents will query context-hub automatically when working with supported libraries.
 
 ### Cross-Repository Coordination
 
@@ -228,15 +278,23 @@ Automatically scans, catalogs, and organizes experiment figures by run ID and fo
 
 ### From PyPI (recommended)
 
+ricet uses [uv](https://github.com/astral-sh/uv) for fast, reproducible package management.
+
 ```bash
-pip install ricet
+# Install uv first (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Then install ricet
+uv pip install ricet
 ```
+
+uv is auto-installed during `ricet init` so you don't have to do this manually on new machines.
 
 ### With ML extras
 
 ```bash
-pip install "ricet[ml]"     # numpy, pandas, scipy, scikit-learn, matplotlib
-pip install "ricet[all]"    # + chromadb, sentence-transformers, torch, jupyter
+uv pip install "ricet[ml]"     # numpy, pandas, scipy, scikit-learn, matplotlib
+uv pip install "ricet[all]"    # + chromadb, sentence-transformers, torch, jupyter
 ```
 
 ### Docker
@@ -251,8 +309,21 @@ docker run -it -v $(pwd):/workspace ricet
 ```bash
 git clone https://github.com/lucafusarbassini/research-automation.git
 cd research-automation
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 ```
+
+### What `ricet init` auto-installs
+
+Running `ricet init` in a new project bootstraps the full toolchain with no manual steps:
+
+| Tool | Purpose |
+|------|---------|
+| **uv** | Fast Python package manager (replaces pip) |
+| **tectonic** | Single-binary LaTeX engine (replaces a full TeX distribution) |
+| **biber 2.17** | BibLaTeX backend, version-matched to tectonic's bundled biblatex |
+| **screen** | Background sessions and [remote phone access](#remote-access-via-mobile) |
+| **cloudflared** | Secure tunnel for mobile browser access through firewalls |
+| **chub** | [context-hub](#context-hub) — versioned API docs for agents |
 
 ## Configuration
 

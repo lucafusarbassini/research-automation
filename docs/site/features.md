@@ -489,15 +489,19 @@ ricet adopt /path/to/local/repo
 
 # Custom name and target directory
 ricet adopt https://github.com/user/repo --name my-project --path ~/research
+
+# Create a named personal branch (auto-derived from git email if omitted)
+ricet adopt https://github.com/user/repo --branch user-alice
 ```
 
 ### What Adopt Does
 
 1. **Forks** the repo via `gh repo fork --clone` (preserves the original).
-2. **Overlays** the ricet workspace structure: `knowledge/`, `state/`, `config/`, `paper/`.
-3. **Pre-fills** `knowledge/GOAL.md` from the repository README.
-4. **Registers** the project in `~/.ricet/projects.json`.
-5. **Auto-commits** the scaffolding changes.
+2. **Creates a personal branch** (`user-<name>` from git email, or `--branch` value). Creates it on the remote if new.
+3. **Overlays** the ricet workspace structure: `knowledge/`, `state/`, `config/`, `paper/`.
+4. **Pre-fills** `knowledge/GOAL.md` from the repository README.
+5. **Registers** the project in `~/.ricet/projects.json`.
+6. **Auto-commits** the scaffolding changes.
 
 ### When to Use
 
@@ -507,19 +511,38 @@ ricet adopt https://github.com/user/repo --name my-project --path ~/research
 
 ---
 
-## Collaborative Research
+## Collaborative Research (Multi-User Workflow)
 
-Multiple researchers can work on the same ricet repository without conflicts.
+Multiple researchers can work on the same ricet repository on their own branches without conflicts.
 
 ### How It Works
 
-1. **Sync on start**: `ricet start` runs `git pull --rebase` before beginning the session.
-2. **User attribution**: Every encyclopedia entry includes the user's git email.
-3. **Merge-friendly files**: `.gitattributes` uses `merge=union` for append-only files (`ENCYCLOPEDIA.md`, `PROGRESS.md`), which auto-merges without conflicts.
+1. **Personal branches**: Each researcher gets their own `user-*` branch on `ricet adopt`.
+2. **Daily sync**: `ricet sync` pulls the latest and pushes your work.
+3. **Morning merge**: The lead researcher runs `ricet morning-sync` to merge all user branches into `main`.
+4. **User attribution**: Every encyclopedia entry includes the user's git email.
+5. **Merge-friendly files**: `.gitattributes` uses `merge=union` for append-only files.
 
-### Setup
+### Daily Workflow
 
-Collaboration works automatically. Just ensure both researchers have push access to the repository and run `ricet start` at the beginning of each session.
+```bash
+# Each researcher (once): adopt the repo
+ricet adopt https://github.com/lab/project    # → lands on user-alice branch
+
+# Every morning: sync your branch
+ricet sync
+
+# Lead researcher: merge everyone's work into main
+ricet morning-sync
+# Conflict branches are skipped and listed — resolve manually, then re-run
+```
+
+### Advanced Options
+
+```bash
+ricet morning-sync --main develop     # merge into a different integration branch
+ricet morning-sync --no-push          # merge locally but don't push yet
+```
 
 ---
 
@@ -681,6 +704,23 @@ ricet test-gen
 ```
 
 Scans the project for source files that lack corresponding test coverage and generates pytest-compatible test stubs. Uses Claude to analyze function signatures, docstrings, and usage patterns for meaningful test cases.
+
+---
+
+## context-hub: Versioned API Docs for Agents
+
+ricet integrates [context-hub](https://github.com/andrewyng/context-hub) (`chub`) to give coding agents access to accurate, versioned API documentation. This prevents agents from hallucinating library APIs.
+
+```bash
+ricet chub search openai              # find available doc sets
+ricet chub get openai                 # fetch Python API reference
+ricet chub get pandas --lang py       # language-specific variant
+ricet chub get openai --full          # complete reference
+ricet chub annotate openai "note"     # add a persistent local note
+ricet chub feedback openai up         # rate docs as helpful
+```
+
+`chub` is auto-installed during `ricet init` (requires Node.js ≥ 18). It is distributed as `npm install -g @aisuite/chub`.
 
 ---
 

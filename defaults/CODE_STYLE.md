@@ -360,3 +360,39 @@ Avoid:
 - Heavy frameworks when simple functions suffice
 - Multiple libraries that do the same thing
 - Unmaintained packages
+
+---
+
+## Exception Handling Rules
+
+**try-except should be used sparingly, never as a crutch.** Code that crashes should crash loudly so bugs can be found and fixed, not silently swallowed.
+
+**When try-except IS appropriate:**
+- At true system boundaries: external processes, network calls, file I/O from user input, optional third-party tools that may not be installed
+- Falling back to a degraded-but-correct mode (e.g. claude-flow unavailable → keyword search)
+- Logging and re-raising so the error is still visible
+
+**When try-except is NOT appropriate:**
+- Around your own logic — if your code raises, fix the code
+- To silence `ImportError` on mandatory dependencies
+- As a catch-all `except Exception: pass` that hides bugs
+- When the correct response to failure is to crash and tell the user
+
+**Package-first rule:** Use well-maintained packages for non-trivial operations (HTTP, JSON, YAML, git, PDF, image) instead of reimplementing. Only reimplement when no package exists or the package is too heavy for the use case.
+
+```python
+# BAD: swallowing crashes
+try:
+    result = complex_operation()
+except Exception:
+    pass  # silent failure — bugs hide here
+
+# GOOD: narrow, purposeful catch with fallback
+try:
+    result = optional_feature()
+except ImportError:
+    result = fallback_implementation()
+except TimeoutError as exc:
+    logger.warning("feature timed out: %s", exc)
+    result = None
+```

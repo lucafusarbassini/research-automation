@@ -68,7 +68,12 @@ def main(
     ),
 ):
     """ricet CLI - Scientific research automation powered by Claude Code."""
-    pass
+    # Lightweight update check (runs at most once per week)
+    try:
+        from core.updater import session_start_check
+        session_start_check()
+    except Exception:
+        pass
 
 
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
@@ -821,6 +826,13 @@ def init(
         "  a Claude session in screen, just type [bold]/remote-session[/bold] in Claude\n"
         "  and use the link it provides!"
     )
+
+    # Record installed version for future migration tracking
+    try:
+        from core.updater import record_version
+        record_version()
+    except Exception:
+        pass
 
 
 def _init_update(
@@ -2375,76 +2387,61 @@ def memory(
         if not query:
             console.print("[red]Provide a search query.[/red]")
             raise typer.Exit(1)
-        from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
 
-        # Try to auto-start claude-flow daemon if not running
+        # Resolve encyclopedia path against active project
+        _enc = Path("knowledge/ENCYCLOPEDIA.md")
         try:
+            from core.project_registry import ProjectRegistry
+
+            _preg = ProjectRegistry()
+            _aproj = _preg.get_active_project()
+            if _aproj and _aproj.get("path"):
+                _enc = Path(_aproj["path"]) / "knowledge" / "ENCYCLOPEDIA.md"
+        except Exception:
+            pass
+
+        # Try HNSW search via claude-flow only if it's already running (no auto-start)
+        hits = []
+        try:
+            from core.claude_flow import ClaudeFlowUnavailable, _get_bridge
+
             bridge = _get_bridge()
-        except ClaudeFlowUnavailable:
-            console.print(
-                "[dim]Starting claude-flow daemon...[/dim]"
-            )
-            import subprocess as _sp
-
-            _sp.run(
-                ["npx", "@claude-flow/cli@latest", "daemon", "start", "--quiet"],
-                capture_output=True,
-                timeout=10,
-            )
-            try:
-                # Re-create bridge after starting daemon
-                from core.claude_flow import ClaudeFlowBridge
-
-                bridge = ClaudeFlowBridge()
-                if not bridge.is_available():
-                    raise ClaudeFlowUnavailable("still unavailable")
-            except ClaudeFlowUnavailable:
-                bridge = None
-
-        try:
-            if bridge is None:
-                raise ClaudeFlowUnavailable("not available")
             result = bridge.query_memory(query, top_k=top_k)
             hits = result.get("results", [])
             if hits:
-                console.print(f"[bold]Memory results ({len(hits)}):[/bold]")
+                console.print(f"[bold]Memory results ({len(hits)}) [HNSW]:[/bold]")
                 for hit in hits:
                     score = hit.get("score", "?")
-                    text = hit.get("text", "")[:100]
-                    console.print(f"  [{score}] {text}")
-            else:
-                console.print("No matches found")
-        except ClaudeFlowUnavailable:
-            console.print(
-                "[yellow]claude-flow not available. Using keyword search.[/yellow]"
-            )
-            from core.knowledge import search_knowledge
+                    text = hit.get("text", "")[:120]
+                    console.print(f"  [{score:.2f}] {text}")
+        except Exception:
+            pass  # claude-flow not running or disabled — fall through to keyword search
 
-            # Resolve encyclopedia path against active project
-            _enc = Path("knowledge/ENCYCLOPEDIA.md")
-            try:
-                from core.project_registry import ProjectRegistry
+        # Always merge with keyword search from encyclopedia
+        from core.knowledge import search_knowledge
 
-                _preg = ProjectRegistry()
-                _aproj = _preg.get_active_project()
-                if _aproj and _aproj.get("path"):
-                    _enc = Path(_aproj["path"]) / "knowledge" / "ENCYCLOPEDIA.md"
-            except Exception:
-                pass
-            results = search_knowledge(query, encyclopedia_path=_enc)
-            if results:
-                for r in results[:top_k]:
-                    console.print(f"  {r}")
+        kw_results = search_knowledge(query, encyclopedia_path=_enc)
+        # Deduplicate against HNSW hits
+        shown_hnsw = {h.get("text", "") for h in hits}
+        kw_only = [r for r in kw_results if r not in shown_hnsw]
+
+        if kw_only:
+            if hits:
+                console.print(f"[bold]Keyword matches ({len(kw_only)}):[/bold]")
+            for r in kw_only[:top_k]:
+                console.print(f"  {r}")
+
+        if not hits and not kw_only:
+            if not _enc.exists():
+                console.print(
+                    f"[dim]Encyclopedia not found at {_enc}.\n"
+                    f"  Log findings with: ricet memory log-decision \"Your insight\"[/dim]"
+                )
             else:
-                encyclopedia = _enc
-                if not encyclopedia.exists() or not encyclopedia.read_text().strip():
-                    console.print(
-                        "[dim]No results. knowledge/ENCYCLOPEDIA.md is empty.\n"
-                        "  Add content with: ricet memory log-decision \"Your finding\"\n"
-                        "  Or populate it during work sessions.[/dim]"
-                    )
-                else:
-                    console.print(f"[dim]No matches for '{query}'.[/dim]")
+                console.print(f"[dim]No matches for '{query}'.[/dim]")
+                console.print(
+                    "[dim]  Log new findings: ricet memory log-decision \"Your insight\"[/dim]"
+                )
 
     elif action == "log-decision":
         if not query:
@@ -2718,6 +2715,64 @@ def repro(
         raise typer.Exit(1)
 
 
+@app.command(name="enable-ruflo")
+def enable_ruflo():
+    """Enable the claude-flow (ruflo) MCP server for complex multi-agent tasks.
+
+    \b
+    WARNING: claude-flow loads 200+ tools into every message context, which
+    significantly increases token consumption. Only enable it for tasks that
+    genuinely need swarm coordination or HNSW vector memory. Disable it again
+    with 'ricet disable-ruflo' when done.
+
+    Useful for: overnight swarm runs, cross-session HNSW memory, agent spawning.
+    Not needed for: normal research sessions, paper writing, single-agent tasks.
+    """
+    import json
+
+    mcp_file = Path(".mcp.json")
+    if not mcp_file.exists():
+        console.print("[red].mcp.json not found in current directory[/red]")
+        raise typer.Exit(1)
+
+    config = json.loads(mcp_file.read_text())
+    cf = config.get("mcpServers", {}).get("claude-flow", {})
+    if not cf:
+        console.print("[red]claude-flow not found in .mcp.json[/red]")
+        raise typer.Exit(1)
+
+    cf.pop("disabled", None)
+    mcp_file.write_text(json.dumps(config, indent=2) + "\n")
+    console.print("[green]claude-flow (ruflo) enabled.[/green]")
+    console.print(
+        "[yellow]⚠ This loads 200+ tools per message — token usage will increase substantially.[/yellow]"
+    )
+    console.print("[dim]Restart Claude Code for the change to take effect.[/dim]")
+    console.print("[dim]Run 'ricet disable-ruflo' when done with complex tasks.[/dim]")
+
+
+@app.command(name="disable-ruflo")
+def disable_ruflo():
+    """Disable the claude-flow (ruflo) MCP server to reduce token consumption."""
+    import json
+
+    mcp_file = Path(".mcp.json")
+    if not mcp_file.exists():
+        console.print("[red].mcp.json not found in current directory[/red]")
+        raise typer.Exit(1)
+
+    config = json.loads(mcp_file.read_text())
+    cf = config.get("mcpServers", {}).get("claude-flow", {})
+    if not cf:
+        console.print("[red]claude-flow not found in .mcp.json[/red]")
+        raise typer.Exit(1)
+
+    cf["disabled"] = True
+    mcp_file.write_text(json.dumps(config, indent=2) + "\n")
+    console.print("[green]claude-flow (ruflo) disabled.[/green]")
+    console.print("[dim]Restart Claude Code for the change to take effect.[/dim]")
+
+
 @app.command(name="mcp-search")
 def mcp_search(
     need: str = typer.Argument(help="What you need (e.g. 'access PubMed papers')"),
@@ -2807,7 +2862,11 @@ def paper(
         help="Action: build, update, modernize, check, adapt-style"
     ),
     reference: Path = typer.Option(
-        None, "--reference", help="Path to reference paper for adapt-style"
+        None, "--reference", help="Path to reference paper (style donor) for adapt-style"
+    ),
+    source: Path = typer.Option(
+        None, "--source", "-s",
+        help="Path to source text/tex to rewrite for adapt-style (default: paper/main.tex)",
     ),
 ):
     """Paper pipeline commands."""
@@ -2874,9 +2933,13 @@ def paper(
         console.print("[bold]Adapting paper style from reference...[/bold]")
         from core.style_transfer import rewrite_in_reference_style
 
-        paper_tex = Path("paper/main.tex")
-        if not paper_tex.exists():
-            console.print("[red]paper/main.tex not found[/red]")
+        # Resolve source file: --source flag, or default to paper/main.tex
+        source_file = source if source else Path("paper/main.tex")
+        if not source_file.exists():
+            console.print(
+                f"[red]Source file not found: {source_file}\n"
+                "  Pass --source /path/to/file.txt to specify a different source.[/red]"
+            )
             raise typer.Exit(1)
         if reference is None:
             console.print("[red]--reference is required for adapt-style[/red]")
@@ -2885,7 +2948,7 @@ def paper(
             console.print(f"[red]Reference file not found: {reference}[/red]")
             raise typer.Exit(1)
 
-        source_text = paper_tex.read_text()
+        source_text = source_file.read_text(errors="replace")
 
         # Handle PDF references: extract text with pdftotext or fallback
         if reference.suffix.lower() == ".pdf":
@@ -2940,7 +3003,7 @@ def paper(
         console.print(f"  Tense: {tp.tense}")
 
         if result.get("rewritten"):
-            out_path = Path("paper/main_adapted.tex")
+            out_path = source_file.with_stem(source_file.stem + "_adapted")
             out_path.write_text(result["rewritten"])
             console.print(f"\n[green]Adapted text written to {out_path}[/green]")
             if result["plagiarism_flags"]:
@@ -3490,8 +3553,19 @@ def adopt(
     name: str = typer.Option(None, "--name", "-n", help="Project name"),
     path: Path = typer.Option(None, "--path", help="Target directory"),
     no_fork: bool = typer.Option(False, "--no-fork", help="Clone instead of fork"),
+    branch: str = typer.Option(
+        None,
+        "--branch",
+        "-b",
+        help="Branch name for this user (auto-derived from git email if omitted)",
+    ),
 ):
-    """Adopt an existing repository as a Ricet project."""
+    """Adopt an existing repository as a Ricet project.
+
+    Creates a personal branch for this user so multiple collaborators can work
+    on the same repo independently. Use ``ricet morning-sync`` to merge all
+    user branches into main.
+    """
     from core.adopt import adopt_repo
 
     console.print(f"[bold]Adopting: {source}[/bold]")
@@ -3501,6 +3575,7 @@ def adopt(
             project_name=name,
             target_path=path,
             fork=not no_fork,
+            branch=branch,
         )
         console.print(f"[green]Project adopted at {project_dir}[/green]")
         console.print("[bold]Next steps:[/bold]")
@@ -3512,6 +3587,107 @@ def adopt(
     except (RuntimeError, FileNotFoundError) as exc:
         console.print(f"[red]Error: {exc}[/red]")
         raise typer.Exit(1)
+
+
+@app.command(name="morning-sync")
+def morning_sync(
+    main_branch: str = typer.Option("main", "--main", help="Integration branch name"),
+    no_push: bool = typer.Option(False, "--no-push", help="Merge locally but don't push"),
+):
+    """Merge all user-* branches into main (run every morning).
+
+    Pulls the latest from each collaborator's personal branch and fast-forwards
+    or merges it into the main branch. Conflicts are reported and skipped.
+    """
+    from core.collaboration import morning_sync as _morning_sync
+
+    console.print(f"[bold]Morning sync → {main_branch}[/bold]")
+    results = _morning_sync(main_branch=main_branch, push=not no_push)
+    if not results:
+        console.print("[dim]No user branches found to merge.[/dim]")
+        return
+    for branch_name, status in results.items():
+        if status == "merged":
+            console.print(f"  [green]✓ {branch_name}[/green]")
+        elif status == "conflict":
+            console.print(f"  [red]✗ {branch_name} — conflict (skipped)[/red]")
+        else:
+            console.print(f"  [yellow]~ {branch_name}: {status}[/yellow]")
+    merged = sum(1 for s in results.values() if s == "merged")
+    console.print(f"[bold]Done: {merged}/{len(results)} branches merged.[/bold]")
+
+
+@app.command()
+def sync(
+    push: bool = typer.Option(True, "--push/--no-push", help="Push after pull"),
+):
+    """Pull & rebase the current branch, then push. Safe daily workflow command."""
+    from core.collaboration import sync_before_start
+
+    console.print("[bold]Syncing current branch...[/bold]")
+    ok = sync_before_start()
+    if ok:
+        console.print("[green]Up to date.[/green]")
+        if push:
+            import subprocess
+
+            r = subprocess.run(
+                ["git", "push"],
+                capture_output=True,
+                text=True,
+                cwd=str(Path.cwd()),
+            )
+            if r.returncode == 0:
+                console.print("[green]Pushed.[/green]")
+            elif "Everything up-to-date" in r.stderr or "Everything up-to-date" in r.stdout:
+                console.print("[dim]Nothing to push.[/dim]")
+            else:
+                console.print(f"[yellow]Push skipped: {r.stderr.strip()}[/yellow]")
+    else:
+        console.print("[red]Sync failed (conflict or no remote). Resolve manually.[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+def chub(
+    action: str = typer.Argument(help="Action: search, get, annotate, feedback"),
+    query_or_id: str = typer.Argument(help="Search query or doc ID"),
+    extra: str = typer.Argument(None, help="Extra argument (note text, up/down)"),
+    lang: str = typer.Option("py", "--lang", "-l", help="Language variant: py or js"),
+    full: bool = typer.Option(False, "--full", help="Fetch full doc (not just summary)"),
+):
+    """Query context-hub for versioned API documentation.
+
+    \b
+    Examples:
+      ricet chub search openai                # find available docs
+      ricet chub get openai --lang py         # fetch Python API docs
+      ricet chub get openai --full            # fetch complete reference
+      ricet chub annotate openai "use v2 API" # add a local note
+      ricet chub feedback openai up           # rate docs as helpful
+    """
+    import shutil
+    import subprocess
+
+    chub_bin = shutil.which("chub")
+    if not chub_bin:
+        console.print(
+            "[red]chub not found. Run [bold]ricet init[/bold] to install it, "
+            "or: npm install -g @aisuite/chub[/red]"
+        )
+        raise typer.Exit(1)
+
+    cmd = ["chub", action, query_or_id]
+    if action == "get":
+        cmd += ["--lang", lang]
+        if full:
+            cmd += ["--full"]
+    if extra:
+        cmd.append(extra)
+
+    result = subprocess.run(cmd, capture_output=False)
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
 
 
 @app.command()

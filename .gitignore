@@ -16,6 +16,11 @@ htmlcov/
 .secrets
 /secrets/
 
+# Slack / bot tokens (never commit these)
+claudebot_token.txt
+slack_token.txt
+*_token.txt
+
 *.aux
 *.bbl
 *.bcf

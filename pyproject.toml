@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "ricet"
@@ -77,8 +77,17 @@ all = [
 [project.scripts]
 ricet = "cli.main:app"
 
-[tool.setuptools.packages.find]
-include = ["cli*", "core*"]
+[tool.hatch.build.targets.wheel]
+packages = ["cli", "core"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov",
+    "black",
+    "isort",
+    "mypy",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

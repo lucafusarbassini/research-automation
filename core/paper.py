@@ -11,14 +11,15 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # LaTeX tools required for paper compilation
+# tectonic is preferred (single binary, auto-downloads packages).
+# lualatex + biber is the traditional alternative.
 REQUIRED_LATEX_TOOLS = {
-    "lualatex": "LaTeX compiler (LuaLaTeX for font support)",
+    "tectonic|lualatex": "LaTeX compiler (tectonic preferred, lualatex fallback)",
     "biber": "Bibliography processor (BibLaTeX backend)",
-    "make": "Build system",
 }
 
 OPTIONAL_LATEX_TOOLS = {
-    "latexmk": "Automated LaTeX build tool",
+    "make": "Build system (for Makefile-based compilation)",
     "gs": "Ghostscript (PDF compression via make small)",
     "latexdiff": "Revision diff generation",
 }
@@ -27,45 +28,32 @@ OPTIONAL_LATEX_TOOLS = {
 def check_latex_dependencies(*, verbose: bool = False) -> tuple[bool, list[str]]:
     """Check that required LaTeX tools are installed.
 
-    Args:
-        verbose: If True, also report optional missing tools.
+    Tool keys may use ``|`` to specify alternatives (e.g. ``tectonic|lualatex``).
 
     Returns:
         Tuple of (all_required_present, list_of_error_messages).
     """
     errors: list[str] = []
     warnings: list[str] = []
-    system = platform.system()
 
-    for tool, description in REQUIRED_LATEX_TOOLS.items():
-        if shutil.which(tool) is None:
-            errors.append(f"  - {tool}: {description}")
+    for tool_spec, description in REQUIRED_LATEX_TOOLS.items():
+        alternatives = tool_spec.split("|")
+        if not any(shutil.which(t) for t in alternatives):
+            errors.append(f"  - {' or '.join(alternatives)}: {description}")
 
     if verbose:
-        for tool, description in OPTIONAL_LATEX_TOOLS.items():
-            if shutil.which(tool) is None:
-                warnings.append(f"  - {tool}: {description}")
+        for tool_spec, description in OPTIONAL_LATEX_TOOLS.items():
+            alternatives = tool_spec.split("|")
+            if not any(shutil.which(t) for t in alternatives):
+                warnings.append(f"  - {' or '.join(alternatives)}: {description}")
 
     messages: list[str] = []
     if errors:
         messages.append("Required LaTeX tools not found:\n" + "\n".join(errors))
-        if system == "Linux":
-            messages.append(
-                "Install with:\n"
-                "  mamba install -c conda-forge texlive-core texlive-luatex biber\n"
-                "  Or ask sysadmin: apt install texlive-full"
-            )
-        elif system == "Darwin":
-            messages.append(
-                "Install with:\n"
-                "  brew install --cask mactex  # includes lualatex + biber\n"
-                "or download from https://tug.org/mactex/"
-            )
-        elif system == "Windows":
-            messages.append(
-                "Install MiKTeX from https://miktex.org/download\n"
-                "or TeX Live from https://tug.org/texlive/"
-            )
+        messages.append(
+            "Install with: ricet init (auto-installs tectonic + biber)\n"
+            "  Or manually: curl -sL https://drop-sh.fullyjustified.net | sh"
+        )
 
     if verbose and warnings:
         messages.append("Optional tools not found (non-fatal):\n" + "\n".join(warnings))
@@ -182,44 +170,73 @@ def list_citations(bib_file: Path = BIB_FILE) -> list[str]:
 
 
 def compile_paper(paper_dir: Path = PAPER_DIR) -> bool:
-    """Compile the LaTeX paper using make.
+    """Compile the LaTeX paper.
 
-    Runs a pre-flight check for required LaTeX tools before attempting
-    compilation.
+    Prefers tectonic (single command, auto-downloads packages).
+    Falls back to ``make all`` if tectonic is unavailable.
 
     Returns:
         True if compilation succeeded.
     """
-    # Pre-flight: check that LaTeX toolchain is available
     deps_ok, dep_messages = check_latex_dependencies(verbose=True)
     if not deps_ok:
         for msg in dep_messages:
             logger.error(msg)
         return False
 
-    makefile = paper_dir / "Makefile"
-    if not makefile.exists():
-        logger.error("Makefile not found in %s", paper_dir)
+    main_tex = paper_dir / "main.tex"
+    if not main_tex.exists():
+        logger.error("main.tex not found in %s", paper_dir)
         return False
 
-    try:
-        subprocess.run(
-            ["make", "all"],
-            cwd=paper_dir,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        logger.info("Paper compiled successfully")
-        return True
-    except subprocess.CalledProcessError as e:
-        logger.error("Paper compilation failed:\n%s", e.stderr)
-        return False
+    # Prefer tectonic
+    if shutil.which("tectonic"):
+        try:
+            subprocess.run(
+                ["tectonic", "main.tex"],
+                cwd=paper_dir,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+            logger.info("Paper compiled successfully (tectonic)")
+            return True
+        except subprocess.CalledProcessError as e:
+            logger.error("tectonic compilation failed:\n%s", e.stderr)
+            return False
+        except subprocess.TimeoutExpired:
+            logger.error("tectonic compilation timed out")
+            return False
+
+    # Fallback: make
+    if shutil.which("make") and (paper_dir / "Makefile").exists():
+        try:
+            subprocess.run(
+                ["make", "main"],
+                cwd=paper_dir,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            logger.info("Paper compiled successfully (make)")
+            return True
+        except subprocess.CalledProcessError as e:
+            logger.error("make compilation failed:\n%s", e.stderr)
+            return False
+
+    logger.error("No compilation tool available (need tectonic or make + lualatex)")
+    return False
 
 
 def clean_paper(paper_dir: Path = PAPER_DIR) -> None:
     """Clean LaTeX build artifacts."""
-    subprocess.run(["make", "clean"], cwd=paper_dir, capture_output=True)
+    for pattern in ("*.aux", "*.bbl", "*.bcf", "*.blg", "*.log", "*.out",
+                    "*.run.xml", "*.toc", "*.fls", "*.fdb_latexmk"):
+        for f in paper_dir.glob(pattern):
+            f.unlink(missing_ok=True)
+    if shutil.which("make") and (paper_dir / "Makefile").exists():
+        subprocess.run(["make", "clean"], cwd=paper_dir, capture_output=True)
 
 
 def check_figure_references(paper_dir: Path = PAPER_DIR) -> list[str]:

@@ -89,6 +89,93 @@ class OnboardingAnswers:
     needs_mobile: bool = True
 
 
+def _install_tectonic(system: str, print_fn) -> bool:
+    """Download and install tectonic binary."""
+    import tarfile
+    import tempfile
+    import urllib.request
+
+    arch_map = {
+        ("Linux", "x86_64"): "x86_64-unknown-linux-gnu",
+        ("Linux", "aarch64"): "aarch64-unknown-linux-gnu",
+        ("Darwin", "x86_64"): "x86_64-apple-darwin",
+        ("Darwin", "arm64"): "aarch64-apple-darwin",
+    }
+    machine = platform.machine()
+    key = (system, machine)
+    if key not in arch_map:
+        print_fn(f"  tectonic: unsupported platform {system}/{machine}")
+        return False
+
+    version = "0.15.0"
+    triple = arch_map[key]
+    url = (
+        f"https://github.com/tectonic-typesetting/tectonic/releases/download/"
+        f"tectonic%40{version}/tectonic-{version}-{triple}.tar.gz"
+    )
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tgz = Path(tmpdir) / "tectonic.tar.gz"
+            urllib.request.urlretrieve(url, tgz)
+            with tarfile.open(tgz) as tf:
+                tf.extractall(tmpdir)
+            binary = Path(tmpdir) / "tectonic"
+            # Install to user-local bin or conda bin
+            for dest_dir in (
+                Path(shutil.which("python3") or shutil.which("python") or "/usr/local/bin").parent,
+                Path.home() / ".local" / "bin",
+            ):
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                dest = dest_dir / "tectonic"
+                shutil.copy2(binary, dest)
+                dest.chmod(0o755)
+                if shutil.which("tectonic"):
+                    print_fn(f"  tectonic: installed to {dest}")
+                    return True
+    except Exception as e:
+        print_fn(f"  tectonic: install failed ({e})")
+    return False
+
+
+def _install_biber(system: str, print_fn) -> bool:
+    """Download and install biber binary."""
+    import tarfile
+    import tempfile
+    import urllib.request
+
+    # biber 2.17 is compatible with tectonic's bundled biblatex 3.17
+    version = "2.17"
+    if system == "Darwin":
+        suffix = "OSX_Intel/biber-darwin_x86_64.tar.gz"
+    else:
+        suffix = "Linux/biber-linux_x86_64.tar.gz"
+    url = (
+        f"https://sourceforge.net/projects/biblatex-biber/files/"
+        f"biblatex-biber/{version}/binaries/{suffix}/download"
+    )
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tgz = Path(tmpdir) / "biber.tar.gz"
+            urllib.request.urlretrieve(url, tgz)
+            with tarfile.open(tgz) as tf:
+                tf.extractall(tmpdir)
+            binary = Path(tmpdir) / "biber"
+            for dest_dir in (
+                Path(shutil.which("python3") or shutil.which("python") or "/usr/local/bin").parent,
+                Path.home() / ".local" / "bin",
+            ):
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                dest = dest_dir / "biber"
+                shutil.copy2(binary, dest)
+                dest.chmod(0o755)
+                if shutil.which("biber"):
+                    print_fn(f"  biber: installed to {dest}")
+                    return True
+    except Exception as e:
+        print_fn(f"  biber: install failed ({e})")
+    return False
+
+
 def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
     """Auto-install critical system dependencies that ricet needs.
 
@@ -101,30 +188,31 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
     results: dict[str, bool] = {}
     system = platform.system()
 
-    # 1. LaTeX (lualatex + biber) - needed for paper pipeline
-    if shutil.which("lualatex") and shutil.which("biber"):
-        print_fn("  lualatex + biber: already installed")
-        results["lualatex"] = True
+    # 1. LaTeX - needed for paper pipeline
+    #    Strategy: tectonic (single binary, auto-downloads packages) + biber
+    if shutil.which("tectonic") and shutil.which("biber"):
+        print_fn("  tectonic + biber: already installed")
+        results["latex"] = True
     else:
-        print_fn("  lualatex/biber: installing texlive...")
-        installed = False
-        for pkg_mgr in ("mamba", "conda"):
-            if shutil.which(pkg_mgr):
-                try:
-                    subprocess.run(
-                        [pkg_mgr, "install", "-y", "-c", "conda-forge",
-                         "texlive-core", "texlive-luatex", "biber"],
-                        capture_output=True, timeout=300,
-                    )
-                    if shutil.which("lualatex"):
-                        print_fn(f"  lualatex: installed via {pkg_mgr}")
-                        installed = True
-                        break
-                except Exception:
-                    pass
-        if not installed:
-            print_fn("  lualatex: not found (try: mamba install -c conda-forge texlive-core texlive-luatex biber)")
-        results["lualatex"] = installed
+        installed_tectonic = bool(shutil.which("tectonic"))
+        installed_biber = bool(shutil.which("biber"))
+
+        if not installed_tectonic:
+            print_fn("  tectonic: installing...")
+            installed_tectonic = _install_tectonic(system, print_fn)
+
+        if not installed_biber:
+            print_fn("  biber: installing...")
+            installed_biber = _install_biber(system, print_fn)
+
+        if installed_tectonic and installed_biber:
+            print_fn("  tectonic + biber: ready")
+        elif installed_tectonic:
+            print_fn("  tectonic: ready, biber: not found (bibliography won't resolve)")
+        else:
+            print_fn("  tectonic: not found (paper compilation unavailable)")
+            print_fn("    Manual install: curl -sL https://drop-sh.fullyjustified.net | sh")
+        results["latex"] = installed_tectonic
 
     # 2. Make - needed for paper Makefile
     if shutil.which("make"):
@@ -176,6 +264,28 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
         print_fn("  docker: not installed (needed for overnight mode)")
         print_fn("    Install: https://docs.docker.com/get-docker/")
         results["docker"] = False
+
+    # 5a. uv - fast Python package manager (SOTA replacement for pip)
+    if shutil.which("uv"):
+        print_fn("  uv: available")
+        results["uv"] = True
+    else:
+        print_fn("  uv: installing...")
+        try:
+            subprocess.run(
+                ["bash", "-c", "curl -LsSf https://astral.sh/uv/install.sh | sh"],
+                capture_output=True, timeout=60,
+            )
+            # uv installs to ~/.local/bin which may not be on PATH yet
+            uv_path = Path.home() / ".local" / "bin" / "uv"
+            results["uv"] = uv_path.exists() or bool(shutil.which("uv"))
+            if results["uv"]:
+                print_fn("  uv: installed")
+            else:
+                print_fn("  uv: install failed (optional; pip will be used instead)")
+        except Exception:
+            print_fn("  uv: install failed (optional; pip will be used instead)")
+            results["uv"] = False
 
     # 5b. screen - needed for background sessions and remote phone access
     if shutil.which("screen"):
@@ -281,6 +391,36 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
             results["qrcode"] = True
         except Exception:
             results["qrcode"] = False
+
+    # 8. context-hub (chub) - versioned API docs for coding agents
+    #    Requires Node.js >= 18.  Distributed via npm as @aisuite/chub.
+    if shutil.which("chub"):
+        print_fn("  chub (context-hub): available")
+        results["chub"] = True
+    else:
+        npm = shutil.which("npm")
+        if npm:
+            print_fn("  chub (context-hub): installing via npm...")
+            try:
+                r = subprocess.run(
+                    [npm, "install", "-g", "@aisuite/chub"],
+                    capture_output=True, timeout=120,
+                )
+                results["chub"] = bool(shutil.which("chub"))
+                if results["chub"]:
+                    print_fn("  chub: installed")
+                else:
+                    print_fn("  chub: install may have succeeded; restart shell if 'chub' not found")
+                    results["chub"] = True  # npm didn't error; assume OK
+            except Exception:
+                print_fn("  chub: install failed (run: npm install -g @aisuite/chub)")
+                results["chub"] = False
+        else:
+            print_fn(
+                "  chub (context-hub): skipped (Node.js/npm not found; "
+                "install Node ≥18 then: npm install -g @aisuite/chub)"
+            )
+            results["chub"] = False
 
     return results
 
@@ -969,6 +1109,29 @@ CREDENTIAL_REGISTRY: list[tuple[str, str, str, str]] = [
         "Google Gemini API key [FREE tier: 5-15 RPM, no credit card needed]",
         "https://aistudio.google.com/apikey → sign in with Google account → Create API key.\n"
         "  Free tier: up to 15 req/min. Paid: enable billing in Google Cloud for higher limits.",
+        "core",
+    ),
+    # --- Slack (figure delivery & notifications) ---
+    (
+        "SLACK_BOT_TOKEN",
+        "Slack bot token [FREE] (send plots & alerts to Slack)",
+        "Enables ricet to upload figures to Slack automatically.\n"
+        "  1. Create a free Slack workspace (or use an existing one)\n"
+        "  2. Go to https://api.slack.com/apps → Create New App → From Scratch\n"
+        "  3. OAuth & Permissions → Scopes → Bot Token Scopes → Add:\n"
+        "       chat:write, files:write, channels:read, groups:read\n"
+        "  4. Install App to Workspace → copy the Bot User OAuth Token (starts with xoxb-)\n"
+        "  5. Create a channel (e.g. #claude_plots) and invite your bot:\n"
+        "       /invite @YourBotName\n"
+        "  IMPORTANT: token must start with xoxb- (Bot Token), NOT xapp- (App Token)",
+        "core",
+    ),
+    (
+        "SLACK_PLOTS_CHANNEL",
+        "Slack channel for figure delivery [FREE] (e.g. claude_plots)",
+        "Name of the Slack channel where ricet will post plots and figures.\n"
+        "  Default: claude_plots — create this channel in your workspace and\n"
+        "  invite your bot with /invite @YourBotName",
         "core",
     ),
     # --- ML / Experiment tracking ---

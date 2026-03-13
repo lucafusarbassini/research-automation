@@ -1,6 +1,6 @@
 # Installation
 
-ricet supports three installation methods: pip (recommended), Docker, and from source.
+ricet supports three installation methods: uv/pip (recommended), Docker, and from source.
 
 ---
 
@@ -9,7 +9,7 @@ ricet supports three installation methods: pip (recommended), Docker, and from s
 All installation methods require:
 
 - **Python 3.11+**
-- **Node.js 20+** (for Claude Code CLI)
+- **Node.js 20+** (for Claude Code CLI and context-hub)
 - **Git**
 
 Install Claude Code globally before proceeding:
@@ -35,12 +35,17 @@ export ANTHROPIC_API_KEY="your-key-here"
 
 ---
 
-## Method 1: pip Install (Recommended)
+## Method 1: uv Install (Recommended)
+
+ricet uses [uv](https://github.com/astral-sh/uv) for fast, reproducible package management. uv is auto-installed during `ricet init`.
 
 ### Basic install
 
 ```bash
-pip install -e .
+# Install uv first (if needed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+uv pip install ricet
 ```
 
 This installs the core CLI with minimal dependencies: `typer`, `rich`, `pyyaml`, and `python-dotenv`.
@@ -48,7 +53,7 @@ This installs the core CLI with minimal dependencies: `typer`, `rich`, `pyyaml`,
 ### With ML extras
 
 ```bash
-pip install -e ".[ml]"
+uv pip install "ricet[ml]"
 ```
 
 Adds `numpy`, `pandas`, `scipy`, `scikit-learn`, `matplotlib`, and `seaborn`.
@@ -56,7 +61,7 @@ Adds `numpy`, `pandas`, `scipy`, `scikit-learn`, `matplotlib`, and `seaborn`.
 ### With slides extras
 
 ```bash
-pip install -e ".[slides]"
+uv pip install "ricet[slides]"
 ```
 
 Adds `python-pptx`, `google-genai` (for Nano Banana Pro schematics), and `Pillow`.

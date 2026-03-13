@@ -20,6 +20,7 @@ def adopt_repo(
     project_name: str | None = None,
     target_path: str | Path | None = None,
     fork: bool = True,
+    branch: str | None = None,
     run_cmd=None,
 ) -> Path:
     """Transform an existing repo into a Ricet project.
@@ -29,6 +30,8 @@ def adopt_repo(
         project_name: Name for the project (derived from URL/path if None).
         target_path: Where to place the repo locally (defaults to cwd).
         fork: If True and *source* is a URL, fork via ``gh repo fork``.
+        branch: Optional branch name to create/checkout for this user.
+                If the branch exists, it is checked out; otherwise created.
         run_cmd: Optional ``callable(cmd_list, **kw) -> CompletedProcess``
                  override for testing.
 
@@ -91,6 +94,15 @@ def adopt_repo(
         if not project_dir.is_dir():
             raise FileNotFoundError(f"Source directory not found: {source}")
 
+    # Branch creation / checkout for this user
+    if branch:
+        _create_or_checkout_branch(project_dir, branch, run_cmd)
+    else:
+        # Auto-generate branch from git user identity
+        auto_branch = _default_branch_name(run_cmd)
+        if auto_branch:
+            _create_or_checkout_branch(project_dir, auto_branch, run_cmd)
+
     # Overlay ricet structure
     _overlay_structure(project_dir)
 
@@ -110,6 +122,56 @@ def adopt_repo(
     )
 
     return project_dir
+
+
+def _default_branch_name(run_cmd) -> str | None:
+    """Derive a branch name from git user.email (e.g. 'user-luca')."""
+    try:
+        r = run_cmd(["git", "config", "user.email"])
+        if r.returncode == 0 and r.stdout.strip():
+            local = r.stdout.strip().split("@")[0]
+            # sanitise to git-safe characters
+            safe = "".join(c if c.isalnum() or c == "-" else "-" for c in local)
+            return f"user-{safe.strip('-')}"
+    except Exception:
+        pass
+    return None
+
+
+def _create_or_checkout_branch(
+    project_dir: Path, branch: str, run_cmd
+) -> None:
+    """Create or checkout *branch* in *project_dir*.
+
+    If the branch already exists remotely, tracks it; otherwise creates a new
+    local branch and pushes it to ``origin``.
+    """
+    cwd = str(project_dir)
+
+    # Check remote
+    r = run_cmd(["git", "ls-remote", "--heads", "origin", branch], cwd=cwd)
+    exists_remote = r.returncode == 0 and branch in r.stdout
+
+    # Check local
+    r = run_cmd(["git", "branch", "--list", branch], cwd=cwd)
+    exists_local = r.returncode == 0 and branch in r.stdout
+
+    if exists_local:
+        run_cmd(["git", "checkout", branch], cwd=cwd)
+        if exists_remote:
+            run_cmd(["git", "pull", "--rebase"], cwd=cwd)
+    elif exists_remote:
+        run_cmd(
+            ["git", "checkout", "-b", branch, f"origin/{branch}"],
+            cwd=cwd,
+        )
+    else:
+        r = run_cmd(["git", "checkout", "-b", branch], cwd=cwd)
+        if r.returncode == 0:
+            # Push and track
+            run_cmd(["git", "push", "-u", "origin", branch], cwd=cwd)
+
+    logger.info("adopt: on branch '%s'", branch)
 
 
 def _overlay_structure(project_dir: Path) -> None:
