@@ -55,6 +55,7 @@ Captured automatically from past corrections. Obey these without question:
   - `defaults/raggable_mcps.md` — same, indexed for sentence-transformers RAG (`ricet memory search` finds MCPs here once indexed)
   - Install pattern: `npx -y <package>` or add entry to `.mcp.json`
 - **Accumulated research knowledge**: `knowledge/ENCYCLOPEDIA.md` — use `ricet memory search <query>` before answering domain questions.
+- **Project decision history**: `knowledge/DECISION_LOG.md` — read when making architectural or methodological choices to avoid re-litigating past decisions.
 
 ## Token economy
 
