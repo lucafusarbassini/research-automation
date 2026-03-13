@@ -774,9 +774,28 @@ def init(
     except Exception as exc:
         console.print(f"  [yellow]MCP installation skipped: {exc}[/yellow]")
 
-    # --- Step 9: Start mobile access with cloudflared tunnel ---
-    console.print("\n[bold cyan]Step 9: Starting mobile access...[/bold cyan]")
-    _launch_tunnel_background(console)
+    # --- Step 9: Mobile access setup (named tunnel or quick tunnel) ---
+    console.print("\n[bold cyan]Step 9: Setting up mobile access...[/bold cyan]")
+    if answers.tunnel_domain:
+        console.print(f"  Setting up named Cloudflare tunnel → {answers.tunnel_domain}")
+        from core.onboarding import setup_named_tunnel, write_mobile_env
+        tunnel_result = setup_named_tunnel(
+            answers.tunnel_domain,
+            print_fn=lambda s: console.print(f"  {s}"),
+        )
+        if tunnel_result["ok"]:
+            console.print(f"  [green]Permanent URL: {tunnel_result['url']}[/green]")
+            write_mobile_env(project_path, answers)
+            console.print(f"  Run: [bold]ricet mobile tunnel[/bold] to activate")
+        else:
+            console.print(f"  [yellow]Named tunnel setup failed: {tunnel_result['error']}[/yellow]")
+            console.print("  Falling back to quick tunnel mode.")
+            _launch_tunnel_background(console)
+    else:
+        _launch_tunnel_background(console)
+    if answers.screen_session:
+        from core.onboarding import write_mobile_env
+        write_mobile_env(project_path, answers)
 
     # --- Done ---
     console.print(f"\n[bold green]Project ready![/bold green]")
@@ -3200,8 +3219,17 @@ def mobile(
             console.print(f"[red]Failed: {exc}[/red]")
             raise typer.Exit(1)
     elif action == "tunnel":
-        # Start mobile server (no TLS — tunnel handles TLS) + cloudflared tunnel
-        console.print("[bold]Starting mobile server + public tunnel...[/bold]")
+        # Auto-detect: use named tunnel if ~/.cloudflared/config.yml exists, else quick tunnel
+        _cf_config = Path.home() / ".cloudflared" / "config.yml"
+        _named = _cf_config.exists()
+        if _named:
+            import re as _re
+            _cfg_text = _cf_config.read_text()
+            _domain_m = _re.search(r"hostname:\s*(\S+)", _cfg_text)
+            _domain = _domain_m.group(1) if _domain_m else "(see config.yml)"
+            console.print(f"[bold]Starting mobile server + named tunnel → {_domain}...[/bold]")
+        else:
+            console.print("[bold]Starting mobile server + public tunnel...[/bold]")
         try:
             info = mobile_server.serve(host="127.0.0.1", port=port, tls=False)
             console.print(f"[green]{info}[/green]")
@@ -3238,15 +3266,28 @@ def mobile(
 
         console.print("[dim]Setting up cloudflared tunnel...[/dim]")
         from core.mobile import parse_tunnel_url, start_tunnel, generate_qr_terminal
+        import shutil as _sh2
+        _cf_bin = _sh2.which("cloudflared") or str(Path.home() / ".local" / "bin" / "cloudflared")
 
-        proc = start_tunnel(port=port)
-        public_url = parse_tunnel_url(proc)
-        if not public_url:
-            console.print(
-                "[red]Could not start tunnel. Check network connectivity.[/red]"
+        if _named and Path(_cf_bin).exists():
+            # Named tunnel: runs as a foreground service, URL is fixed
+            import subprocess as _sp2
+            proc = _sp2.Popen(
+                [_cf_bin, "tunnel", "run"],
+                stdout=_sp2.PIPE, stderr=_sp2.PIPE, text=True,
             )
-            mobile_server.stop()
-            raise typer.Exit(1)
+            public_url = f"https://{_domain}"
+            console.print(f"[dim]Named tunnel process started (PID {proc.pid})[/dim]")
+        else:
+            # Quick tunnel: ephemeral URL, parse from stderr
+            proc = start_tunnel(port=port)
+            public_url = parse_tunnel_url(proc)
+            if not public_url:
+                console.print(
+                    "[red]Could not start tunnel. Check network connectivity.[/red]"
+                )
+                mobile_server.stop()
+                raise typer.Exit(1)
 
         console.print(f"\n[bold green]Public URL (open on your phone):[/bold green]")
         console.print(f"  {public_url}")

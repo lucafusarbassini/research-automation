@@ -87,6 +87,9 @@ class OnboardingAnswers:
     paper_type: str = "journal-article"
     needs_website: bool = True
     needs_mobile: bool = True
+    # Mobile access
+    tunnel_domain: str = ""      # e.g. "ricet.yourdomain.com" — permanent named tunnel
+    screen_session: str = "ricet"  # GNU screen session name for live voice injection
 
 
 def _install_tectonic(system: str, print_fn) -> bool:
@@ -945,6 +948,20 @@ def collect_answers(
     answers.needs_website = True
     answers.needs_mobile = True
 
+    # --- Mobile / tunnel ---
+    tunnel_domain = prompt_fn(
+        "Cloudflare named tunnel domain for permanent mobile URL\n"
+        "  (e.g. ricet.yourdomain.com — requires cloudflared login done once)\n"
+        "  Leave empty to use ephemeral quick tunnels",
+        "",
+    ).strip()
+    answers.tunnel_domain = tunnel_domain
+
+    screen_name = prompt_fn(
+        "GNU screen session name for live voice injection", "ricet"
+    ).strip()
+    answers.screen_session = screen_name or "ricet"
+
     return answers
 
 
@@ -1382,6 +1399,90 @@ def collect_credentials(
     return credentials
 
 
+def setup_named_tunnel(
+    domain: str,
+    tunnel_name: str = "ricet",
+    port: int = 8777,
+    *,
+    print_fn=None,
+) -> dict:
+    """Create a named Cloudflare tunnel and write ~/.cloudflared/config.yml.
+
+    Idempotent: if the tunnel already exists it reuses it.
+    Returns {"ok": True, "url": "https://<domain>", "tunnel_id": ...}
+    or {"ok": False, "error": ...}.
+    """
+    import json
+    import re
+
+    if print_fn is None:
+        print_fn = print
+
+    cf = shutil.which("cloudflared")
+    if not cf:
+        return {"ok": False, "error": "cloudflared not found in PATH"}
+
+    # 1. Create tunnel (or find existing)
+    result = subprocess.run(
+        [cf, "tunnel", "create", tunnel_name],
+        capture_output=True, text=True,
+    )
+    tunnel_id: str = ""
+    if result.returncode == 0:
+        m = re.search(r"id\s+([\w-]{36})", result.stdout + result.stderr)
+        if m:
+            tunnel_id = m.group(1)
+        print_fn(f"  Created tunnel '{tunnel_name}' (id: {tunnel_id or '?'})")
+    elif "already exist" in (result.stderr + result.stdout).lower():
+        # Reuse existing tunnel
+        ls = subprocess.run(
+            [cf, "tunnel", "list", "--output", "json"],
+            capture_output=True, text=True,
+        )
+        if ls.returncode == 0:
+            try:
+                for t in json.loads(ls.stdout):
+                    if t.get("name") == tunnel_name:
+                        tunnel_id = t["id"]
+                        break
+            except (json.JSONDecodeError, KeyError):
+                pass
+        print_fn(f"  Reusing existing tunnel '{tunnel_name}' (id: {tunnel_id or '?'})")
+    else:
+        return {"ok": False, "error": result.stderr.strip() or "cloudflared tunnel create failed"}
+
+    if not tunnel_id:
+        return {"ok": False, "error": "Could not determine tunnel ID"}
+
+    # 2. Route DNS
+    dns_result = subprocess.run(
+        [cf, "tunnel", "route", "dns", tunnel_name, domain],
+        capture_output=True, text=True,
+    )
+    if dns_result.returncode == 0:
+        print_fn(f"  DNS routed: {domain} → tunnel")
+    else:
+        print_fn(f"  DNS routing warning: {dns_result.stderr.strip()[:120]}")
+
+    # 3. Write ~/.cloudflared/config.yml
+    config_dir = Path.home() / ".cloudflared"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    creds_file = config_dir / f"{tunnel_id}.json"
+    config_content = (
+        f"tunnel: {tunnel_id}\n"
+        f"credentials-file: {creds_file}\n"
+        "ingress:\n"
+        f"  - hostname: {domain}\n"
+        f"    service: http://localhost:{port}\n"
+        "  - service: http_status:404\n"
+    )
+    config_path = config_dir / "config.yml"
+    config_path.write_text(config_content)
+    print_fn(f"  Config written: {config_path}")
+
+    return {"ok": True, "url": f"https://{domain}", "tunnel_id": tunnel_id, "config_path": str(config_path)}
+
+
 def write_env_file(project_path: Path, credentials: dict[str, str]) -> Path:
     """Write credentials to secrets/.env.
 
@@ -1398,6 +1499,25 @@ def write_env_file(project_path: Path, credentials: dict[str, str]) -> Path:
     env_path.write_text("\n".join(lines) + "\n" if lines else "")
     logger.info("Credentials written to %s", env_path)
     return env_path
+
+
+def write_mobile_env(project_path: Path, answers: "OnboardingAnswers") -> None:
+    """Append mobile-specific env vars (screen session, tunnel domain) to .env."""
+    env_path = project_path / "secrets" / ".env"
+    env_path.parent.mkdir(parents=True, exist_ok=True)
+    additions: list[str] = []
+    if answers.screen_session:
+        additions.append(f"RICET_SCREEN_SESSION={answers.screen_session}")
+    if answers.tunnel_domain:
+        additions.append(f"RICET_TUNNEL_DOMAIN={answers.tunnel_domain}")
+    if not additions:
+        return
+    existing = env_path.read_text() if env_path.exists() else ""
+    new_lines = [a for a in additions if a.split("=")[0] not in existing]
+    if new_lines:
+        with env_path.open("a") as f:
+            f.write("\n# Mobile access\n" + "\n".join(new_lines) + "\n")
+        logger.info("Mobile env vars written to %s", env_path)
 
 
 def write_env_example(project_path: Path) -> Path:
