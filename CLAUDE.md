@@ -33,6 +33,12 @@ Use these tools naturally when relevant. For simple tasks, just work directly.
 
 Never save working files to the root folder. Use: `core/`, `cli/`, `tests/`, `docs/`, `config/`, `scripts/`, `knowledge/`, `state/`.
 
+## User-specific behavioral rules
+
+Captured automatically from past corrections. Obey these without question:
+
+@knowledge/RULES.md
+
 ## General rules
 
 - Do what is asked; nothing more, nothing less.

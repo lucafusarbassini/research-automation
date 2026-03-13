@@ -2374,7 +2374,7 @@ def agents():
 @app.command()
 def memory(
     action: str = typer.Argument(
-        help="Action: search, log-decision, export, import, stats"
+        help="Action: search, log-decision, export, import, stats, rules, add-rule"
     ),
     query: str = typer.Argument(
         "", help="Search query or text (for search / log-decision)"
@@ -2495,9 +2495,39 @@ def memory(
         else:
             console.print("[yellow]No encyclopedia found or empty.[/yellow]")
 
+    elif action == "rules":
+        # Show / manage knowledge/RULES.md
+        rules_file = Path("knowledge/RULES.md")
+        if not rules_file.exists():
+            console.print("[yellow]No RULES.md yet. Rules are captured automatically from your corrections.[/yellow]")
+        else:
+            lines = [l for l in rules_file.read_text().splitlines() if l.startswith("- ")]
+            console.print(f"[bold]Behavioral rules ({len(lines)}):[/bold]")
+            for line in lines:
+                console.print(f"  {line}")
+            console.print(f"\n[dim]Edit directly: {rules_file}[/dim]")
+
+    elif action == "add-rule":
+        if not query:
+            console.print("[red]Provide rule text.[/red]")
+            raise typer.Exit(1)
+        rules_file = Path("knowledge/RULES.md")
+        rules_file.parent.mkdir(parents=True, exist_ok=True)
+        if not rules_file.exists():
+            rules_file.write_text(
+                "# Behavioral Rules\n\nAutomatically captured from user corrections.\n\n"
+            )
+        existing = {l.strip("- \n") for l in rules_file.read_text().splitlines() if l.startswith("- ")}
+        if query in existing:
+            console.print("[yellow]Rule already exists.[/yellow]")
+        else:
+            with rules_file.open("a") as f:
+                f.write(f"- {query}\n")
+            console.print(f"[green]Rule added: {query}[/green]")
+
     else:
         console.print(f"[red]Unknown action: {action}[/red]")
-        console.print("Available: search, log-decision, export, import, stats")
+        console.print("Available: search, log-decision, export, import, stats, rules, add-rule")
         raise typer.Exit(1)
 
 

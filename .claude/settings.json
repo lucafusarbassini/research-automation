@@ -75,6 +75,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python3 scripts/meta_learn_hook.py",
+            "timeout": 3000,
+            "continueOnError": true
+          },
+          {
+            "type": "command",
             "command": "npx @claude-flow/cli@latest hooks route --task \"$PROMPT\"",
             "timeout": 5000,
             "continueOnError": true
