@@ -3087,7 +3087,8 @@ def paper(
 @app.command()
 def mobile(
     action: str = typer.Argument(
-        help="Action: serve, stop, pair, tunnel, connect-info, tokens, cert-regen, status"
+        "tunnel",
+        help="Action: tunnel (default), serve, stop, pair, connect-info, tokens, cert-regen, status"
     ),
     port: int = typer.Option(8777, "--port", "-p", help="Server port"),
     host: str = typer.Option("0.0.0.0", "--host", help="Bind address"),
@@ -3207,9 +3208,27 @@ def mobile(
         _cf_config = Path.home() / ".cloudflared" / "config.yml"
         _named = _cf_config.exists()
 
+        # Auto-detect screen session for task injection
+        import subprocess as _sp_screen
+        import os as _os_screen
+        _screen_name = _os_screen.environ.get("RICET_SCREEN_SESSION", "")
+        if not _screen_name:
+            _screen_out = _sp_screen.run(
+                ["screen", "-ls"], capture_output=True, text=True,
+            )
+            import re as _re_screen
+            _screen_matches = _re_screen.findall(r'\d+\.(\S+)', _screen_out.stdout)
+            # Prefer "research" session, fall back to first available
+            if "research" in _screen_matches:
+                _screen_name = "research"
+            elif _screen_matches:
+                _screen_name = _screen_matches[0]
+        if _screen_name:
+            console.print(f"[dim]Screen session: {_screen_name} (tasks will be injected)[/dim]")
+
         # Start mobile server on localhost (tailscale serve or CF tunnel will proxy to it)
         try:
-            info = mobile_server.serve(host="127.0.0.1", port=port, tls=False)
+            info = mobile_server.serve(host="127.0.0.1", port=port, tls=False, screen_session=_screen_name)
             console.print(f"[green]{info}[/green]")
         except OSError as exc:
             if "Address already in use" in str(exc):

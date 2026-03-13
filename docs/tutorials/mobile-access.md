@@ -1,396 +1,299 @@
 # Tutorial 7: Mobile Access
 
-This tutorial shows you how to set up mobile phone access to your ricet
-projects. You can submit tasks, check status, review progress, and
-send voice commands -- all from your phone's browser.
+This tutorial shows you how to control your research from your phone using
+Tailscale, GNU Screen, and Claude's remote-control feature. You can submit
+tasks via voice, check progress, and steer your Claude session -- all from
+your phone's browser, from anywhere.
 
 **Time:** ~15 minutes
 
 **Prerequisites:**
 - A project created with `ricet init` ([Tutorial 3](first-project.md))
-- Your computer and phone on the same network (for local access), or a public
-  server/tunneling setup (for remote access)
+- Tailscale installed on your computer (`ricet init` installs it automatically)
+- Tailscale app installed on your phone (free, [iOS](https://apps.apple.com/app/tailscale/id1470499037) / [Android](https://play.google.com/store/apps/details?id=com.tailscale.ipn))
+- Both devices signed into the same Tailscale account
 
 ---
 
 ## Table of Contents
 
-1. [How Mobile Access Works](#1-how-mobile-access-works)
-2. [Start the Mobile Server](#2-start-the-mobile-server)
+1. [Architecture Overview](#1-architecture-overview)
+2. [Set Up the Three Components](#2-set-up-the-three-components)
 3. [Connect from Your Phone](#3-connect-from-your-phone)
-4. [API Endpoints](#4-api-endpoints)
-5. [Authentication](#5-authentication)
-6. [Remote Access via Tunnel](#6-remote-access-via-tunnel)
-7. [Using a Bookmarklet or Shortcut](#7-using-a-bookmarklet-or-shortcut)
+4. [Submitting Tasks and Voice Commands](#4-submitting-tasks-and-voice-commands)
+5. [How Task Injection Works](#5-how-task-injection-works)
+6. [API Endpoints](#6-api-endpoints)
+7. [Authentication](#7-authentication)
 8. [Troubleshooting](#8-troubleshooting)
 
 ---
 
-## 1. How Mobile Access Works
+## 1. Architecture Overview
 
-The mobile module (`core/mobile.py`) runs a lightweight HTTPS API server on port
-8777 with self-signed TLS certificates. It uses only Python standard library
-modules (no Flask, no Django) so there are no extra dependencies.
+The mobile access system combines three components that run simultaneously:
 
-The server provides a Progressive Web App (PWA) at the root URL and nine API
-endpoints:
+| Component | What it does |
+|-----------|-------------|
+| **GNU Screen** | Keeps your Claude session alive even if you close the terminal |
+| **Remote Control** | Lets you send prompts to the running Claude session from another terminal |
+| **Tailscale + Mobile Server** | Exposes a PWA and API to your phone via your private Tailscale network |
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/` | PWA dashboard (installable mobile app) |
-| POST | `/task` | Submit a new task |
-| GET | `/status` | Get project status |
-| GET | `/sessions` | List sessions |
-| POST | `/voice` | Submit voice-transcribed text as a task |
-| GET | `/progress` | View recent task progress |
-| GET | `/projects` | List all registered ricet projects |
-| GET | `/project/status?name=X` | Get a specific project's status |
-| POST | `/project/task?name=X` | Submit a task to a specific project |
-| GET | `/connect-info` | TLS fingerprint and connection methods |
+```
+Phone (Tailscale) ──→ Tailscale serve ──→ Mobile server (:8777)
+                                              │
+                                              ├── PWA dashboard
+                                              ├── Voice commands
+                                              └── Task injection ──→ Screen session ──→ Claude
+```
 
-All responses are JSON, formatted for compact mobile display (strings truncated
-to 280 characters).
-
-The PWA includes four tabs (Dashboard, Tasks, Voice, Settings), works offline
-via a service worker, and can be installed to your phone's home screen.
+Tasks submitted from your phone are injected directly into the running Claude
+session inside Screen. Claude executes them as if you had typed them yourself.
 
 ---
 
-## 2. Start the Mobile Server
+## 2. Set Up the Three Components
 
-### From Python
-
-```python
-from core.mobile import start_server, MobileAuth
-
-# Without authentication (local network only)
-start_server(host="0.0.0.0", port=8777)
-
-# With authentication (recommended)
-auth = MobileAuth()
-token = auth.generate_token()
-print(f"Your access token: {token}")
-start_server(host="0.0.0.0", port=8777, auth=auth)
-```
-
-### From a script
-
-Create a quick startup script:
+### Step 1: Start a Screen session with Claude
 
 ```bash
-$ cat > start_mobile.py << 'EOF'
-#!/usr/bin/env python3
-from core.mobile import start_server, generate_mobile_url, MobileAuth
-import time
-
-auth = MobileAuth()
-url = generate_mobile_url(port=8777, auth=auth)
-print(f"Mobile access URL: {url}")
-print("Share this URL with your phone (copy or scan QR code)")
-print("Press Ctrl+C to stop")
-
-thread = start_server(host="0.0.0.0", port=8777, auth=auth)
-
-try:
-    while True:
-        time.sleep(1)
-except KeyboardInterrupt:
-    from core.mobile import stop_server
-    stop_server()
-    print("Server stopped.")
-EOF
-
-$ python3 start_mobile.py
-Mobile access URL: http://0.0.0.0:8777?token=abc123...
+screen -S research
+claude
 ```
 
-### Alongside overnight mode
+Claude is now running inside a persistent Screen session called `research`.
+Detach with **Ctrl+A then D** -- the session keeps running.
 
-You can run the mobile server in the background while overnight mode runs:
+### Step 2: Start the mobile tunnel
+
+In a **new terminal** (or reattach and open a split):
 
 ```bash
-# Terminal 1: Start mobile server
-$ python3 start_mobile.py &
-
-# Terminal 2: Start overnight mode
-$ ricet overnight --iterations 20
+ricet mobile
 ```
+
+This is equivalent to `ricet mobile tunnel` and will:
+
+1. Auto-detect your `research` Screen session
+2. Start the mobile API server on `localhost:8777`
+3. Run `tailscale serve` to proxy it to your Tailscale network over HTTPS
+4. Display a QR code and your Tailscale URL
+
+You should see output like:
+
+```
+Screen session: research (tasks will be injected)
+Server started on http://127.0.0.1:8777
+Starting Tailscale serve → tailnet HTTPS...
+
+Public URL (open on your phone):
+  https://your-machine.tail0ece0c.ts.net
+
+█▀▀▀▀▀▀▀█ ▄▄▄ █▀▀▀▀▀▀▀█
+█ █▀▀▀█ █ ▄ ▄ █ █▀▀▀█ █
+...
+```
+
+### Step 3: (Optional) Remote control from another terminal
+
+In yet another terminal:
+
+```bash
+claude /remote-control
+```
+
+This connects to the same Claude session and lets you send prompts to it
+interactively from any terminal. Useful for quick interventions without
+touching your phone.
+
+### Summary
+
+| Terminal | Command | Purpose |
+|----------|---------|---------|
+| 1 (Screen) | `screen -S research` then `claude` | Persistent Claude session |
+| 2 | `ricet mobile` | Mobile server + Tailscale tunnel |
+| 3 (optional) | `claude /remote-control` | Desktop remote control |
 
 ---
 
 ## 3. Connect from Your Phone
 
-### Step 1: Find your computer's local IP
+### Prerequisites
+
+1. Install the **Tailscale app** on your phone
+2. Sign in with the **same account** as your computer
+3. Toggle Tailscale **ON**
+
+### Open the PWA
+
+Open the URL shown by `ricet mobile` in your phone's browser:
+
+```
+https://your-machine.tail0ece0c.ts.net
+```
+
+Or scan the QR code displayed in the terminal.
+
+### Install as a home screen app
+
+The server provides a Progressive Web App (PWA) with four tabs (Dashboard,
+Tasks, Voice, Settings):
+
+- **iOS**: Open in Safari, tap Share, then "Add to Home Screen"
+- **Android**: Chrome shows an "Install" banner automatically, or use the menu
+
+The app works in standalone mode (no browser chrome) and supports offline
+graceful degradation.
+
+---
+
+## 4. Submitting Tasks and Voice Commands
+
+### From the PWA
+
+- **Tasks tab**: Type a task description and submit it. The task is injected
+  directly into your running Claude session.
+- **Voice tab**: Tap the microphone button, speak your command, and it gets
+  transcribed and submitted as a task.
+
+### From the command line (curl)
 
 ```bash
-$ hostname -I | awk '{print $1}'
-192.168.1.100
-```
+# Submit a text task
+curl -s https://your-machine.ts.net/task \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Generate a confusion matrix for the test set"}'
 
-### Step 2: Open the URL on your phone
-
-Open your phone's browser and navigate to:
-
-```
-http://192.168.1.100:8777?token=YOUR_TOKEN
-```
-
-> **Screenshot:** Phone browser showing the JSON response from the /status
-> endpoint with project status information displayed.
-
-### Step 3: Test with a status check
-
-Navigate to:
-```
-http://192.168.1.100:8777/status
-```
-
-You should see:
-```json
-{
-  "ok": true,
-  "status": "running",
-  "tasks_queued": 2,
-  "tasks_total": 5,
-  "_ts": "2026-02-01T23:15:00+00:00"
-}
+# Submit a voice-transcribed command
+curl -s https://your-machine.ts.net/voice \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "check how many epochs have completed"}'
 ```
 
 ---
 
-## 4. API Endpoints
+## 5. How Task Injection Works
 
-### Submit a task
+When the mobile server starts, it detects running Screen sessions (preferring
+one named `research`). When a task or voice command arrives:
 
-```bash
-# From phone browser or using a REST client app:
-POST http://192.168.1.100:8777/task
-Content-Type: application/json
-Authorization: Bearer YOUR_TOKEN
+1. The server calls `screen -S research -X stuff "<prompt>\r"`
+2. This types the prompt directly into the Claude session running inside Screen
+3. Claude receives it as a normal user message and executes it
+4. The task status is set to `"injected"` (not `"queued"`)
 
-{"prompt": "Generate a confusion matrix figure for the test results"}
-```
+If no Screen session is found, tasks are queued to `state/TODO.md` instead
+and picked up by the next overnight iteration.
 
-Response:
-```json
-{
-  "ok": true,
-  "task_id": "a1b2c3d4e5f6",
-  "status": "queued",
-  "_ts": "2026-02-01T23:15:00+00:00"
-}
-```
-
-### Check status
+You can also set the `RICET_SCREEN_SESSION` environment variable to target
+a specific session:
 
 ```bash
-GET http://192.168.1.100:8777/status
-Authorization: Bearer YOUR_TOKEN
+RICET_SCREEN_SESSION=my-session ricet mobile
 ```
-
-### View progress
-
-```bash
-GET http://192.168.1.100:8777/progress
-Authorization: Bearer YOUR_TOKEN
-```
-
-Response:
-```json
-{
-  "ok": true,
-  "entries": [
-    {"task_id": "a1b2c3d4e5f6", "prompt": "Generate a confusion...", "status": "queued"},
-    {"task_id": "f6e5d4c3b2a1", "prompt": "Run training...", "status": "queued"}
-  ],
-  "_ts": "2026-02-01T23:16:00+00:00"
-}
-```
-
-### Submit voice command
-
-```bash
-POST http://192.168.1.100:8777/voice
-Content-Type: application/json
-Authorization: Bearer YOUR_TOKEN
-
-{"text": "check how many epochs have completed"}
-```
-
-> **Screenshot:** Phone showing a simple interface (or REST client app) with
-> a text field for entering tasks and a "Submit" button.
 
 ---
 
-## 5. Authentication
+## 6. API Endpoints
 
-The mobile server uses bearer token authentication. Tokens are generated
-randomly (48 characters, URL-safe).
+All API responses are JSON with a `_ts` timestamp.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/` | PWA dashboard (installable mobile app) |
+| `POST` | `/task` | Submit a new task |
+| `GET` | `/status` | Server status and queue size |
+| `GET` | `/sessions` | List project sessions |
+| `POST` | `/voice` | Submit voice-transcribed text as a task |
+| `GET` | `/progress` | Recent task entries |
+| `GET` | `/projects` | List all registered ricet projects |
+| `GET` | `/project/status?name=X` | Specific project status |
+| `POST` | `/project/task?name=X` | Submit task to a specific project |
+| `GET` | `/connect-info` | TLS fingerprint and connection methods |
+
+---
+
+## 7. Authentication
+
+The mobile server uses bearer token authentication.
 
 ### Generate a token
 
-```python
-from core.mobile import MobileAuth
-
-auth = MobileAuth()
-token = auth.generate_token()
-print(token)  # e.g., "kF3x9Qm2-vB7_nL1pR8..."
+```bash
+ricet mobile pair
 ```
 
-### Use the token in requests
+Tokens are 48-character URL-safe strings. The plaintext is shown once; only
+the SHA-256 hash is stored on disk (`~/.ricet/mobile_tokens.json`).
 
-Add the `Authorization` header to every request:
+### Use the token
 
-```
-Authorization: Bearer kF3x9Qm2-vB7_nL1pR8...
-```
-
-Or pass it as a URL parameter (less secure, but convenient for bookmarks):
+Include in every API request:
 
 ```
-http://192.168.1.100:8777/status?token=kF3x9Qm2-vB7_nL1pR8...
+Authorization: Bearer YOUR_TOKEN
 ```
 
-### Revoke a token
+Or pass as a URL parameter when first opening the PWA (stored in
+`localStorage`):
 
-```python
-auth.revoke("kF3x9Qm2-vB7_nL1pR8...")
+```
+https://your-machine.ts.net?token=YOUR_TOKEN
 ```
 
-### Security notes
-
-- Token SHA-256 hashes are persisted to `~/.ricet/mobile_tokens.json`. Tokens survive server restarts.
-- The plaintext token is shown exactly once during generation -- store it securely.
-- Rate limiting: 10 failed authentication attempts from a single IP triggers a 15-minute lockout.
-- The server uses self-signed TLS certificates by default. Verify the SHA-256 fingerprint on first connection.
-- For internet-facing deployments, always use a tunnel (see below) and keep bearer tokens confidential.
-
----
-
-## 6. Remote Access via Tunnel
-
-If you want to access your research from outside your local network (e.g., from
-your phone on cellular data), use an SSH tunnel or a tunneling service.
-
-### Option A: SSH tunnel (if you have a server with a public IP)
-
-On your local machine:
+### List and revoke tokens
 
 ```bash
-$ ssh -R 8777:localhost:8777 user@your-server.com
+ricet mobile tokens
 ```
 
-Then access `http://your-server.com:8777` from your phone.
+### Rate limiting
 
-### Option B: Cloudflare Tunnel (free)
-
-```bash
-# Install cloudflared
-$ curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
-$ chmod +x /usr/local/bin/cloudflared
-
-# Start tunnel
-$ cloudflared tunnel --url http://localhost:8777
-```
-
-Cloudflared gives you a public URL like `https://random-words.trycloudflare.com`.
-Open this on your phone.
-
-### Option C: ngrok
-
-```bash
-$ ngrok http 8777
-```
-
-Ngrok provides a public URL like `https://abc123.ngrok-free.app`.
-
-> **Important:** When using a tunnel, always enable authentication (bearer
-> token) to prevent unauthorized access.
-
----
-
-## 7. Using a Bookmarklet or Shortcut
-
-### iOS Shortcut
-
-Create a Shortcut that sends a POST request:
-
-1. Open the **Shortcuts** app.
-2. Create a new shortcut.
-3. Add action: **Get Contents of URL**.
-4. Set URL to `http://192.168.1.100:8777/status`.
-5. Set Method to `GET`.
-6. Add Header: `Authorization: Bearer YOUR_TOKEN`.
-7. Add action: **Show Result**.
-8. Name it "Research Status" and add it to your home screen.
-
-### Android quick action
-
-Use an app like **HTTP Shortcuts** (free, open source):
-
-1. Install HTTP Shortcuts from the Play Store.
-2. Create a new shortcut.
-3. Set the URL and method.
-4. Add the Authorization header.
-5. Place the widget on your home screen.
-
-> **Screenshot:** Phone home screen showing a "Research Status" shortcut widget
-> that can be tapped to quickly check project status.
+10 failed authentication attempts from a single IP triggers a 15-minute
+lockout.
 
 ---
 
 ## 8. Troubleshooting
 
-### Cannot connect from phone
+### Phone says "offline" or cannot connect
 
-- Verify your computer and phone are on the same Wi-Fi network
-- Check your computer's firewall allows port 8777:
-  ```bash
-  $ sudo ufw allow 8777/tcp        # Ubuntu
-  $ sudo firewall-cmd --add-port=8777/tcp --permanent  # Fedora
-  ```
-- Verify the server is running: `curl http://localhost:8777/status`
+- Open the **Tailscale app** on your phone and make sure it is **toggled ON**
+- Verify both devices are on the same Tailscale account
+- Check Tailscale status on your computer: `tailscale status`
+- Verify the serve proxy is active: `tailscale serve status`
 
-### "unauthorized" response
+### "tailscale serve failed" error
 
-- Check that you are sending the `Authorization: Bearer TOKEN` header
-- Tokens are case-sensitive; copy the exact token
-- If the server was restarted, generate a new token
+Run this once to allow your user to manage Tailscale without sudo:
 
-### Slow responses
+```bash
+sudo tailscale set --operator=$USER
+```
 
-- The mobile server is single-threaded for simplicity
-- If an overnight task is consuming heavy CPU, API responses may be delayed
-- The server itself is lightweight; delays usually come from the research tasks
+### Screen session not detected
 
-### Phone shows raw JSON instead of the PWA
+- Make sure your Screen session is named `research`: `screen -S research`
+- Check running sessions: `screen -ls`
+- Or set the environment variable: `RICET_SCREEN_SESSION=research ricet mobile`
 
-Navigate to the server root URL (`https://<ip>:8777/`) to see the built-in PWA
-dashboard. The API endpoints (`/status`, `/task`, etc.) return raw JSON by
-design. If the PWA does not load:
+### Tasks show "queued" instead of "injected"
 
-1. Clear browser cache and reload
-2. Ensure you are using HTTPS (not HTTP)
-3. Try Chrome on Android or Safari on iOS for best PWA support
+This means the mobile server did not find a Screen session at startup.
+Restart `ricet mobile` after starting your Screen session.
 
-### Token in URL is not secure
+### Voice tab says "Speech not supported"
 
-URL parameters can be logged by proxies and appear in browser history. For
-better security:
+The Web Speech API requires HTTPS (provided by Tailscale) and is supported
+in Chrome and Safari. Firefox does not support it.
 
-- Use the `Authorization` header instead of URL parameters
-- Use HTTPS via a tunnel (Cloudflare/ngrok)
-- Revoke tokens when no longer needed
+### PWA not installable
+
+- Must be served over HTTPS (Tailscale provides this)
+- Try clearing browser cache and reloading
+- Use Chrome on Android or Safari on iOS
 
 ---
 
-**That completes the tutorial series.** You now have all the tools to:
-
-1. Set up credentials and Docker environments
-2. Create and manage research projects
-3. Write papers with LaTeX, citations, and style analysis
-4. Deploy academic websites
-5. Run overnight autonomous sessions
-6. Monitor everything from your phone
-
-Return to the [Tutorial Index](README.md) at any time.
+**Next:** Return to the [Tutorial Index](README.md).

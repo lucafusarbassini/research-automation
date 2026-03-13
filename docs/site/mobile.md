@@ -1,369 +1,186 @@
 # Mobile Access
 
-ricet includes a full mobile access system that lets you monitor and control research projects from your phone. The implementation uses only Python standard library modules -- no Flask, Django, or other web framework is required.
-
----
-
-## Overview
-
-The mobile system (`core/mobile.py` and `core/mobile_pwa.py`) provides:
-
-- An HTTPS API server with self-signed TLS certificates
-- A Progressive Web App (PWA) that works as a native-like phone app
-- Bearer token authentication with SHA-256 hash storage
-- Rate limiting per client IP (10 failures triggers a 15-minute lockout)
-- QR code generation for easy phone pairing
-- Multi-project management from a single server
-- Voice command submission via the Web Speech API
+ricet lets you control your research from your phone. Submit tasks, send voice
+commands, and monitor progress -- all from a mobile-friendly PWA served over
+your private Tailscale network.
 
 ---
 
 ## Quick Start
 
-### Always-On by Default
-
-Mobile and web access is always enabled -- no configuration needed. During `ricet init`, the mobile server starts automatically and a Cloudflare Tunnel is set up with a QR code for instant phone pairing.
-
-When you run `ricet start`, the mobile server launches automatically alongside your Claude session.
-
-### Cloudflare Tunnel Auto-Setup
-
-During `ricet init`, ricet automatically:
-
-1. Installs `cloudflared` if not present
-2. Creates a Cloudflare Tunnel pointing to the mobile server
-3. Displays a public URL and QR code in the terminal
-4. The QR code can be scanned to instantly pair your phone
-
-This gives you remote access without opening firewall ports or configuring VPNs.
-
-### Manual Server Management
+Three commands, three terminals:
 
 ```bash
-# Start the HTTPS server (port 8777)
-ricet mobile serve
+# Terminal 1: persistent Claude session
+screen -S research
+claude
 
-# Pair a device (generates a bearer token and QR code)
-ricet mobile pair
+# Terminal 2: mobile server + Tailscale tunnel
+ricet mobile
 
-# View connection methods (direct, SSH tunnel, WireGuard)
-ricet mobile connect-info
-
-# List active tokens
-ricet mobile tokens
-
-# Regenerate TLS certificates
-ricet mobile cert-regen
-
-# Check server status
-ricet mobile status
-
-# Stop the server
-ricet mobile stop
+# Terminal 3 (optional): desktop remote control
+claude /remote-control
 ```
+
+`ricet mobile` auto-detects the Screen session, starts the API server, and
+creates a Tailscale HTTPS tunnel. A QR code and URL are printed -- scan it
+with your phone.
 
 ---
 
-## Architecture
+## Prerequisites
 
-### Components
-
-| Component | Module | Purpose |
-|-----------|--------|---------|
-| `TLSManager` | `core/mobile.py` | Self-signed certificate generation via OpenSSL CLI |
-| `MobileAuth` | `core/mobile.py` | Bearer token generation, validation, revocation, rate limiting |
-| `MobileServer` | `core/mobile.py` | Route-based HTTP dispatch with auth and mobile-formatted responses |
-| `ProjectRegistry` | `core/mobile.py` | Multi-project status and task management |
-| PWA assets | `core/mobile_pwa.py` | HTML, CSS, JS, manifest, service worker, icon |
-
-### Security Model
-
-The mobile server uses a defense-in-depth approach:
-
-1. **TLS encryption** -- Self-signed certificates generated via OpenSSL. The SHA-256 fingerprint is displayed for manual verification (SSH trust-on-first-use model).
-2. **Bearer tokens** -- Only SHA-256 hashes are stored on disk (`~/.ricet/mobile_tokens.json`). The plaintext token is shown exactly once when generated.
-3. **Rate limiting** -- 10 failed authentication attempts from a single IP triggers a 15-minute lockout.
-4. **Minimal surface** -- PWA asset routes (`/`, `/manifest.json`, `/sw.js`, `/icon.svg`) bypass auth; all API routes require a valid token.
+| Requirement | How to get it |
+|-------------|--------------|
+| Tailscale on your computer | `ricet init` installs it automatically |
+| Tailscale on your phone | Free app: [iOS](https://apps.apple.com/app/tailscale/id1470499037) / [Android](https://play.google.com/store/apps/details?id=com.tailscale.ipn) |
+| Same Tailscale account | Sign in on both devices with the same account |
 
 ---
 
-## API Endpoints
+## How It Works
 
-All API responses are JSON with a `_ts` timestamp and string values truncated to 280 characters for mobile readability.
-
-### Core Endpoints
-
-| Method | Path | Purpose | Auth Required |
-|--------|------|---------|---------------|
-| `GET` | `/` | PWA HTML page (installable app) | No |
-| `GET` | `/manifest.json` | PWA manifest | No |
-| `GET` | `/sw.js` | Service worker for offline support | No |
-| `GET` | `/icon.svg` | App icon | No |
-| `GET` | `/status` | Server status (running tasks, queue size) | Yes |
-| `GET` | `/sessions` | List project sessions | Yes |
-| `GET` | `/progress` | Recent task entries (last 10) | Yes |
-| `POST` | `/task` | Submit a new task | Yes |
-| `POST` | `/voice` | Submit voice-transcribed text as a task | Yes |
-| `GET` | `/connect-info` | TLS fingerprint and connection methods | Yes |
-| `GET` | `/dashboard` | Web dashboard (HTML) | Yes |
-| `GET` | `/dashboard/html` | Alias for web dashboard | Yes |
-| `GET` | `/agents/output` | Live verbose agent output | Yes |
-
-### Multi-Project Endpoints
-
-| Method | Path | Purpose | Auth Required |
-|--------|------|---------|---------------|
-| `GET` | `/projects` | List all registered ricet projects | Yes |
-| `GET` | `/project/status?name=X` | Get a specific project's progress and sessions | Yes |
-| `POST` | `/project/task?name=X` | Submit a task to a specific project | Yes |
-| `POST` | `/project/create` | Create a new project from mobile | Yes |
-
-### Example Requests
-
-**Submit a task:**
-
-```bash
-curl -k -X POST https://192.168.1.100:8777/task \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Generate a confusion matrix for the test set"}'
+```
+Phone (Tailscale app) ──→ tailscale serve ──→ localhost:8777 (mobile server)
+                                                    │
+                                                    └── screen -X stuff ──→ Claude session
 ```
 
-Response:
-
-```json
-{
-  "ok": true,
-  "task_id": "a1b2c3d4e5f6",
-  "status": "queued",
-  "_ts": "2026-02-02T10:30:00+00:00"
-}
-```
-
-**Check project status:**
-
-```bash
-curl -k https://192.168.1.100:8777/project/status?name=my-project \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-Response:
-
-```json
-{
-  "ok": true,
-  "name": "my-project",
-  "progress": "## Week 1\n- Completed literature review...",
-  "sessions": [
-    {"name": "20260201_143000", "status": "completed"},
-    {"name": "20260202_091500", "status": "active"}
-  ],
-  "_ts": "2026-02-02T10:31:00+00:00"
-}
-```
+1. The mobile server runs on `localhost:8777`
+2. `tailscale serve` proxies it to `https://your-machine.your-tailnet.ts.net`
+3. Your phone connects via Tailscale (encrypted, private, no port forwarding)
+4. Tasks submitted from the phone are injected directly into the Claude session
+   running in GNU Screen
 
 ---
 
 ## Progressive Web App (PWA)
 
-When you open the server URL in your phone's browser, you get a full mobile-optimized app with five tabs:
+Open the Tailscale URL on your phone to access the PWA with four tabs:
 
-### Dashboard
+| Tab | Purpose |
+|-----|---------|
+| **Dashboard** | Project status, task queue, auto-refresh |
+| **Tasks** | Type and submit tasks to Claude |
+| **Voice** | Tap microphone, speak a command, submit |
+| **Settings** | Connection info, token management |
 
-Lists all registered ricet projects with their status, description, and progress bar. Auto-refreshes every 30 seconds.
+Install it to your home screen for a native app experience:
 
-### Tasks
-
-Select a project from the dropdown, type a task description, and submit it. The task is queued for execution by the agent system. You can also create new projects directly from this tab.
-
-### Voice
-
-Tap the microphone button to dictate a command using your phone's speech recognition (Web Speech API). The transcribed text can be sent as a task to any project.
-
-### Monitor
-
-Live verbose output from running agents. Shows the last 15 lines of each active agent's output with agent name headers. Auto-refreshes to display real-time activity. Useful for checking overnight session progress from your phone.
-
-### Settings
-
-Displays connection information (server address, TLS fingerprint, TLS status) and stored token info. Includes a button to clear the local token.
-
-### Installing as a Home Screen App
-
-The PWA manifest enables "Add to Home Screen":
-
-- **iOS**: Open in Safari, tap Share, then "Add to Home Screen".
-- **Android**: Chrome shows an "Install" banner automatically, or use the menu.
-
-The app works in standalone mode (no browser chrome) and includes a service worker for offline graceful degradation.
+- **iOS**: Safari → Share → "Add to Home Screen"
+- **Android**: Chrome shows an install banner automatically
 
 ---
 
-## Connection Methods
+## Task Injection
 
-The `ricet mobile connect-info` command shows your connection options:
-
-### 1. Cloudflare Tunnel (Recommended)
-
-Auto-configured during `ricet init`. A QR code is displayed in the terminal for instant pairing:
+When the mobile server detects a Screen session (preferring one named
+`research`), submitted tasks are **injected directly** into Claude:
 
 ```
-https://your-tunnel-id.trycloudflare.com
+POST /task  →  screen -S research -X stuff "your prompt\r"  →  Claude executes it
 ```
 
-No firewall changes needed. Works from anywhere with internet access.
+The task status is `"injected"`. If no Screen session is found, tasks fall
+back to `"queued"` in `state/TODO.md` for overnight mode to pick up.
 
-!!! note
-    `cloudflared` is auto-installed if not present. The tunnel URL uses `--no-tls-verify` since the tunnel handles encryption.
-
-### 2. Direct HTTPS (Same Network)
-
-If your phone and computer are on the same Wi-Fi:
-
-```
-https://192.168.1.100:8443
-```
-
-Your phone will show a certificate warning because the certificate is self-signed. Accept it after verifying the SHA-256 fingerprint matches.
-
-### 3. SSH Tunnel (Remote Access)
-
-For accessing a remote lab server:
-
-```bash
-# On your laptop or phone (Termux, etc.)
-ssh -L 8443:localhost:8443 user@lab-server.example.com
-
-# Then open
-https://localhost:8443
-```
-
-### 4. WireGuard VPN (Peer-to-Peer)
-
-If you have a WireGuard VPN between your phone and server:
-
-```
-https://<wireguard-ip>:8443
-```
-
-!!! warning
-    Always enable bearer token authentication when exposing the server to the internet.
+Set `RICET_SCREEN_SESSION=name` to target a specific session.
 
 ---
 
-## Token Management
-
-### Generating Tokens
+## CLI Reference
 
 ```bash
-# Via CLI
-ricet mobile pair
+# Start tunnel (default action)
+ricet mobile                    # = ricet mobile tunnel
 
-# Programmatically
-from core.mobile import MobileAuth
-auth = MobileAuth()
-token = auth.generate_token(label="my-phone")
-```
+# Force Cloudflare tunnel instead of Tailscale
+ricet mobile --cf
 
-Tokens are 48-character URL-safe strings. The plaintext is displayed once; only the SHA-256 hash is persisted to `~/.ricet/mobile_tokens.json`.
-
-### Using Tokens
-
-Include in every API request via the `Authorization` header:
-
-```
-Authorization: Bearer YOUR_TOKEN_HERE
-```
-
-Or pass as a URL parameter when first opening the PWA (the app stores it in `localStorage`):
-
-```
-https://192.168.1.100:8777?token=YOUR_TOKEN_HERE
-```
-
-### Listing and Revoking
-
-```bash
-# List all tokens (shows hash prefix, label, creation date)
-ricet mobile tokens
-
-# Revoke by hash prefix
-from core.mobile import MobileAuth
-auth = MobileAuth()
-auth.revoke("a1b2c3d4e5f6")
+# Other actions
+ricet mobile serve              # Start server without tunnel
+ricet mobile stop               # Stop the server
+ricet mobile pair               # Generate auth token + QR
+ricet mobile tokens             # List active tokens
+ricet mobile connect-info       # Show connection methods
+ricet mobile cert-regen         # Regenerate TLS certificates
+ricet mobile status             # Check server status
 ```
 
 ---
 
-## TLS Certificate Management
+## API Endpoints
 
-The server generates self-signed RSA 2048-bit certificates on first start:
+All responses are JSON with a `_ts` timestamp.
 
-```
-~/.ricet/certs/server.crt
-~/.ricet/certs/server.key
-```
-
-Key file permissions are restricted to `0600`. Certificates are valid for 365 days.
-
-### Regenerating Certificates
-
-```bash
-ricet mobile cert-regen
-```
-
-This generates new certificates and displays the new SHA-256 fingerprint. Existing phone connections will need to accept the new certificate.
-
-### Viewing the Fingerprint
-
-```bash
-ricet mobile connect-info
-```
-
-Compare the displayed fingerprint with what your phone shows when accepting the certificate.
+| Method | Path | Purpose | Auth |
+|--------|------|---------|------|
+| `GET` | `/` | PWA dashboard | No |
+| `POST` | `/task` | Submit a task | Yes |
+| `POST` | `/voice` | Submit voice command | Yes |
+| `GET` | `/status` | Server status | Yes |
+| `GET` | `/progress` | Recent tasks | Yes |
+| `GET` | `/sessions` | Project sessions | Yes |
+| `GET` | `/projects` | All registered projects | Yes |
+| `GET` | `/project/status?name=X` | Project-specific status | Yes |
+| `POST` | `/project/task?name=X` | Task for specific project | Yes |
+| `GET` | `/connect-info` | TLS fingerprint | Yes |
 
 ---
 
-## Running Alongside Overnight Mode
+## Authentication
 
-The mobile server runs in a daemon thread, so it coexists with other ricet commands:
+Bearer token authentication. Generate a token with `ricet mobile pair`.
 
-```bash
-# Terminal 1: Start mobile server
-ricet mobile serve
-
-# Terminal 2: Run overnight
-ricet overnight --iterations 20
+```
+Authorization: Bearer YOUR_TOKEN
 ```
 
-If mobile access is enabled in `config/settings.yml`, `ricet start` launches the mobile server automatically. Check progress from your phone while overnight mode runs.
+Or pass as a URL parameter when first opening the PWA (stored in
+`localStorage` for subsequent requests):
+
+```
+https://your-machine.ts.net?token=YOUR_TOKEN
+```
+
+Tokens are 48-character URL-safe strings. Only SHA-256 hashes are stored on
+disk (`~/.ricet/mobile_tokens.json`). Rate limiting: 10 failed attempts from
+one IP triggers a 15-minute lockout.
+
+---
+
+## Security Model
+
+- **Tailscale**: End-to-end encrypted WireGuard tunnel between your devices.
+  No ports exposed to the internet. Only devices on your tailnet can connect.
+- **Bearer tokens**: SHA-256 hashed, stored on disk. Plaintext shown once.
+- **Rate limiting**: Per-IP lockout after repeated failures.
+- **TLS**: Self-signed certificates for local connections. Tailscale serve
+  provides its own trusted HTTPS certificate for phone access.
 
 ---
 
 ## Troubleshooting
 
-### Cannot connect from phone
+### Phone cannot connect
 
-- Verify both devices are on the same network
-- Check firewall: `sudo ufw allow 8777/tcp`
-- Test locally first: `curl -k https://localhost:8777/status`
+1. Open Tailscale app on your phone -- is it **ON**?
+2. Same account on both devices?
+3. Check on computer: `tailscale status` (should show both devices)
+4. Check proxy: `tailscale serve status`
 
-### Certificate warning on phone
+### "tailscale serve failed"
 
-This is expected with self-signed certificates. Verify the SHA-256 fingerprint matches `ricet mobile connect-info` output, then accept.
+```bash
+sudo tailscale set --operator=$USER    # run once
+```
 
-### "unauthorized" response
+### Tasks show "queued" not "injected"
 
-- Ensure the `Authorization: Bearer TOKEN` header is included
-- Tokens are case-sensitive
-- Check if your IP is rate-limited (15-minute lockout after 10 failures)
+The server didn't find a Screen session at startup. Start `screen -S research`
+first, then restart `ricet mobile`.
 
-### Voice tab says "Speech not supported"
+### Voice not working
 
-The Web Speech API requires a secure context (HTTPS) and is supported in Chrome and Safari. Firefox does not support it. Use Chrome on Android or Safari on iOS.
-
-### PWA not installable
-
-- Must be served over HTTPS (the self-signed cert counts)
-- Must have a valid `/manifest.json` (served automatically)
-- Try clearing browser cache and reloading
+Requires HTTPS (provided by Tailscale) + Chrome or Safari. Firefox does not
+support the Web Speech API.
