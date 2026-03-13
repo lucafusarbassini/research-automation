@@ -347,7 +347,72 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
             print_fn("  whisper: could not auto-install (try: pip install openai-whisper)")
             results["whisper"] = False
 
-    # 6. cloudflared - needed for mobile phone access through firewalls
+    # 6. Tailscale — permanent private network for mobile access (no domain needed)
+    #    Requires the tailscaled daemon running as root (one-time sysadmin setup).
+    #    The CLI itself works for non-root users once the daemon is running.
+    if shutil.which("tailscale"):
+        # Check if daemon is up and we can auth
+        ts_status = subprocess.run(
+            ["tailscale", "status"], capture_output=True, text=True, timeout=5
+        )
+        if ts_status.returncode == 0:
+            print_fn("  tailscale: running")
+            results["tailscale"] = True
+        else:
+            # Daemon present but not authenticated — try `tailscale up`
+            has_sudo = subprocess.run(
+                ["sudo", "-n", "true"], capture_output=True, timeout=3
+            ).returncode == 0
+            if has_sudo:
+                r = subprocess.run(
+                    ["sudo", "tailscale", "up", "--accept-routes"],
+                    capture_output=True, text=True, timeout=30,
+                )
+                results["tailscale"] = r.returncode == 0
+                if results["tailscale"]:
+                    print_fn("  tailscale: activated")
+                else:
+                    print_fn("  tailscale: installed but could not activate — run: sudo tailscale up")
+            else:
+                print_fn("  tailscale: installed but not running")
+                print_fn("    Ask your sysadmin: sudo tailscale up")
+                print_fn("    (needed once; then works without sudo)")
+                results["tailscale"] = False
+    else:
+        # Try to install without sudo via the official script
+        has_sudo = subprocess.run(
+            ["sudo", "-n", "true"], capture_output=True, timeout=3
+        ).returncode == 0
+        if has_sudo:
+            print_fn("  tailscale: installing...")
+            r = subprocess.run(
+                ["bash", "-c", "curl -fsSL https://tailscale.com/install.sh | sudo sh"],
+                capture_output=True, text=True, timeout=120,
+            )
+            if r.returncode == 0:
+                r2 = subprocess.run(
+                    ["sudo", "tailscale", "up", "--accept-routes"],
+                    capture_output=True, text=True, timeout=30,
+                )
+                if r2.returncode == 0:
+                    print_fn("  tailscale: installed and activated")
+                    results["tailscale"] = True
+                else:
+                    print_fn("  tailscale: installed — run: sudo tailscale up")
+                    results["tailscale"] = False
+            else:
+                print_fn("  tailscale: install failed — manual: curl -fsSL https://tailscale.com/install.sh | sudo sh")
+                results["tailscale"] = False
+        else:
+            print_fn("  tailscale: not available (no sudo)")
+            print_fn("    Ask your sysadmin to run once:")
+            print_fn("      curl -fsSL https://tailscale.com/install.sh | sudo sh")
+            print_fn("      sudo tailscale up")
+            print_fn("    After that, ricet mobile works without sudo.")
+            print_fn("    Falling back to Cloudflare quick tunnel for now.")
+            results["tailscale"] = False
+
+    # 6b. cloudflared - fallback if Tailscale unavailable
     if shutil.which("cloudflared"):
         print_fn("  cloudflared: already installed")
         results["cloudflared"] = True
