@@ -948,14 +948,28 @@ def collect_answers(
     answers.needs_website = True
     answers.needs_mobile = True
 
-    # --- Mobile / tunnel ---
-    tunnel_domain = prompt_fn(
-        "Cloudflare named tunnel domain for permanent mobile URL\n"
-        "  (e.g. ricet.yourdomain.com — requires cloudflared login done once)\n"
-        "  Leave empty to use ephemeral quick tunnels",
-        "",
-    ).strip()
-    answers.tunnel_domain = tunnel_domain
+    # --- Mobile / tunnel access ---
+    # Detect what's available to guide the user
+    _has_tailscale = bool(shutil.which("tailscale"))
+    _has_cf_login = (Path.home() / ".cloudflared" / "cert.pem").exists()
+
+    print_fn = getattr(prompt_fn, "_print", None) or (lambda s: None)  # best-effort print
+
+    mobile_mode = prompt_fn(
+        "Remote mobile access mode:\n"
+        "  tailscale  — permanent address, no domain needed (recommended, free)\n"
+        "  cloudflare — permanent address, needs a domain on Cloudflare\n"
+        "  quick      — ephemeral Cloudflare URL (changes on restart)\n"
+        "  none       — local network only",
+        "tailscale" if _has_tailscale else ("cloudflare" if _has_cf_login else "quick"),
+    ).strip().lower()
+
+    if mobile_mode == "cloudflare":
+        tunnel_domain = prompt_fn(
+            "Cloudflare tunnel subdomain (e.g. ricet.yourdomain.com)", ""
+        ).strip()
+        answers.tunnel_domain = tunnel_domain
+    # tailscale and quick modes need no extra config — tailscale detected at tunnel start
 
     screen_name = prompt_fn(
         "GNU screen session name for live voice injection", "ricet"

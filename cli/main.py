@@ -3219,17 +3219,25 @@ def mobile(
             console.print(f"[red]Failed: {exc}[/red]")
             raise typer.Exit(1)
     elif action == "tunnel":
-        # Auto-detect: use named tunnel if ~/.cloudflared/config.yml exists, else quick tunnel
+        # Auto-detect access mode (priority: Tailscale > named CF tunnel > quick CF tunnel)
+        from core.mobile import get_tailscale_address
+        _ts_ip = get_tailscale_address()
         _cf_config = Path.home() / ".cloudflared" / "config.yml"
         _named = _cf_config.exists()
-        if _named:
+        if _ts_ip:
+            console.print(f"[bold]Starting mobile server + Tailscale access...[/bold]")
+            console.print(f"  [green]Tailscale address: http://{_ts_ip}:{port}[/green]")
+            console.print(f"  Install Tailscale on your phone → open the URL above")
+            _domain = _ts_ip
+        elif _named:
             import re as _re
             _cfg_text = _cf_config.read_text()
             _domain_m = _re.search(r"hostname:\s*(\S+)", _cfg_text)
             _domain = _domain_m.group(1) if _domain_m else "(see config.yml)"
-            console.print(f"[bold]Starting mobile server + named tunnel → {_domain}...[/bold]")
+            console.print(f"[bold]Starting mobile server + named CF tunnel → {_domain}...[/bold]")
         else:
-            console.print("[bold]Starting mobile server + public tunnel...[/bold]")
+            console.print("[bold]Starting mobile server + public CF tunnel...[/bold]")
+            _domain = ""
         try:
             info = mobile_server.serve(host="127.0.0.1", port=port, tls=False)
             console.print(f"[green]{info}[/green]")
@@ -3264,30 +3272,33 @@ def mobile(
             console.print(f"[red]Failed to start server: {exc}[/red]")
             raise typer.Exit(1)
 
-        console.print("[dim]Setting up cloudflared tunnel...[/dim]")
         from core.mobile import parse_tunnel_url, start_tunnel, generate_qr_terminal
         import shutil as _sh2
-        _cf_bin = _sh2.which("cloudflared") or str(Path.home() / ".local" / "bin" / "cloudflared")
 
-        if _named and Path(_cf_bin).exists():
-            # Named tunnel: runs as a foreground service, URL is fixed
-            import subprocess as _sp2
-            proc = _sp2.Popen(
-                [_cf_bin, "tunnel", "run"],
-                stdout=_sp2.PIPE, stderr=_sp2.PIPE, text=True,
-            )
-            public_url = f"https://{_domain}"
-            console.print(f"[dim]Named tunnel process started (PID {proc.pid})[/dim]")
+        if _ts_ip:
+            # Tailscale: server is already reachable, no tunnel process needed
+            public_url = f"http://{_ts_ip}:{port}"
+            proc = None
         else:
-            # Quick tunnel: ephemeral URL, parse from stderr
-            proc = start_tunnel(port=port)
-            public_url = parse_tunnel_url(proc)
-            if not public_url:
-                console.print(
-                    "[red]Could not start tunnel. Check network connectivity.[/red]"
+            console.print("[dim]Setting up cloudflared tunnel...[/dim]")
+            _cf_bin = _sh2.which("cloudflared") or str(Path.home() / ".local" / "bin" / "cloudflared")
+            if _named and Path(_cf_bin).exists():
+                # Named tunnel: persistent URL
+                import subprocess as _sp2
+                proc = _sp2.Popen(
+                    [_cf_bin, "tunnel", "run"],
+                    stdout=_sp2.PIPE, stderr=_sp2.PIPE, text=True,
                 )
-                mobile_server.stop()
-                raise typer.Exit(1)
+                public_url = f"https://{_domain}"
+                console.print(f"[dim]Named tunnel process started (PID {proc.pid})[/dim]")
+            else:
+                # Quick tunnel: ephemeral URL
+                proc = start_tunnel(port=port)
+                public_url = parse_tunnel_url(proc)
+                if not public_url:
+                    console.print("[red]Could not start tunnel. Check network connectivity.[/red]")
+                    mobile_server.stop()
+                    raise typer.Exit(1)
 
         console.print(f"\n[bold green]Public URL (open on your phone):[/bold green]")
         console.print(f"  {public_url}")
@@ -3313,9 +3324,10 @@ def mobile(
             while True:
                 _t.sleep(3600)
         except KeyboardInterrupt:
-            proc.terminate()
+            if proc is not None:
+                proc.terminate()
             mobile_server.stop()
-            console.print("\n[green]Tunnel + server stopped.[/green]")
+            console.print("\n[green]Server stopped.[/green]")
     elif action == "status":
         st = mobile_server.status()
         running = "[green]running[/green]" if st["running"] else "[dim]stopped[/dim]"

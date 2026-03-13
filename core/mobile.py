@@ -1145,6 +1145,20 @@ def _ensure_cloudflared() -> Path:
     return _CLOUDFLARED_BIN
 
 
+def get_tailscale_address() -> str:
+    """Return the machine's Tailscale IP/hostname, or '' if not running."""
+    import shutil
+    if not shutil.which("tailscale"):
+        return ""
+    result = subprocess.run(
+        ["tailscale", "ip", "--4"],
+        capture_output=True, text=True, timeout=5,
+    )
+    if result.returncode == 0:
+        return result.stdout.strip()
+    return ""
+
+
 def start_tunnel(port: int = 8777) -> subprocess.Popen:
     """Start a cloudflared quick-tunnel exposing localhost:port.
 
