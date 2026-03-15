@@ -777,6 +777,43 @@ def init(
         from core.onboarding import write_mobile_env
         write_mobile_env(project_path, answers)
 
+    # --- Step 10: Install gstack startup workflow skills ---
+    console.print("\n[bold cyan]Step 10: Installing gstack startup skills...[/bold cyan]")
+    if _GSTACK_DIR.exists():
+        _gv = (_GSTACK_DIR / "VERSION").read_text().strip() if (_GSTACK_DIR / "VERSION").exists() else "?"
+        console.print(f"  [green]gstack v{_gv} already installed[/green]")
+    else:
+        import shutil as _sh_gstack
+        import subprocess as _sp_gstack
+        _has_bun_init = _sh_gstack.which("bun") is not None
+        _skip = not _has_bun_init
+        console.print(f"  Cloning gstack{'  (--skip-browser: bun not found)' if _skip else ''}...")
+        _gstack_ok = _sp_gstack.run(
+            ["git", "clone", _GSTACK_REPO, str(_GSTACK_DIR)],
+            capture_output=True,
+        ).returncode == 0
+        if _gstack_ok:
+            _skills_dir_init = Path.home() / ".claude" / "skills"
+            _skills_dir_init.mkdir(parents=True, exist_ok=True)
+            if not _skip:
+                _sp_gstack.run(["bash", "./setup"], cwd=str(_GSTACK_DIR), capture_output=True)
+            else:
+                # Symlink non-browser skills manually
+                for _sk in _GSTACK_ALL_SKILLS:
+                    if _sk in _GSTACK_BROWSER_SKILLS:
+                        continue
+                    _sk_dir = _GSTACK_DIR / _sk
+                    if not _sk_dir.is_dir():
+                        continue
+                    _link = _skills_dir_init / _sk
+                    if not _link.exists() and not _link.is_symlink():
+                        _link.symlink_to(f"gstack/{_sk}")
+            _gv = (_GSTACK_DIR / "VERSION").read_text().strip() if (_GSTACK_DIR / "VERSION").exists() else "?"
+            _installed = [s for s in _GSTACK_ALL_SKILLS if (_skills_dir_init / s).exists()]
+            console.print(f"  [green]gstack v{_gv} installed: {', '.join('/' + s for s in _installed)}[/green]")
+        else:
+            console.print("  [yellow]gstack clone failed (network issue?). Run later: ricet gstack install[/yellow]")
+
     # --- Done ---
     console.print(f"\n[bold green]Project ready![/bold green]")
     console.print("")
@@ -820,10 +857,15 @@ def init(
     console.print(f"    [bold]screen -r {project_name}[/bold]")
     console.print("")
     console.print(
-        "  [bold green]Did you know that you can now remotely control Claude\n"
-        "  running on workstations from your phone?[/bold green] After launching\n"
-        "  a Claude session in screen, just type [bold]/remote-session[/bold] in Claude\n"
-        "  and use the link it provides!"
+        "  [bold green]Control Claude from your phone:[/bold green] After launching\n"
+        "  a Claude session in screen, run [bold]ricet mobile[/bold] in another terminal.\n"
+        "  It creates a Tailscale tunnel with a QR code you can scan."
+    )
+    console.print("")
+    console.print(
+        "  [bold yellow]Reminder:[/bold yellow] Install [bold]Tailscale[/bold] on your phone\n"
+        "  (iOS: App Store, Android: Play Store) and sign in with the same\n"
+        "  account as this machine. Keep the app toggled ON when using mobile access."
     )
 
     # Record installed version for future migration tracking

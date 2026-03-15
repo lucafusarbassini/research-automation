@@ -182,18 +182,35 @@ select{appearance:none;-webkit-appearance:none}
     <select id="voiceLang" style="width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#1e1e1e;color:#e0e0e0;font-size:14px">
       <option value="">Auto-detect</option>
       <option value="en-US">English</option>
-      <option value="it-IT">Italiano</option>
+      <option value="zh-CN">&#x4E2D;&#x6587; (Mandarin)</option>
+      <option value="hi-IN">&#x0939;&#x093F;&#x0928;&#x094D;&#x0926;&#x0940;</option>
       <option value="es-ES">Espa&ntilde;ol</option>
       <option value="fr-FR">Fran&ccedil;ais</option>
-      <option value="de-DE">Deutsch</option>
-      <option value="pt-BR">Portugu&ecirc;s</option>
-      <option value="zh-CN">&#x4E2D;&#x6587;</option>
-      <option value="ja-JP">&#x65E5;&#x672C;&#x8A9E;</option>
-      <option value="ko-KR">&#xD55C;&#xAD6D;&#xC5B4;</option>
-      <option value="ru-RU">&#x0420;&#x0443;&#x0441;&#x0441;&#x043A;&#x0438;&#x0439;</option>
       <option value="ar-SA">&#x0627;&#x0644;&#x0639;&#x0631;&#x0628;&#x064A;&#x0629;</option>
+      <option value="bn-BD">&#x09AC;&#x09BE;&#x0982;&#x09B2;&#x09BE;</option>
+      <option value="pt-BR">Portugu&ecirc;s</option>
+      <option value="ru-RU">&#x0420;&#x0443;&#x0441;&#x0441;&#x043A;&#x0438;&#x0439;</option>
+      <option value="ja-JP">&#x65E5;&#x672C;&#x8A9E;</option>
+      <option value="de-DE">Deutsch</option>
+      <option value="ko-KR">&#xD55C;&#xAD6D;&#xC5B4;</option>
+      <option value="it-IT">Italiano</option>
+      <option value="tr-TR">T&uuml;rk&ccedil;e</option>
+      <option value="vi-VN">Ti&#x1EBF;ng Vi&#x1EC7;t</option>
+      <option value="pl-PL">Polski</option>
       <option value="nl-NL">Nederlands</option>
+      <option value="uk-UA">&#x0423;&#x043A;&#x0440;&#x0430;&#x0457;&#x043D;&#x0441;&#x044C;&#x043A;&#x0430;</option>
+      <option value="ro-RO">Rom&acirc;n&#x0103;</option>
+      <option value="el-GR">&#x0395;&#x03BB;&#x03BB;&#x03B7;&#x03BD;&#x03B9;&#x03BA;&#x03AC;</option>
+      <option value="cs-CZ">&#x010C;e&#x0161;tina</option>
       <option value="sv-SE">Svenska</option>
+      <option value="hu-HU">Magyar</option>
+      <option value="th-TH">&#x0E44;&#x0E17;&#x0E22;</option>
+      <option value="id-ID">Bahasa Indonesia</option>
+      <option value="ms-MY">Bahasa Melayu</option>
+      <option value="da-DK">Dansk</option>
+      <option value="fi-FI">Suomi</option>
+      <option value="no-NO">Norsk</option>
+      <option value="he-IL">&#x05E2;&#x05D1;&#x05E8;&#x05D9;&#x05EA;</option>
     </select>
   </div>
   <div class="voice-area">
