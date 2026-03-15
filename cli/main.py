@@ -990,7 +990,7 @@ def _init_update(
     state_dir = project_path / "state"
     state_dir.mkdir(exist_ok=True)
     state_templates = Path(__file__).parent.parent / "templates" / "state"
-    for state_file in ("MEMORY.md", "SYSTEM.md"):
+    for state_file in ("SYSTEM.md",):
         dst = state_dir / state_file
         src = state_templates / state_file
         if not dst.exists() and src.exists():
@@ -4919,6 +4919,204 @@ def voice(
             '    python -c "import whisper; m=whisper.load_model(\'base\'); '
             'print(m.transcribe(\'recording.wav\')[\'text\'])"'
         )
+
+
+# ---------------------------------------------------------------------------
+# Code RAG – index and search external/legacy codebases
+# ---------------------------------------------------------------------------
+
+
+@app.command(name="index-code")
+def index_code(
+    path: str = typer.Argument(help="Directory to index"),
+    output: str = typer.Option(
+        "state/code_index.md", "--output", "-o",
+        help="Output file for the index",
+    ),
+):
+    """Index a codebase for RAG search (functions, classes, signatures)."""
+    from core.code_index import build_index
+
+    root = Path(path).resolve()
+    out = Path(output)
+    if not out.is_absolute():
+        out = Path.cwd() / out
+
+    index_text = build_index(root, output=out)
+    n_files = index_text.count("###")
+    console.print(f"[green]Indexed {n_files} files → {out}[/green]")
+    console.print(f"Search with: [bold]ricet search-code \"your query\"[/bold]")
+
+
+@app.command(name="search-code")
+def search_code(
+    query: str = typer.Argument(help="Search query"),
+    index: str = typer.Option(
+        "state/code_index.md", "--index", "-i",
+        help="Code index file to search",
+    ),
+    top_k: int = typer.Option(5, "--top", "-k", help="Number of results"),
+):
+    """Search indexed code via semantic similarity."""
+    index_path = Path(index)
+    if not index_path.is_absolute():
+        index_path = Path.cwd() / index_path
+    if not index_path.exists():
+        console.print(f"[red]Index not found: {index_path}[/red]")
+        console.print("Run first: [bold]ricet index-code <path>[/bold]")
+        raise typer.Exit(1)
+
+    from core.rag import search
+    results = search(query, encyclopedia_path=str(index_path), top_k=top_k)
+    if not results:
+        console.print("[dim]No results found.[/dim]")
+        return
+    console.print(f"[bold]Top {len(results)} results for:[/bold] {query}\n")
+    for i, (text, score) in enumerate(results, 1):
+        console.print(f"  {i}. [cyan]{score:.3f}[/cyan] {text.strip()[:120]}")
+
+
+# ---------------------------------------------------------------------------
+# Lab/Stable promotion – chaos → validated
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def promote(
+    path: str = typer.Argument(help="File to promote (e.g. lab/analysis.py)"),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip falsification check"),
+):
+    """Promote a lab/ file to stable/ after validation."""
+    from core.promotion import promote_file
+    result = promote_file(Path(path), force=force)
+    if result["ok"]:
+        console.print(f"[green]Promoted → {result['dest']}[/green]")
+        if result.get("provenance"):
+            console.print(f"  Provenance: {result['provenance']}")
+    else:
+        console.print(f"[red]Promotion failed: {result['error']}[/red]")
+
+
+# ---------------------------------------------------------------------------
+# Feature requests – for ricet's own development
+# ---------------------------------------------------------------------------
+
+_FEATURE_REQUESTS_FILE = Path(__file__).parent.parent / "state" / "feature_requests.md"
+
+
+@app.command(name="feature-request")
+def feature_request(
+    description: str = typer.Argument(help="Description of the feature request"),
+    source: str = typer.Option("cli", "--source", "-s", help="Source: cli, github, mobile"),
+):
+    """Log a feature request for ricet development."""
+    from datetime import datetime
+    _FEATURE_REQUESTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    if not _FEATURE_REQUESTS_FILE.exists():
+        _FEATURE_REQUESTS_FILE.write_text(
+            "# Feature Requests\n\n"
+            "Accumulated feature requests for ricet development.\n\n"
+            "| Date | Source | Description | Status |\n"
+            "|------|--------|-------------|--------|\n"
+        )
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+    desc_escaped = description.replace("|", "\\|")
+    with _FEATURE_REQUESTS_FILE.open("a") as f:
+        f.write(f"| {ts} | {source} | {desc_escaped} | pending |\n")
+    console.print(f"[green]Feature request logged.[/green]")
+    console.print(f"  View: [bold]cat {_FEATURE_REQUESTS_FILE}[/bold]")
+    console.print(f"  Implement: [bold]ricet implement-features[/bold]")
+
+
+@app.command(name="implement-features")
+def implement_features(
+    max_parallel: int = typer.Option(3, "--parallel", "-p", help="Max parallel agents"),
+):
+    """Review pending feature requests and implement selected ones in parallel worktrees."""
+    if not _FEATURE_REQUESTS_FILE.exists():
+        console.print("[dim]No feature requests found.[/dim]")
+        raise typer.Exit(0)
+
+    lines = _FEATURE_REQUESTS_FILE.read_text().splitlines()
+    pending = []
+    for i, line in enumerate(lines):
+        if "| pending |" in line:
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) >= 5:
+                pending.append({"index": i, "date": parts[1], "source": parts[2], "desc": parts[3]})
+
+    if not pending:
+        console.print("[dim]No pending feature requests.[/dim]")
+        raise typer.Exit(0)
+
+    console.print(f"[bold]Pending feature requests ({len(pending)}):[/bold]\n")
+    for j, item in enumerate(pending, 1):
+        console.print(f"  {j}. [{item['date']}] ({item['source']}) {item['desc']}")
+
+    console.print(f"\n[bold]Select features to implement (comma-separated numbers, or 'all'):[/bold]")
+    import sys
+    selection = input("> ").strip()
+    if not selection:
+        console.print("[dim]No selection made.[/dim]")
+        return
+
+    if selection.lower() == "all":
+        selected = pending
+    else:
+        indices = []
+        for s in selection.split(","):
+            s = s.strip()
+            if s.isdigit() and 1 <= int(s) <= len(pending):
+                indices.append(int(s) - 1)
+        selected = [pending[i] for i in indices]
+
+    if not selected:
+        console.print("[dim]No valid features selected.[/dim]")
+        return
+
+    console.print(f"\n[bold]Implementing {len(selected)} feature(s)...[/bold]")
+
+    import subprocess as sp
+    from core.git_worktrees import create_worktree, remove_worktree
+
+    results = []
+    for item in selected[:max_parallel]:
+        branch_name = "feature/" + item["desc"][:40].lower().replace(" ", "-").replace("/", "-")
+        branch_name = "".join(c for c in branch_name if c.isalnum() or c in "-_/")
+        console.print(f"\n  [cyan]→ {branch_name}[/cyan]: {item['desc']}")
+
+        wt = create_worktree(branch_name)
+        if not wt:
+            console.print(f"    [red]Failed to create worktree[/red]")
+            results.append({"desc": item["desc"], "ok": False, "error": "worktree failed"})
+            continue
+
+        console.print(f"    Worktree: {wt}")
+        console.print(f"    [yellow]Spawning agent...[/yellow]")
+
+        # Spawn claude in the worktree to implement the feature
+        proc = sp.run(
+            ["claude", "-p", f"Implement this feature request for ricet: {item['desc']}. "
+             "Read CLAUDE.md first. Make minimal, focused changes. Commit when done."],
+            cwd=str(wt),
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+
+        ok = proc.returncode == 0
+        results.append({"desc": item["desc"], "ok": ok, "branch": branch_name})
+        if ok:
+            console.print(f"    [green]Done[/green]")
+        else:
+            console.print(f"    [red]Agent failed (exit {proc.returncode})[/red]")
+
+    console.print(f"\n[bold]Results:[/bold]")
+    for r in results:
+        status = "[green]OK[/green]" if r["ok"] else "[red]FAIL[/red]"
+        console.print(f"  {status} {r['desc']}")
+        if r.get("branch"):
+            console.print(f"        Branch: {r['branch']}")
 
 
 # ---------------------------------------------------------------------------

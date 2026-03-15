@@ -112,9 +112,41 @@ def _existing_bullets(path: Path) -> set[str]:
     return {line.strip("- \n") for line in path.read_text().splitlines() if line.startswith("- ")}
 
 
+def _is_low_quality(content: str) -> bool:
+    """Reject garbled, noisy, or trivially short content."""
+    content = content.strip()
+    if len(content) < 15:
+        return True
+    # Excessive punctuation (frustration/venting that slipped through)
+    punct_count = sum(1 for c in content if c in "!?.")
+    if punct_count > 5:
+        return True
+    # Raw multi-line user text (numbered lists, multiple newlines)
+    if "\n\n" in content:
+        return True
+    if re.match(r"^\d+\)", content):
+        return True
+    # Auto-commit noise
+    if "auto-commit:" in content or "state-modifying CLI" in content:
+        return True
+    # Session lifecycle noise
+    if re.match(r"^session (started|ended):", content):
+        return True
+    return False
+
+
+def _fuzzy_exists(content: str, existing: set[str]) -> bool:
+    """Check if content's first 30 chars match any existing entry."""
+    prefix = content[:30].lower()
+    return any(e[:30].lower() == prefix for e in existing if len(e) >= 10)
+
+
 def _append_rule(content: str) -> bool:
     content = content.strip()
-    if not content or content in _existing_bullets(RULES_FILE):
+    if not content or _is_low_quality(content):
+        return False
+    existing = _existing_bullets(RULES_FILE)
+    if content in existing or _fuzzy_exists(content, existing):
         return False
     RULES_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not RULES_FILE.exists():
@@ -130,10 +162,15 @@ def _append_rule(content: str) -> bool:
 
 def _append_insight(content: str) -> bool:
     content = content.strip()
-    if not content:
+    if not content or _is_low_quality(content):
         return False
-    if ENCYCLOPEDIA_FILE.exists() and content[:50] in ENCYCLOPEDIA_FILE.read_text():
-        return False
+    if ENCYCLOPEDIA_FILE.exists():
+        text = ENCYCLOPEDIA_FILE.read_text()
+        if content[:50] in text:
+            return False
+        existing = _existing_bullets(ENCYCLOPEDIA_FILE)
+        if _fuzzy_exists(content, existing):
+            return False
     ENCYCLOPEDIA_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not ENCYCLOPEDIA_FILE.exists():
         ENCYCLOPEDIA_FILE.write_text("# Encyclopedia\n\nAccumulated domain knowledge.\n\n")
@@ -144,10 +181,12 @@ def _append_insight(content: str) -> bool:
 
 def _append_decision(content: str, rationale: str) -> bool:
     content = content.strip()
-    if not content:
+    if not content or _is_low_quality(content):
         return False
-    if DECISION_LOG_FILE.exists() and content[:50] in DECISION_LOG_FILE.read_text():
-        return False
+    if DECISION_LOG_FILE.exists():
+        text = DECISION_LOG_FILE.read_text()
+        if content[:50] in text:
+            return False
     DECISION_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not DECISION_LOG_FILE.exists():
         DECISION_LOG_FILE.write_text(

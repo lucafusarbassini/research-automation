@@ -7,6 +7,24 @@ Scientific research project. Read these files before starting any work:
 - `knowledge/PHILOSOPHY.md` — core research principles
 - `state/TODO.md` — current task list
 
+## Session Start Checklist
+
+1. Re-read `knowledge/GOAL.md`
+2. Scan `knowledge/DECISION_LOG.md` for recent entries relevant to current work
+3. For domain questions, search `knowledge/ENCYCLOPEDIA.md` before answering
+
+## Memory Hierarchy
+
+Knowledge persists across sessions in three files, each with a different purpose:
+
+| File | Loaded | Purpose | Updated by |
+|------|--------|---------|------------|
+| `knowledge/RULES.md` | Every session (via CLAUDE.md) | Behavioral rules from user corrections | meta_learn_hook (auto) |
+| `knowledge/ENCYCLOPEDIA.md` | On-demand (search before domain questions) | Domain knowledge, techniques, what works/fails | meta_learn_hook (auto) |
+| `knowledge/DECISION_LOG.md` | On-demand (before architectural choices) | Project decisions with rationale | meta_learn_hook (auto) |
+
+The meta-learn hook runs on every user prompt via Haiku. It extracts rules, insights, and decisions and appends them to the appropriate file. Do not duplicate this by manually writing the same information.
+
 ## Core Philosophies
 
 1. **Break big problems into small ones.** Decompose every task into the smallest useful subtasks. Execute one at a time. Checkpoint after each.
@@ -20,7 +38,6 @@ Scientific research project. Read these files before starting any work:
 - Do NOT add features, helpers, or abstractions not asked for.
 - Do NOT add docstrings, comments, or type hints to code you didn't change.
 - If tempted to "improve" something adjacent — stop. Note it and ask first.
-- Re-read `knowledge/GOAL.md` at the start of every session.
 
 ## Work Protocol
 
@@ -37,14 +54,6 @@ Scientific research project. Read these files before starting any work:
 - Be objective — challenge assumptions, report flaws, don't flatter.
 - Estimate token cost before expensive operations (~4 chars/token).
 - Prefer simple solutions. Less code is better code.
-
-## Claude-Flow Integration
-
-When [claude-flow](https://github.com/ruvnet/claude-flow) is available:
-- Hierarchical swarm: coordinator dispatches to specialized agents (researcher, coder, reviewer).
-- HNSW vector memory for semantic search over knowledge entries.
-- 3-tier model routing: Haiku (simple) → Sonnet (general) → Opus (reasoning).
-- All capabilities degrade gracefully when claude-flow is absent.
 
 ## Self-Maintenance
 
