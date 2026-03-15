@@ -4879,5 +4879,138 @@ def voice(
         )
 
 
+# ---------------------------------------------------------------------------
+# gstack – startup workflow skills (global install)
+# ---------------------------------------------------------------------------
+
+_GSTACK_DIR = Path.home() / ".claude" / "skills" / "gstack"
+_GSTACK_REPO = "https://github.com/garrytan/gstack.git"
+_GSTACK_ALL_SKILLS = [
+    "plan-ceo-review", "plan-eng-review", "review", "ship",
+    "browse", "qa", "setup-browser-cookies", "retro",
+]
+_GSTACK_BROWSER_SKILLS = {"browse", "qa", "setup-browser-cookies"}
+
+
+@app.command(name="gstack")
+def gstack_cmd(
+    action: str = typer.Argument(
+        "status",
+        help="Action: install, update, status",
+    ),
+    skip_browser: bool = typer.Option(
+        False, "--skip-browser",
+        help="Install Markdown-only skills without bun/browser binary",
+    ),
+):
+    """Manage gstack startup workflow skills (global install)."""
+    import shutil
+    import subprocess as sp
+
+    skills_dir = Path.home() / ".claude" / "skills"
+    skills_dir.mkdir(parents=True, exist_ok=True)
+
+    def _has_bun() -> bool:
+        return shutil.which("bun") is not None
+
+    def _symlink_skills(browser: bool = True):
+        """Create skill symlinks in ~/.claude/skills/."""
+        for skill in _GSTACK_ALL_SKILLS:
+            if not browser and skill in _GSTACK_BROWSER_SKILLS:
+                continue
+            skill_dir = _GSTACK_DIR / skill
+            if not skill_dir.is_dir():
+                continue
+            link = skills_dir / skill
+            if link.exists() or link.is_symlink():
+                link.unlink()
+            link.symlink_to(f"gstack/{skill}")
+
+    if action == "install":
+        if _GSTACK_DIR.exists():
+            console.print("[yellow]gstack already installed.[/yellow] Use: ricet gstack update")
+            raise typer.Exit(0)
+
+        has_bun = _has_bun()
+        if not has_bun and not skip_browser:
+            console.print("[yellow]bun not found.[/yellow] /browse and /qa need bun to compile the browser binary.")
+            console.print("  Install bun:  curl -fsSL https://bun.sh/install | bash")
+            console.print("  Or run:       ricet gstack install --skip-browser")
+            console.print("                (installs 5 Markdown-only skills without the browser)")
+            raise typer.Exit(1)
+
+        console.print("[bold]Cloning gstack...[/bold]")
+        sp.run(["git", "clone", _GSTACK_REPO, str(_GSTACK_DIR)], check=True)
+
+        if not skip_browser and has_bun:
+            console.print("[bold]Running gstack setup (building browser binary)...[/bold]")
+            sp.run(["bash", "./setup"], cwd=str(_GSTACK_DIR), check=True)
+        else:
+            console.print("[bold]Symlinking Markdown-only skills (skipping browser)...[/bold]")
+            _symlink_skills(browser=False)
+
+        # Also symlink gstack-upgrade
+        upgrade_link = skills_dir / "gstack-upgrade"
+        if not upgrade_link.exists():
+            upgrade_src = _GSTACK_DIR / "gstack-upgrade"
+            if upgrade_src.exists():
+                upgrade_link.symlink_to("gstack/gstack-upgrade")
+
+        version_file = _GSTACK_DIR / "VERSION"
+        version = version_file.read_text().strip() if version_file.exists() else "unknown"
+        console.print(f"\n[green]gstack v{version} installed.[/green]")
+        installed = [s for s in _GSTACK_ALL_SKILLS if (skills_dir / s).exists()]
+        console.print(f"Skills: {', '.join('/' + s for s in installed)}")
+
+    elif action == "update":
+        if not _GSTACK_DIR.exists():
+            console.print("[red]gstack not installed.[/red] Run: ricet gstack install")
+            raise typer.Exit(1)
+
+        old_ver = ""
+        version_file = _GSTACK_DIR / "VERSION"
+        if version_file.exists():
+            old_ver = version_file.read_text().strip()
+
+        console.print("[bold]Updating gstack...[/bold]")
+        sp.run(["git", "pull", "origin", "main"], cwd=str(_GSTACK_DIR), check=True)
+
+        if _has_bun() and (_GSTACK_DIR / "setup").exists():
+            sp.run(["bash", "./setup"], cwd=str(_GSTACK_DIR), check=True)
+        else:
+            _symlink_skills(browser=False)
+
+        new_ver = version_file.read_text().strip() if version_file.exists() else "unknown"
+        if old_ver and old_ver != new_ver:
+            console.print(f"[green]Updated: v{old_ver} → v{new_ver}[/green]")
+        else:
+            console.print(f"[green]gstack v{new_ver} up to date.[/green]")
+
+    elif action == "status":
+        if not _GSTACK_DIR.exists():
+            console.print("[dim]gstack not installed.[/dim] Run: ricet gstack install")
+            raise typer.Exit(0)
+
+        version_file = _GSTACK_DIR / "VERSION"
+        version = version_file.read_text().strip() if version_file.exists() else "unknown"
+        console.print(f"[bold]gstack v{version}[/bold]")
+
+        has_bun = _has_bun()
+        browse_bin = _GSTACK_DIR / "browse" / "dist" / "browse"
+        console.print(f"  bun:            {'installed' if has_bun else 'not found'}")
+        console.print(f"  browser binary: {'built' if browse_bin.exists() else 'not built'}")
+        console.print(f"  location:       {_GSTACK_DIR}")
+        console.print()
+
+        for skill in _GSTACK_ALL_SKILLS:
+            link = skills_dir / skill
+            active = link.exists() or link.is_symlink()
+            icon = "[green]active[/green]" if active else "[dim]not linked[/dim]"
+            console.print(f"  /{skill:.<28s} {icon}")
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]. Use: install, update, status")
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()

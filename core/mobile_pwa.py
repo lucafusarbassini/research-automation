@@ -178,6 +178,24 @@ select{appearance:none;-webkit-appearance:none}
 
 <!-- Voice -->
 <div class="panel" id="panel-voice">
+  <div style="margin-bottom:12px">
+    <select id="voiceLang" style="width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#1e1e1e;color:#e0e0e0;font-size:14px">
+      <option value="">Auto-detect</option>
+      <option value="en-US">English</option>
+      <option value="it-IT">Italiano</option>
+      <option value="es-ES">Espa&ntilde;ol</option>
+      <option value="fr-FR">Fran&ccedil;ais</option>
+      <option value="de-DE">Deutsch</option>
+      <option value="pt-BR">Portugu&ecirc;s</option>
+      <option value="zh-CN">&#x4E2D;&#x6587;</option>
+      <option value="ja-JP">&#x65E5;&#x672C;&#x8A9E;</option>
+      <option value="ko-KR">&#xD55C;&#xAD6D;&#xC5B4;</option>
+      <option value="ru-RU">&#x0420;&#x0443;&#x0441;&#x0441;&#x043A;&#x0438;&#x0439;</option>
+      <option value="ar-SA">&#x0627;&#x0644;&#x0639;&#x0631;&#x0628;&#x064A;&#x0629;</option>
+      <option value="nl-NL">Nederlands</option>
+      <option value="sv-SE">Svenska</option>
+    </select>
+  </div>
   <div class="voice-area">
     <button class="mic-btn" id="micBtn">&#x1F3A4;</button>
     <div class="meta" id="voiceStatus">Tap to speak</div>
@@ -302,11 +320,17 @@ select{appearance:none;-webkit-appearance:none}
   let recognition = null;
   let voiceText = '';
 
+  const voiceLangSelect = document.getElementById('voiceLang');
+  const savedLang = localStorage.getItem('voiceLanguage') || '';
+  if (savedLang) voiceLangSelect.value = savedLang;
+  voiceLangSelect.addEventListener('change', () => {
+    localStorage.setItem('voiceLanguage', voiceLangSelect.value);
+  });
+
   if (SpeechRecognition) {
     recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
     recognition.onresult = e => {
       voiceText = Array.from(e.results).map(r => r[0].transcript).join('');
       transcriptEl.textContent = voiceText;
@@ -323,6 +347,9 @@ select{appearance:none;-webkit-appearance:none}
     if (!recognition) return;
     if (micBtn.classList.contains('listening')) { recognition.stop(); return; }
     voiceText = ''; transcriptEl.textContent = '';
+    const lang = voiceLangSelect.value;
+    if (lang) recognition.lang = lang;
+    else recognition.lang = '';
     recognition.start();
     micBtn.classList.add('listening');
     voiceStatus.textContent = 'Listening...';

@@ -465,6 +465,15 @@ class MobileServer:
 
     def _handle_post_voice(self, body: Optional[dict]) -> dict:
         text = (body or {}).get("text", "")
+        original_lang = ""
+        # Translate non-English voice input to English via Haiku
+        from core.voice import detect_language, translate_to_english
+        original_lang = detect_language(text)
+        if original_lang != "en":
+            translated = translate_to_english(text, source_lang=original_lang)
+            if translated and translated != text:
+                logger.info("Voice translated %s→en: %s → %s", original_lang, text[:40], translated[:40])
+                text = translated
         task_id = uuid.uuid4().hex[:12]
         injected = _inject_to_screen(text, self._screen_session) if self._screen_session else False
         status = "injected" if injected else "queued"
@@ -473,7 +482,8 @@ class MobileServer:
         if not injected:
             self._persist_task_to_todo(text, source="voice")
         logger.info("Voice %s: %s — %s", status, task_id, text[:80])
-        return {"ok": True, "task_id": task_id, "source": "voice", "injected": injected}
+        return {"ok": True, "task_id": task_id, "source": "voice", "injected": injected,
+                "original_lang": original_lang}
 
     def _persist_task_to_todo(self, prompt: str, source: str = "mobile") -> None:
         """Append a task to state/TODO.md so ricet overnight can pick it up.

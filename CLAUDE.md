@@ -56,6 +56,7 @@ Captured automatically from past corrections. Obey these without question:
   - Install pattern: `npx -y <package>` or add entry to `.mcp.json`
 - **Accumulated research knowledge**: `knowledge/ENCYCLOPEDIA.md` — use `ricet memory search <query>` before answering domain questions.
 - **Project decision history**: `knowledge/DECISION_LOG.md` — read when making architectural or methodological choices to avoid re-litigating past decisions.
+- **Startup workflow skills**: `ricet gstack install` — installs [gstack](https://github.com/garrytan/gstack) globally for /plan-ceo-review, /plan-eng-review, /review, /ship, /browse, /qa, /retro. Use `--skip-browser` on systems without bun.
 
 ## Token economy
 
