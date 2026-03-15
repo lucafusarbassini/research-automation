@@ -22,8 +22,9 @@ internet.
 4. [Preview Locally](#4-preview-locally)
 5. [Deploy to GitHub Pages](#5-deploy-to-github-pages)
 6. [Set Up a Custom Domain](#6-set-up-a-custom-domain)
-7. [Automate Updates with ricet](#7-automate-updates-with-ricet)
-8. [Troubleshooting](#8-troubleshooting)
+7. [Self-Hosted Alternative: Hetzner VPS + Namecheap Domain](#7-self-hosted-alternative-hetzner-vps--namecheap-domain)
+8. [Automate Updates with ricet](#8-automate-updates-with-ricet)
+9. [Troubleshooting](#9-troubleshooting)
 
 ---
 
@@ -288,7 +289,148 @@ $ git push
 
 ---
 
-## 7. Automate Updates with ricet
+## 7. Self-Hosted Alternative: Hetzner VPS + Namecheap Domain
+
+GitHub Pages works for static sites. If you need a server (running APIs, databases,
+long computations, or hosting overnight agents), use a VPS instead.
+
+### Step 1: Get a Hetzner VPS
+
+1. Create an account at [hetzner.com/cloud](https://www.hetzner.com/cloud/)
+2. Create a new project, then click **Add Server**
+3. Recommended config for research:
+   - **Location**: Falkenstein or Helsinki (cheapest)
+   - **Image**: Ubuntu 24.04
+   - **Type**: CPX21 (3 vCPU, 4 GB RAM, ~5 EUR/mo) for lightweight tasks,
+     or CCX23 (4 vCPU, 16 GB RAM, ~15 EUR/mo) for heavier workloads
+   - **SSH key**: paste your public key (`cat ~/.ssh/id_ed25519.pub`)
+4. Note the server IP address after creation
+
+### Step 2: Initial server setup
+
+```bash
+# SSH into your new server
+$ ssh root@YOUR_SERVER_IP
+
+# Create a non-root user
+$ adduser researcher
+$ usermod -aG sudo researcher
+
+# Set up firewall
+$ ufw allow OpenSSH
+$ ufw allow 80
+$ ufw allow 443
+$ ufw enable
+
+# Install essentials
+$ apt update && apt install -y git curl nginx certbot python3-certbot-nginx
+
+# Switch to your user
+$ su - researcher
+```
+
+### Step 3: Buy a domain on Namecheap
+
+1. Go to [namecheap.com](https://www.namecheap.com/) and search for your domain
+2. After purchase, go to **Domain List > Manage > Advanced DNS**
+3. Add these records:
+
+| Type | Host | Value | TTL |
+|------|------|-------|-----|
+| A | @ | YOUR_SERVER_IP | Automatic |
+| A | www | YOUR_SERVER_IP | Automatic |
+
+### Step 4: Set up HTTPS with nginx
+
+```bash
+# Create nginx config
+$ sudo tee /etc/nginx/sites-available/mysite <<'EOF'
+server {
+    listen 80;
+    server_name yourdomain.com www.yourdomain.com;
+    root /home/researcher/website;
+    index index.html;
+}
+EOF
+
+$ sudo ln -s /etc/nginx/sites-available/mysite /etc/nginx/sites-enabled/
+$ sudo nginx -t && sudo systemctl reload nginx
+
+# Get free SSL certificate (wait for DNS propagation first)
+$ sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+```
+
+### Step 5: Deploy your site
+
+```bash
+# On your local machine
+$ rsync -avz website/ researcher@YOUR_SERVER_IP:~/website/
+
+# Or set up a git hook for auto-deploy
+$ ssh researcher@YOUR_SERVER_IP 'cd ~/website && git init'
+$ git remote add deploy researcher@YOUR_SERVER_IP:~/website
+$ git push deploy main
+```
+
+### Cost summary
+
+| Service | Cost |
+|---------|------|
+| Hetzner CPX21 (3 vCPU, 4 GB) | ~5 EUR/mo |
+| Namecheap .com domain | ~9 EUR/yr |
+| SSL certificate (Let's Encrypt) | Free |
+| **Total** | **~6 EUR/mo** |
+
+### Multiple projects on one machine
+
+A single Hetzner box can host many projects using a reverse proxy. Install
+Caddy (auto-HTTPS, zero config) and point each project to its own subdomain:
+
+```bash
+# Install Caddy
+$ sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+$ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+$ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+$ sudo apt update && sudo apt install caddy
+```
+
+Create `/etc/caddy/Caddyfile`:
+
+```
+project1.yourdomain.com {
+    reverse_proxy localhost:3001
+}
+
+project2.yourdomain.com {
+    reverse_proxy localhost:3002
+}
+
+demo.yourdomain.com {
+    reverse_proxy localhost:3003
+}
+```
+
+Each project runs in its own Docker Compose stack on a different port. Caddy
+handles HTTPS certificates automatically via Let's Encrypt.
+
+**DNS setup**: add an A record for each subdomain pointing to the same server IP.
+
+**Best practices for multi-project hosting:**
+- Use `docker compose` per project with `mem_limit` and `cpus` to prevent one
+  runaway project from killing everything else
+- Keep databases on internal Docker networks only (never exposed to the internet)
+- Use `fail2ban` + SSH keys only (no password auth)
+- For heavy datasets, use Hetzner Storage Boxes (BX series) or S3-compatible
+  storage (Hetzner, Backblaze B2, Cloudflare R2) instead of filling the boot disk
+- Automate deploys: a simple `git pull && docker compose up -d` script via SSH,
+  or a GitHub Actions self-hosted runner
+- Back up Docker volumes and configs via `cron` + `rsync` to a Storage Box
+- For GPU compute (ML training), burst to cloud (Lambda Labs, Vast.ai) and only
+  deploy inference/demos on the Hetzner box
+
+---
+
+## 8. Automate Updates with ricet
 
 ### Auto-generate publication pages
 
@@ -326,7 +468,7 @@ You: Sync the latest publication list from this project to my website
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 ### GitHub Pages shows 404
 

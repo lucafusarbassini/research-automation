@@ -4,30 +4,30 @@
 
 # ricet
 
-**Automate scientific research using Claude Code with multi-agent orchestration, overnight autonomous execution, and comprehensive tooling.**
+**Automate scientific research using Claude Code with structured skills, persistent knowledge, and overnight autonomous execution.**
 
 Created by **Luca Fusar Bassini**.
 
 ---
 
-ricet is a CLI tool and framework that manages the full lifecycle of scientific research projects. It pairs Claude Code with a structured agent system, persistent knowledge, reproducibility enforcement, and a complete paper pipeline -- so you can focus on the science while automation handles the scaffolding.
+ricet is a CLI tool and framework that manages the full lifecycle of scientific research projects. It pairs Claude Code with eight research skills (slash commands), a persistent knowledge system that compounds insights across sessions, reproducibility enforcement, and a complete paper pipeline -- so you can focus on the science while automation handles the scaffolding.
 
 ---
 
 ## Why ricet?
 
-Running a research project involves dozens of repetitive tasks: environment setup, literature searches, experiment tracking, figure generation, paper writing, and more. ricet provides a single `ricet` command that orchestrates all of these through specialized AI agents operating inside a safe, containerized environment.
+Running a research project involves dozens of repetitive tasks: environment setup, literature searches, experiment tracking, figure generation, paper writing, and more. ricet provides a single `ricet` command that orchestrates all of these through structured AI skills operating inside a safe, containerized environment.
 
 | Problem | Solution |
 |---------|----------|
-| Ad-hoc experiment tracking | Reproducibility engine with run logs, artifact registry, and dataset hashing |
-| Scattered knowledge | Persistent encyclopedia that grows automatically with every task |
-| Tedious boilerplate | Project templates with agents, hooks, LaTeX, and CI/CD out of the box |
-| Unsafe autonomous runs | Docker sandbox with four-tier permission model and auto-backup |
+| Ad-hoc experiment tracking | Lab/stable bipartition with promotion gates and provenance tracking |
+| Scattered knowledge | Persistent encyclopedia, rules, and decision log that grow automatically |
+| Tedious boilerplate | Project templates with skills, hooks, LaTeX, and CI/CD out of the box |
+| Unsafe autonomous runs | Docker sandbox with permission model and auto-backup |
 | Manual paper formatting | Integrated LaTeX pipeline with colorblind-safe figures and citation management |
 | Presentation preparation | AI-generated slide decks with Nano Banana Pro schematics |
-| Credential sprawl | Global credential store with per-project overrides |
-| No remote monitoring | Always-on mobile PWA + Cloudflare Tunnel with QR pairing |
+| Lost insights between sessions | Meta-learn hook auto-captures rules, insights, and decisions from every prompt |
+| No remote monitoring | Mobile access via Tailscale or Cloudflare Tunnel |
 
 ---
 
@@ -61,56 +61,34 @@ ricet start
 ricet overnight --iterations 20
 ```
 
-The `ricet init` wizard auto-detects your system (GPU, conda, Docker), installs claude-flow, walks you through notification and credential setup, creates an isolated Python environment, and optionally creates a GitHub repository. See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough.
+The `ricet init` wizard auto-detects your system (GPU, conda, Docker), installs the full toolchain (uv, tectonic, biber, screen, Tailscale), walks you through notification and credential setup, deploys 8 research skills, registers the meta-learn hook, and optionally creates a GitHub repository. See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough.
 
 ---
 
 ## Feature Highlights
 
-- **Multi-Agent Orchestration** -- Master agent routes tasks to Researcher, Coder, Reviewer, Falsifier, Writer, Cleaner, and Slide-Maker sub-agents, each with dedicated budgets and system prompts.
-- **34 MCP Integrations** -- All installed at startup, organized in eight tiers from essential tools to cloud infrastructure.
-- **Sandbox Infrastructure** -- `ricet sandbox` manages a fully isolated Docker sandbox with auto-backup, credential mounting, and work extraction. Ubuntu 24.04 with full toolchain.
-- **Slide Deck Generation** -- `ricet slides` creates presentation-ready `.pptx` decks with AI-generated schematics via Nano Banana Pro (Gemini 3 Pro). Analyzes your codebase and designs a 15-25 slide narrative.
-- **Always-On Mobile & Web** -- Mobile PWA and web dashboard are always enabled. Cloudflare Tunnel auto-configured during `ricet init` with QR code for instant phone pairing. Monitor tab shows live agent output.
-- **Global Credential Store** -- `~/.ricet/credentials.env` stores API keys once. New projects inherit them automatically. Per-project `.env` overrides supported.
-- **Live Dashboard** -- `ricet dashboard` shows a Rich TUI with agents, resources, memory, progress, and verbose agent output. Also accessible via web at `/dashboard`.
-- **Project Updates** -- `ricet init --update` upgrades an existing project with latest templates, agents, hooks, and skills without overwriting user files.
-- **Overnight Mode** -- Autonomous execution loop with auto-debug, resource monitoring, and recovery. Run `ricet overnight` and check results in the morning.
-- **Knowledge Accumulation** -- A project encyclopedia that records learnings, decisions, successful approaches, and failed attempts. Supports HNSW vector search when claude-flow is available.
-- **Paper Pipeline** -- LaTeX template, publication-quality figure generation with matplotlib rcParams, BibTeX citation management, and one-command compilation.
-- **Reproducibility** -- Every experiment run is logged with parameters, metrics, git hash, and SHA-256 artifact checksums.
-- **Docker Isolation** -- Safe containerized execution with four permission levels (Safe, Moderate, Elevated, Dangerous).
-- **3-Tier Model Routing** -- Automatic model selection (Haiku/Sonnet/Opus) based on task complexity, with budget-aware fallback.
-- **Progressive Instructions** -- Five-phase protocol: Orient, Explore, Plan, Execute, Validate.
-- **Cross-Repository Coordination** -- Link multiple repos, coordinate commits, and enforce permission boundaries.
-- **Adopt Existing Repos** -- Transform any GitHub repo into a ricet project with `ricet adopt`, including fork, scaffold, and GOAL pre-fill from README.
-- **Cross-Repo RAG** -- Link external repositories with `ricet link` so agents can search across all your code while only editing the current project.
-- **Auto-Commit & Push** -- Every state-modifying command automatically commits and pushes, controlled by environment variables.
-- **Collaborative Research** -- Multiple researchers on the same repo with auto-sync, user attribution, and merge-friendly append-only files.
-- **Claude-Powered Intelligence** -- Seven core modules use Claude Opus for intelligent semantic routing, debugging, and suggestions with graceful fallback.
-- **Literature Search** -- `ricet cite` and `ricet discover` search Semantic Scholar and arXiv, format BibTeX, and append to your bibliography.
-- **Style Transfer** -- `ricet paper adapt-style` rewrites your paper to match a reference paper's writing style with plagiarism checks.
-- **Auto Test Generation** -- `ricet test-gen` scans for uncovered source files and generates pytest stubs using Claude.
-- **Package Management** -- `ricet package init/build/publish` turns research code into reusable Python packages.
-- **Daily Maintenance** -- `ricet maintain` runs test generation, docs update, fidelity check, and verification in one pass. Auto-runs after overnight sessions.
-- **Goal Fidelity** -- `ricet fidelity` scores alignment between the codebase and GOAL.md, flagging drift areas.
-- **Cross-Project Learning** -- `ricet sync-learnings` shares encyclopedia entries across ricet projects.
+- **8 Research Skills** -- Slash commands (`/lit-review`, `/experiment-review`, `/paper-draft`, `/falsify`, `/reproduce`, `/research-retro`, `/overnight`, `/slides`) give Claude structured workflows for every research task.
+- **Persistent Knowledge System** -- RULES.md (behavioral), ENCYCLOPEDIA.md (domain), DECISION_LOG.md (architectural) -- all auto-populated by the meta-learn hook from your interactions.
+- **Lab/Stable Bipartition** -- Experimental code in `lab/`, promoted to `stable/` via `ricet promote` with provenance tracking (git hash, timestamp, metrics).
+- **Code Indexing & Search** -- `ricet index-code` extracts function/class signatures; `ricet search-code` does semantic search over the index.
+- **Feature Request Pipeline** -- `ricet feature-request` logs ideas; `ricet implement-features` builds selected ones in parallel worktrees.
+- **Collaborative Research** -- Multiple researchers on the same repo with personal branches, `ricet morning-sync` merges, and user attribution.
+- **Adopt Existing Repos** -- `ricet adopt` transforms any GitHub repo into a ricet project with fork, scaffold, and personal branch.
+- **Sandbox Infrastructure** -- `ricet sandbox` manages a fully isolated Docker sandbox with auto-backup and work extraction.
+- **Slide Deck Generation** -- `ricet slides` creates .pptx decks with AI-generated schematics via Nano Banana Pro (Gemini 3 Pro).
+- **Mobile Access** -- Tailscale (default) or Cloudflare Tunnel for secure access from any device. Screen sessions for persistence.
+- **Overnight Mode** -- Autonomous execution loop with auto-debug, resource monitoring, and recovery.
+- **Paper Pipeline** -- LaTeX template, BibTeX management, tectonic compilation, style transfer.
+- **gstack Integration** -- `ricet gstack install` adds Garry Tan's startup workflow skills alongside ricet's research skills.
+- **Voice Prompting** -- `ricet voice` transcribes audio in 30+ languages and executes the prompt.
+- **Cascading Self-Update** -- When ricet is updated, existing projects get refreshed skills and defaults automatically.
+- **Cross-Repository RAG** -- Link external repos with `ricet link` so agents can search across all your code.
+- **context-hub** -- Versioned API documentation for agents via `ricet chub`.
 - **MCP Discovery** -- `ricet mcp-search` searches 1300+ MCP servers and installs on demand.
-- **Dual-Repo Structure** -- `ricet two-repo` manages experiments/ vs clean/ separation with promotion gates.
-- **URL Browsing** -- `ricet browse` fetches and extracts text from URLs for literature review.
-- **Infrastructure** -- `ricet infra` handles Docker builds, CI/CD, secrets, and dependency checks.
-- **Runbook Execution** -- `ricet runbook` parses and executes code blocks from markdown runbooks.
-- **Docker Overnight** -- `ricet overnight --docker` runs autonomous sessions inside a Docker sandbox.
-- **Resource-Aware Overnight** -- Monitors CPU/RAM/disk between iterations, auto-pauses on low resources.
-- **Falsifier Auto-Trigger** -- Falsifier agent validates results after every overnight iteration automatically.
-- **Voice Prompting** -- `ricet voice` transcribes audio instructions and structures them into actionable research prompts.
-- **Figure Gallery** -- `ricet gallery` scans and catalogs experiment figures by run ID for quick review and paper inclusion.
-- **Git Worktree Management** -- `ricet worktree` manages parallel branches for concurrent experiments.
-- **Task Queue** -- `ricet queue` manages and spools background tasks for batch execution.
-- **Website Builder** -- `ricet website` generates and deploys a GitHub Pages documentation site.
-- **RAG-Powered MCP Discovery** -- Searchable index of 1300+ MCP servers with semantic suggestion and on-demand installation.
-- **Social Media Publishing** -- `ricet publish medium` and `ricet publish linkedin` draft, validate, and publish research summaries to Medium, LinkedIn, and Twitter/X with platform-specific formatting.
-- **[PaperBoat](https://paperboatch.com/)** -- Recommended external service for daily cross-discipline paper discovery. Useful as a background SOTA knowledge source that updates daily.
+- **Auto-Commit & Push** -- Every state-modifying command automatically commits and pushes.
+- **Global Credential Store** -- `~/.ricet/credentials.env` stores API keys once across all projects.
+- **Interactive Dashboard** -- `ricet dashboard` Rich TUI with live progress and resource monitoring.
+- **Zenodo Publishing** -- `ricet zenodo` publishes software, datasets, and papers with permanent DOIs.
 
 Explore all features in the [Features](features.md) page.
 
@@ -131,23 +109,28 @@ ricet is built on six core principles:
 
 ## Project Status
 
-ricet is under active development. The core modules, CLI, Docker setup, templates, and agent system are implemented. Contributions and feedback are welcome.
+ricet is under active development. The core modules, CLI, templates, and skill system are implemented. Contributions and feedback are welcome.
 
 | Component | Status |
 |-----------|--------|
-| CLI (`ricet` command) | Implemented |
+| CLI (`ricet` command, 55+ commands) | Implemented |
 | Core modules (50+ modules) | Implemented |
-| Docker sandbox infrastructure | Implemented |
-| Agent orchestration (7 agent types) | Implemented |
+| Research skills (8 slash commands) | Implemented |
+| Persistent knowledge system | Implemented |
+| Meta-learn hook (auto-capture) | Implemented |
+| Lab/stable bipartition | Implemented |
 | Paper pipeline | Implemented |
 | Slide deck generation | Implemented |
-| MCP integrations (34 at startup) | Implemented |
+| Docker sandbox infrastructure | Implemented |
 | claude-flow integration | Implemented (optional) |
-| GitHub workflows | Implemented |
-| Always-on mobile & web access | Implemented |
-| Global credential store | Implemented |
-| Live dashboard (TUI + web) | Implemented |
-| Cloudflare Tunnel auto-setup | Implemented |
+| gstack integration | Implemented |
+| Mobile access (Tailscale/Cloudflare) | Implemented |
+| Collaborative research workflow | Implemented |
+| Cascading self-update | Implemented |
+| Code indexing & search | Implemented |
+| Feature request pipeline | Implemented |
+| Reproducibility pipeline (`/reproduce`) | Under development |
+| Manual curation of MD skills | Under development |
 | Documentation site | You are here |
 
 ---

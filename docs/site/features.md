@@ -4,37 +4,37 @@ A complete reference for every major feature in ricet, designed by **Luca Fusar 
 
 ---
 
-## Multi-Agent Orchestration
+## Research Skills (Slash Commands)
 
-ricet uses a hierarchical agent system where a Master agent routes tasks to six specialized sub-agents.
+ricet deploys eight research skills as Claude Code slash commands. Each skill is a structured Markdown prompt that gives Claude a complete workflow for a specific research task. Skills are deployed to `.claude/skills/` at `ricet init` and auto-refreshed when ricet is updated.
 
-### Agent Types
+### Available Skills
 
-| Agent | Role | Default Budget |
-|-------|------|----------------|
-| **Master** | Orchestrator -- parses requests, routes, merges results | -- |
-| **Researcher** | Literature search, paper synthesis, citation management | 15% |
-| **Coder** | Code writing, implementation, bug fixes | 35% |
-| **Reviewer** | Code quality audits, improvement suggestions | 10% |
-| **Falsifier** | Adversarial validation, data leakage checks, statistical audits | 20% |
-| **Writer** | Paper sections, documentation, reports | 15% |
-| **Cleaner** | Refactoring, optimization, dead code removal | 5% |
-| **Slide-Maker** | Presentation deck generation with AI schematics | 15% |
+| Skill | What it does | Key features |
+|-------|-------------|--------------|
+| `/lit-review` | Search PubMed/arXiv, synthesize findings | Citation verification, gap analysis, ENCYCLOPEDIA update |
+| `/experiment-review` | Six-dimension experiment audit | Traffic-light scoring (RED/YELLOW/GREEN), leakage detection |
+| `/paper-draft` | Draft paper sections with lab conventions | AI-detection pass, outline-first workflow, zero fluff enforcement |
+| `/falsify` | Adversarial validation (Popper mode) | Permutation tests, leakage checks, code line-by-line audit |
+| `/reproduce` | Reproducibility stress test | Multi-seed runs, stability matrix, quantitative verdict |
+| `/research-retro` | Session retrospective | Tweetable summary, JSON snapshots for trend tracking |
+| `/slides` | Generate polished .pptx presentations | AI-generated schematics, dark theme, 15-25 slide narrative |
+| `/overnight` | Autonomous overnight execution | TODO list processing, auto-debug, "Only stop for" rules |
 
-### Task Routing
+### Skill Design Patterns
 
-Tasks are routed using intelligent Opus-powered routing. Claude Opus semantically analyzes the task description to understand intent, domain, and required expertise, then dispatches it to the best-fit sub-agent. If Opus is unavailable, routing falls back to the claude-flow bridge, and finally to simple keyword matching as a last resort. For example:
+Each skill follows consistent design patterns inspired by [gstack](https://github.com/garrytan/gstack):
 
-- "Search for papers on attention mechanisms" routes to **Researcher**
-- "Implement a data loader for the CSV files" routes to **Coder**
-- "Check if there is data leakage in the pipeline" routes to **Falsifier**
-- "Write the methods section" routes to **Writer**
+- **Priority Hierarchy**: Which steps to prioritize when context is limited
+- **Important Rules**: Terse numbered list of non-negotiable constraints
+- **LEGISLATION citations**: Hard constraints from the project's behavioral rulebook
+- **Quality Checklist**: Verify-before-finishing checklist at the end
+- **Persistence**: JSON snapshots saved for trend tracking across runs
+- **Cross-referencing**: Check for prior reports on the same target
 
 ### Task DAG Execution
 
-Complex tasks can be decomposed into a directed acyclic graph (DAG) of subtasks. The orchestrator resolves dependencies and runs independent tasks in parallel using `ThreadPoolExecutor`.
-
-When claude-flow is available, swarm execution delegates to the bridge for enhanced coordination.
+For complex multi-step tasks, `core/agents.py` provides Task DAG execution with dependency resolution and parallel execution via `ThreadPoolExecutor`. Output ring buffers support mobile-friendly truncated output.
 
 ---
 
@@ -89,22 +89,30 @@ The `scripts/overnight-enhanced.sh` script adds:
 
 ---
 
-## Knowledge Accumulation
+## Persistent Knowledge System
 
-Every project maintains a living encyclopedia at `knowledge/ENCYCLOPEDIA.md`.
+Every project maintains a three-file knowledge system that auto-populates from your interactions:
 
-### Sections
+### Knowledge Files
 
-- **Environment** -- System info, package versions, hardware.
-- **Machines** -- Local and remote compute resources.
-- **Tricks** -- Useful patterns and shortcuts discovered during work.
-- **Decisions** -- Design choices and their rationale.
-- **What Works** -- Successful approaches for future reference.
-- **What Doesn't Work** -- Failed approaches to avoid repeating.
+| File | Purpose | Updated by |
+|------|---------|------------|
+| `knowledge/RULES.md` | Behavioral rules from user corrections | meta_learn_hook (auto) |
+| `knowledge/ENCYCLOPEDIA.md` | Domain knowledge, techniques, what works/fails | meta_learn_hook (auto) |
+| `knowledge/DECISION_LOG.md` | Project decisions with rationale | meta_learn_hook (auto) |
+
+### Meta-Learn Hook
+
+The meta-learn hook (`scripts/meta_learn_hook.py`) runs on every user prompt via Claude Code's `UserPromptSubmit` hook. It uses Haiku to extract:
+- **Behavioral rules** (corrections, preferences) → RULES.md
+- **Domain insights** (techniques, findings) → ENCYCLOPEDIA.md
+- **Decisions** (architectural choices with rationale) → DECISION_LOG.md
+
+Quality filters reject garbled text, near-duplicates, and entries shorter than 15 characters.
 
 ### Auto-Update
 
-After every task, the post-task hook and knowledge module can append new entries. Each entry includes a timestamp for traceability.
+RULES.md is loaded into every session via the CLAUDE.md `@` import directive. ENCYCLOPEDIA.md and DECISION_LOG.md are searched on-demand. Each entry includes a timestamp for traceability.
 
 ### Vector Search
 
@@ -182,6 +190,28 @@ Runs `pdflatex` -> `biber` -> `pdflatex` -> `pdflatex` for a complete build.
 ### Style Transfer
 
 The `core/style_transfer.py` module can analyze the style of a reference paper and apply similar patterns to your writing, with plagiarism checks to ensure originality.
+
+---
+
+## Lab/Stable Bipartition
+
+Experimental work lives in `lab/` (chaotic, iterative). When results pass validation, code is promoted to `stable/` with provenance tracking:
+
+```bash
+# Experimental work happens in lab/
+python lab/analysis.py
+
+# Promote after validation
+ricet promote lab/analysis.py
+```
+
+Promotion copies the file to `stable/` and creates a provenance JSON file containing:
+- Source path and git hash
+- Timestamp of promotion
+- Falsification result (if run)
+- Key metrics at time of promotion
+
+Both directories are created at `ricet init`.
 
 ---
 
@@ -1332,6 +1362,57 @@ The slide maker uses a two-step workflow:
 2. **`ricet slides build`** -- Runs the script, which generates AI schematics via Google Gemini (Nano Banana Pro) and assembles the final `.pptx` file.
 
 Requires `GOOGLE_API_KEY` for schematic generation.
+
+---
+
+## Code Indexing & Search
+
+Index any codebase for semantic search, then query it:
+
+```bash
+ricet index-code reference/code/    # extract function/class signatures + docstrings
+ricet search-code "ODE solver"      # semantic search over the index
+```
+
+`index-code` walks the directory, extracts function/class signatures and docstrings, and writes `state/code_index.md`. `search-code` reuses the existing RAG infrastructure (`core/rag.py`) to search over this index.
+
+---
+
+## Feature Request Pipeline
+
+Log feature ideas and implement them in parallel worktrees:
+
+```bash
+ricet feature-request "add dark mode to dashboard"    # append to state/feature_requests.md
+ricet implement-features                               # select which to build
+```
+
+`implement-features` displays pending features with numbers. After selection, each feature gets its own git worktree branch via `core/git_worktrees.py`, with one agent per worktree for conflict-free parallel development.
+
+---
+
+## Cascading Self-Update
+
+When ricet itself is updated (via git pull or pip install), `_init_update()` automatically refreshes existing projects:
+
+- `.claude/skills/*.md` -- refreshed if source is newer
+- `knowledge/LEGISLATION.md` and `knowledge/PHILOSOPHY.md` -- refreshed from defaults
+- User-edited files in `knowledge/` are never overwritten
+
+This ensures all projects benefit from skill improvements without manual intervention.
+
+---
+
+## gstack Integration
+
+Install [gstack](https://github.com/garrytan/gstack) startup workflow skills globally alongside ricet's research skills:
+
+```bash
+ricet gstack install    # install gstack skills to ~/.claude/skills/
+ricet gstack status     # check installed skills
+```
+
+gstack skills (ship, review, retro, QA, plan-ceo-review, etc.) complement ricet's research skills. Both can be used in the same Claude Code session.
 
 ---
 

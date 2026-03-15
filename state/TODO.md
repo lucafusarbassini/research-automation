@@ -1,5 +1,11 @@
 # TODO
 
+## Under development
+- [ ] Reproducibility pipeline (`/reproduce` skill): largely a placeholder — needs real-world testing
+      with multi-seed runs, split variation, and subsample sensitivity on actual experiments
+- [ ] Manual curation of MD skills: all 8 skills written but need human review and field-testing
+      before they can be considered production-quality
+
 ## Future integrations
 - [ ] Integrate context-hub (https://github.com/andrewyng/context-hub) for structured context management
       Generates .context files from repos, docs, URLs — could feed Encyclopedia and cross-project RAG
@@ -33,3 +39,4 @@
 - [ ] [mobile:proj] run experiments
 - [ ] [voice] what is the current status of my project?
 - [ ] [voice] Let's test implementing a new function
+- [ ] [voice] write an ordinary differential equation system and an integration and make a plot

@@ -21,7 +21,7 @@
 
 ---
 
-ricet turns a research idea into reproducible code, validated results, and a publication-ready LaTeX paper -- all from your terminal. A master agent breaks your goal into subtasks and dispatches them to specialized sub-agents (researcher, coder, reviewer, falsifier, writer, cleaner, slide-maker) that execute inside a Docker-isolated environment with 34 MCP integrations installed at startup.
+ricet turns a research idea into reproducible code, validated results, and a publication-ready LaTeX paper -- all from your terminal. Eight research skills (slash commands) give Claude structured workflows for literature review, experiment auditing, paper drafting, adversarial validation, reproducibility testing, and more. A persistent knowledge system ensures insights compound across sessions instead of being lost.
 
 ## Prerequisites
 
@@ -50,32 +50,54 @@ cd my-experiment
 ricet start
 ```
 
-That's it. The onboarding wizard will ask for your research goal, compute preferences, and notification settings, then scaffold a fully configured project.
+That's it. The onboarding wizard will ask for your research goal, compute preferences, and notification settings, then scaffold a fully configured project with knowledge files, skills, LaTeX template, and auto-learning hooks.
 
 ## Features
 
-### Multi-Agent Orchestration
+### Research Skills (Slash Commands)
 
-A hierarchical swarm of specialized Claude agents collaborates on your research. The **master agent** parses every request and routes it to the right sub-agent:
+Instead of a rigid agent hierarchy, ricet deploys eight research skills as Claude Code slash commands. Each skill is a structured Markdown prompt that gives Claude a complete workflow for a specific research task:
 
-| Agent | Role |
-|-------|------|
-| **Researcher** | Literature search, paper retrieval, background synthesis |
-| **Coder** | Implementation, experiments, data processing |
-| **Reviewer** | Code review, improvement suggestions |
-| **Falsifier** | Attacks results, finds flaws, enforces Popperian falsification |
-| **Writer** | Paper sections, documentation, reports |
-| **Cleaner** | Refactoring, optimization, code hygiene |
-| **Slide-Maker** | Presentation deck generation with AI-generated schematics |
+| Skill | What it does |
+|-------|-------------|
+| `/lit-review` | Search PubMed/arXiv, synthesize findings, update Encyclopedia |
+| `/experiment-review` | Six-dimension experiment audit (data, stats, code, methodology, leakage, sanity) |
+| `/paper-draft` | Draft a paper section with lab style conventions and zero AI artifacts |
+| `/falsify` | Adversarial validation -- try to break current results (Popper mode) |
+| `/reproduce` | Re-run analysis with different seeds/splits, produce stability matrix |
+| `/research-retro` | Session retrospective with tweetable summary, JSON snapshots for trends |
+| `/slides` | Generate a polished .pptx presentation with AI-generated schematics |
+| `/overnight` | Autonomous overnight session -- execute TODO list unattended |
 
-Token budgets are automatically distributed across agents and monitored throughout the session.
+Skills are deployed to `.claude/skills/` at `ricet init` and auto-refreshed when ricet is updated.
 
-### Vector Memory & Knowledge Accumulation
+### Persistent Knowledge System
 
-Every insight, decision, and finding is persisted to a growing **Encyclopedia** backed by HNSW vector search (via claude-flow). Agents query memory semantically so knowledge compounds across sessions instead of being lost.
+Every insight, decision, and behavioral correction is captured and persisted across sessions:
+
+| File | Purpose | Updated by |
+|------|---------|------------|
+| `knowledge/RULES.md` | Behavioral rules from user corrections | meta_learn_hook (auto) |
+| `knowledge/ENCYCLOPEDIA.md` | Domain knowledge, techniques, what works/fails | meta_learn_hook (auto) |
+| `knowledge/DECISION_LOG.md` | Project decisions with rationale | meta_learn_hook (auto) |
+
+The **meta-learn hook** runs on every user prompt via Haiku. It extracts rules, insights, and decisions from your interactions and appends them to the right file. Knowledge compounds across sessions instead of being lost.
 
 ```bash
-ricet memory "effect of learning rate on convergence"
+ricet memory search "effect of learning rate on convergence"
+```
+
+### Lab/Stable Bipartition
+
+Experimental work lives in `lab/`. When results pass validation, code is promoted to `stable/` with provenance tracking:
+
+```bash
+# Experimental work
+python lab/analysis.py
+
+# Promote after validation
+ricet promote lab/analysis.py
+# → copies to stable/analysis.py with provenance JSON (git hash, timestamp, metrics)
 ```
 
 ### Paper Pipeline
@@ -83,7 +105,7 @@ ricet memory "effect of learning rate on convergence"
 A complete LaTeX publication workflow ships with every project:
 
 - `main.tex` template adapted from [Albert Dominguez, Gioele La Manno & Martin Weigert's manuscript template](https://github.com/weigertlab/manuscript_lipiddevatlas)
-- BibTeX citation management with `ricet cite <query>` (search → format → append to .bib)
+- BibTeX citation management with `ricet cite <query>` (search, format, append to .bib)
 - Automatic figure reference checking
 - Style analysis and transfer: `ricet paper adapt-style --reference <paper>`
 - One-command compilation via **tectonic** (auto-installs LaTeX packages, no TeX distribution needed):
@@ -92,7 +114,7 @@ A complete LaTeX publication workflow ships with every project:
 ricet paper build
 ```
 
-For exhaustive cross-discipline paper discovery, we recommend [PaperBoat](https://paperboatch.com/) — an AI-powered service that scans thousands of journals daily and delivers personalized paper matches. Useful as a background SOTA knowledge source that updates daily across all disciplines.
+For exhaustive cross-discipline paper discovery, we recommend [PaperBoat](https://paperboatch.com/) -- an AI-powered service that scans thousands of journals daily and delivers personalized paper matches.
 
 ### Remote Access & Background Sessions {#remote-access-via-mobile}
 
@@ -108,7 +130,7 @@ ricet overnight --iterations 20
 ssh workstation "screen -r ricet-session"
 ```
 
-The Cloudflare Tunnel set up during `ricet init` gives you a browser URL to monitor live output on any device. Share the QR code for instant phone access.
+Mobile access uses Tailscale (default) or Cloudflare Tunnel for secure access from any device.
 
 ### Overnight Autonomous Mode
 
@@ -118,38 +140,7 @@ Queue a task list and let the system work unattended:
 ricet overnight --iterations 30
 ```
 
-The system executes your TODO list iteratively, checkpoints progress after every subtask, and stops when the completion signal is detected or the iteration cap is reached. Supports both claude-flow swarm orchestration and a raw-loop fallback.
-
-### Auto-Debug Loop
-
-When a command fails, the auto-debug module captures the error, analyses the traceback, proposes a fix, applies it, and retries -- all without manual intervention. Every fix and its outcome are logged for reproducibility.
-
-### 3-Tier Model Routing
-
-Requests are automatically routed to the most cost-effective model:
-
-| Tier | Model | Used for |
-|------|-------|----------|
-| Booster | Claude Haiku | Formatting, lookups, classification |
-| Workhorse | Claude Sonnet | Code writing, analysis, general tasks |
-| Oracle | Claude Opus | Architecture, validation, paper writing |
-
-### Browser Automation
-
-Headless browser sessions for web scraping, screenshot capture, and PDF generation. Delegates to a Puppeteer MCP server when available; falls back to lightweight HTTP tools otherwise.
-
-### Auto-Commit & Push
-
-Every state-modifying CLI command (`init`, `start`, `config`, `overnight`, `paper`, `verify`, `debug`, etc.) automatically commits and pushes changes. Controlled by environment variables:
-
-```bash
-export RICET_AUTO_COMMIT=true   # default: true
-export AUTO_PUSH=true           # default: true
-```
-
-### Claude-Powered Routing
-
-Seven core modules (agents, model router, auto-debug, doability, prompt suggestions, verification, onboarding) now try the Claude CLI for intelligent decisions before falling back to keyword heuristics. This improves task routing accuracy, fix suggestions, and complexity classification. Disable in tests or CI with `RICET_NO_CLAUDE=true`.
+The system executes your TODO list iteratively, checkpoints progress after every subtask, and stops when the completion signal is detected or the iteration cap is reached.
 
 ### Adopt Existing Repos
 
@@ -169,7 +160,7 @@ The command forks the repo (keeping the original intact), overlays the ricet wor
 Multiple researchers can collaborate on the same repo, each on their own branch:
 
 ```bash
-# Each collaborator adopts the repo — gets their own branch automatically
+# Each collaborator adopts the repo -- gets their own branch automatically
 ricet adopt https://github.com/lab/project
 # → creates branch user-alice, user-bob, etc. from git email
 
@@ -180,7 +171,25 @@ ricet sync
 ricet morning-sync
 ```
 
-`morning-sync` pulls every `user-*` branch, merges it into `main` with `--no-ff`, and pushes. Conflicts are reported and skipped so nothing is lost. Encyclopedia entries include user identity for attribution. Merge conflicts on append-only files are minimized via `.gitattributes merge=union`.
+`morning-sync` pulls every `user-*` branch, merges it into `main` with `--no-ff`, and pushes. Conflicts are reported and skipped so nothing is lost. Merge conflicts on append-only files are minimized via `.gitattributes merge=union`.
+
+### Code Indexing & Search
+
+Index any codebase for semantic search, then query it:
+
+```bash
+ricet index-code reference/code/    # extract function/class signatures
+ricet search-code "ODE solver"      # semantic search over the index
+```
+
+### Feature Request Pipeline
+
+Log feature ideas and implement them in parallel worktrees:
+
+```bash
+ricet feature-request "add dark mode to dashboard"
+ricet implement-features    # select which to build, each gets a worktree
+```
 
 ### Cross-Repository RAG
 
@@ -188,35 +197,43 @@ Link external repositories so agents can search across all your code while only 
 
 ```bash
 ricet link /path/to/other-repo --name my-lib   # index for search
-ricet link /path/to/data-pipeline               # auto-named from path
 ricet reindex                                    # re-index all linked repos
 ricet unlink my-lib                              # remove
 ```
 
-Linked repos are indexed into HNSW vector memory (with JSON fallback) and searched automatically during `ricet memory` queries. Permission boundaries ensure linked repos are read-only.
-
 ### context-hub: Versioned API Docs for Agents {#context-hub}
 
-ricet integrates [context-hub](https://github.com/andrewyng/context-hub) (`chub`) — a curated, versioned API documentation registry designed for coding agents. Agents can query accurate library docs instead of hallucinating APIs.
+ricet integrates [context-hub](https://github.com/andrewyng/context-hub) (`chub`) -- a curated, versioned API documentation registry designed for coding agents.
 
 ```bash
 ricet chub search openai            # discover available doc sets
 ricet chub get openai               # fetch Python API reference
-ricet chub get pandas --lang py     # language-specific variant
-ricet chub get openai --full        # complete reference (large)
-ricet chub annotate openai "use v2 endpoints"  # add a local note
-ricet chub feedback openai up       # rate docs as helpful
 ```
 
-`chub` is auto-installed during `ricet init` (requires Node.js ≥ 18). Agents will query context-hub automatically when working with supported libraries.
+### gstack Integration
 
-### Cross-Repository Coordination
+Install [gstack](https://github.com/garrytan/gstack) startup workflow skills globally alongside ricet's research skills:
 
-Link multiple repositories, run coordinated commits, and enforce permission boundaries across projects -- useful for mono-repo experiments that span data pipelines and model code.
+```bash
+ricet gstack install    # install gstack skills to ~/.claude/skills/
+ricet gstack status     # check installed skills
+```
 
 ### Voice Prompting
 
-Transcribe audio instructions, detect language, and structure them into actionable prompts that feed directly into the agent pipeline.
+Transcribe audio instructions in 30+ languages and execute them:
+
+```bash
+ricet voice
+```
+
+### Auto-Debug Loop
+
+When a command fails, the auto-debug module captures the error, analyses the traceback, proposes a fix, applies it, and retries -- all without manual intervention.
+
+### Cascading Self-Update
+
+When ricet is updated, `_init_update()` automatically refreshes skills and defaults in all existing projects without overwriting user-edited files.
 
 ### Sandbox Infrastructure
 
@@ -225,54 +242,27 @@ Run autonomous sessions inside a fully isolated Docker sandbox:
 ```bash
 ricet sandbox setup     # Build sandbox image with full toolchain
 ricet sandbox start     # Launch sandbox container
-ricet sandbox status    # Check sandbox health
 ricet sandbox extract   # Copy work products to host
-ricet sandbox backup    # Snapshot the sandbox state
-ricet sandbox destroy   # Tear down the sandbox
 ```
-
-The sandbox uses Ubuntu 24.04 with Node.js, Python 3.11, LaTeX, and all ricet dependencies pre-installed. Claude credentials are mounted read-only. Auto-backup runs every 30 minutes during overnight sessions.
 
 ### Slide Deck Generation
 
 Generate presentation-ready `.pptx` decks with AI-generated schematics:
 
 ```bash
-ricet slides setup      # Copy slide templates into project
-ricet slides create     # Claude agent designs narrative + writes make_slides.py
+ricet slides create     # Claude designs narrative + writes make_slides.py
 ricet slides build      # Run script to generate schematics + build .pptx
 ```
 
-Uses Nano Banana Pro (Google Gemini 3 Pro) to generate full-slide schematic diagrams in 16:9 format. The agent analyzes your codebase, designs a 15-25 slide narrative, engineers detailed prompts for N schematics, and writes a self-contained build script.
+### Additional Features
 
-### Global Credential Store
-
-Manage API keys once, use them across all projects:
-
-```bash
-~/.ricet/credentials.env    # Shared credentials (chmod 600)
-```
-
-During `ricet init`, credentials are collected once and stored globally. New projects inherit them automatically. Project-level `.env` files can override globals.
-
-### Always-On Mobile & Web Access
-
-Mobile and web access is always enabled -- no configuration needed. During `ricet init`, a Cloudflare Tunnel is automatically set up with a QR code for instant phone pairing. The PWA includes a Monitor tab showing live agent output.
-
-### Interactive Dashboard
-
-A Rich-powered TUI that shows live progress, TODO status, session history, resource utilization, and verbose agent output at a glance. Also accessible via the web at `/dashboard`.
-
-### Figure Gallery
-
-Automatically scans, catalogs, and organizes experiment figures by run ID and format for quick review and paper inclusion.
-
-### Security & Reproducibility
-
-- Credential isolation via `.env` files (never committed)
-- Docker containerization for safe, reproducible execution
-- Full audit logging in `state/audit.log`
-- Git checkpoint after every subtask
+- **Auto-Commit & Push** -- Every state-modifying CLI command automatically commits and pushes
+- **Global Credential Store** -- `~/.ricet/credentials.env` stores API keys once across all projects
+- **Interactive Dashboard** -- `ricet dashboard` Rich TUI with live progress and resource monitoring
+- **Figure Gallery** -- Scans, catalogs, and organizes experiment figures by run ID
+- **Security** -- Credential isolation, Docker containerization, full audit logging
+- **MCP Discovery** -- `ricet mcp-search` searches 1300+ MCP servers and installs on demand
+- **claude-flow (ruflo)** -- Optional multi-agent MCP server for complex coordination tasks
 
 ## Installation
 
@@ -322,8 +312,8 @@ Running `ricet init` in a new project bootstraps the full toolchain with no manu
 | **tectonic** | Single-binary LaTeX engine (replaces a full TeX distribution) |
 | **biber 2.17** | BibLaTeX backend, version-matched to tectonic's bundled biblatex |
 | **screen** | Background sessions and [remote phone access](#remote-access-via-mobile) |
-| **cloudflared** | Secure tunnel for mobile browser access through firewalls |
-| **chub** | [context-hub](#context-hub) — versioned API docs for agents |
+| **Tailscale** | Secure tunnel for mobile access (default), Cloudflare Tunnel as fallback |
+| **chub** | [context-hub](#context-hub) -- versioned API docs for agents |
 
 ## Configuration
 
@@ -365,54 +355,52 @@ claude auth login
 
 For CI/headless environments only, you may optionally store an API key as a
 fallback in a `.env` file at the project root (auto-loaded, never committed).
-Note: API usage is billed separately and can be expensive.
-
-```
-# Optional fallback for CI/headless only:
-ANTHROPIC_API_KEY=sk-ant-...
-GITHUB_TOKEN=ghp_...
-```
 
 ## CLI Commands
 
 | Command | Description |
 |---------|-------------|
 | `ricet init <name>` | Scaffold a new research project with interactive onboarding |
-| `ricet init <name> --update` | Update an existing project with latest templates and agents |
 | `ricet start` | Launch an interactive Claude Code session |
 | `ricet overnight` | Run autonomous overnight mode with configurable iterations |
 | `ricet status` | Show current TODO, progress, and resource metrics |
 | `ricet config [section]` | View or update project settings |
-| `ricet paper <action>` | Paper pipeline: `build`, `check`, `update`, `modernize` |
-| `ricet memory <query>` | Semantic search across vector memory |
-| `ricet agents` | Show active swarm agent status |
-| `ricet metrics` | Display token usage, cost, and system resource stats |
-| `ricet sandbox <action>` | Sandbox management: `setup`, `start`, `stop`, `status`, `logs`, `extract`, `backup`, `destroy` |
-| `ricet slides <action>` | Slide deck generation: `setup`, `create`, `build` |
-| `ricet dashboard` | Launch the Rich TUI dashboard with live agent output |
 | `ricet adopt <source>` | Adopt an existing repo as a ricet project (fork + scaffold) |
-| `ricet link <path>` | Link a repository for cross-repo RAG search |
-| `ricet unlink <name>` | Remove a linked repository |
-| `ricet reindex` | Re-index all linked repositories |
-| `ricet docs` | Auto-update project docs from source code |
-| `ricet mcp-search <need>` | Search 1300+ MCP servers and install on demand |
-| `ricet two-repo <action>` | Manage experiments/ vs clean/ dual-repo structure |
-| `ricet browse <url>` | Fetch and extract text from a URL (literature review) |
-| `ricet infra <action>` | Infrastructure checks, Docker builds, CI/CD, secrets |
-| `ricet runbook <file>` | Parse and execute code blocks from a markdown runbook |
-| `ricet paper adapt-style` | Rewrite your paper in a reference paper's style |
+| `ricet morning-sync` | Merge all user-* branches into main |
+| `ricet sync` | Pull, rebase, push the current branch |
+| `ricet paper <action>` | Paper pipeline: `build`, `check`, `update`, `modernize` |
 | `ricet cite <query>` | Search papers and append BibTeX to references.bib |
-| `ricet discover <topic>` | Broad literature discovery across databases |
-| `ricet test-gen` | Auto-generate tests for new/changed source files |
+| `ricet memory <query>` | Semantic search across project knowledge |
+| `ricet promote <path>` | Promote lab/ file to stable/ after validation |
+| `ricet index-code <path>` | Index a codebase for semantic search |
+| `ricet search-code <query>` | Search indexed code |
+| `ricet feature-request <desc>` | Log a feature request |
+| `ricet implement-features` | Build selected features in parallel worktrees |
+| `ricet slides <action>` | Slide deck generation: `setup`, `create`, `build` |
+| `ricet mobile` | Manage mobile companion server |
+| `ricet voice` | Record and execute a voice prompt |
+| `ricet gstack <action>` | Manage gstack startup workflow skills |
+| `ricet sandbox <action>` | Sandbox: `setup`, `start`, `stop`, `extract`, `backup`, `destroy` |
+| `ricet dashboard` | Launch the Rich TUI dashboard |
+| `ricet link <path>` | Link a repository for cross-repo RAG search |
+| `ricet mcp-search <need>` | Search 1300+ MCP servers |
+| `ricet enable-ruflo` | Enable claude-flow MCP server |
+| `ricet disable-ruflo` | Disable claude-flow MCP server |
+| `ricet docs` | Auto-update project documentation |
+| `ricet test-gen` | Auto-generate tests for new/changed files |
 | `ricet package <action>` | Package management: `init`, `build`, `publish` |
-| `ricet maintain` | Run daily maintenance pass (tests, docs, fidelity, verify) |
+| `ricet zenodo <action>` | Publish to Zenodo with DOI |
+| `ricet maintain` | Run daily maintenance pass |
 | `ricet fidelity` | Check GOAL.md alignment and flag drift |
-| `ricet sync-learnings` | Share learnings across ricet projects |
-| `ricet auto <action>` | Manage autonomous routines and topic monitoring |
-| `ricet repro <action>` | Reproducibility: `log`, `list`, `show`, `hash` |
 | `ricet verify` | Run verification on recent outputs |
-| `ricet list-sessions` | List all past and active sessions |
-| `ricet --version` | Print version |
+| `ricet browse <url>` | Fetch and extract text from a URL |
+| `ricet chub <action>` | Query context-hub for versioned API docs |
+| `ricet discover <topic>` | Broad literature discovery across databases |
+| `ricet two-repo <action>` | Manage experiments/ vs clean/ dual-repo |
+| `ricet worktree <action>` | Manage git worktrees for parallel experiments |
+| `ricet queue <action>` | Queue prompts for batch execution |
+| `ricet infra <action>` | Infrastructure checks, Docker, CI/CD |
+| `ricet runbook <file>` | Parse and execute markdown runbooks |
 
 Run `ricet <command> --help` for full option details.
 
@@ -422,72 +410,65 @@ Run `ricet <command> --help` for full option details.
 research-automation/
 |
 |-- cli/                        # Typer CLI entry points
-|   |-- main.py                 #   ricet command definitions
+|   |-- main.py                 #   ricet command definitions (55+ commands)
 |   |-- dashboard.py            #   Rich TUI dashboard
 |   +-- gallery.py              #   Figure gallery viewer
 |
-|-- core/                       # Python library modules
-|   |-- agents.py               #   Agent definitions & routing (incl. Slide-Maker)
+|-- core/                       # Python library modules (50+)
+|   |-- adopt.py                #   Transform existing repos into ricet projects
+|   |-- agents.py               #   Task DAG execution, output ring buffers
+|   |-- auto_commit.py          #   Auto-commit & push after operations
 |   |-- auto_debug.py           #   Auto-debug loop
 |   |-- autonomous.py           #   Overnight autonomous runner
-|   |-- browser.py              #   Headless browser integration
-|   |-- auto_commit.py          #   Auto-commit & push after operations
 |   |-- claude_flow.py          #   claude-flow bridge (swarm, memory, metrics)
-|   |-- claude_helper.py        #   Shared Claude CLI helper for intelligent fallbacks
+|   |-- code_index.py           #   Code indexing for semantic search
 |   |-- collaboration.py        #   Multi-user sync, merge, user identity
-|   |-- credential_store.py     #   Global credential store (~/.ricet/credentials.env)
-|   |-- cross_repo.py           #   Multi-repo coordination & RAG indexing
-|   |-- adopt.py                #   Transform existing repos into ricet projects
-|   |-- knowledge.py            #   Encyclopedia & keyword search
-|   |-- mcps.py                 #   MCP discovery & management (34 installed at startup)
-|   |-- meta_rules.py           #   Automatic meta-rule capture
-|   |-- model_router.py         #   3-tier model routing
+|   |-- knowledge.py            #   Encyclopedia & RAG search
 |   |-- notifications.py        #   Email / Slack notifications
-|   |-- onboarding.py           #   Project setup wizard
+|   |-- onboarding.py           #   Project setup wizard (tectonic, biber, uv, chub)
 |   |-- paper.py                #   LaTeX compilation & citation management
-|   |-- reproducibility.py      #   Reproducibility tracking
-|   |-- resources.py            #   System resource monitoring
-|   |-- sandbox.py              #   Docker sandbox orchestration
-|   |-- security.py             #   Credential & permission guards
-|   |-- session.py              #   Session lifecycle management
-|   |-- slides.py               #   Slide deck generation orchestration
+|   |-- promotion.py            #   Lab → stable promotion with provenance
+|   |-- slack_delivery.py       #   Slack file uploads via v2 API
+|   |-- slides.py               #   Slide deck generation
 |   |-- style_transfer.py       #   Academic writing style analysis
-|   |-- tokens.py               #   Token budget tracking
-|   |-- verification.py         #   Result verification
-|   +-- voice.py                #   Voice transcription & prompt structuring
+|   |-- updater.py              #   Cascading self-update for existing projects
+|   +-- voice.py                #   Voice transcription (30+ languages)
 |
 |-- templates/                  # Scaffolded into every new project
-|   |-- .claude/                #   Agent definitions (incl. slide-maker), hooks, skills
-|   |-- paper/                  #   LaTeX template, Makefile, references.bib
-|   |-- knowledge/              #   GOAL.md, ENCYCLOPEDIA.md, CONSTRAINTS.md
-|   |-- config/                 #   settings.yml, mcp-nucleus.json, claude-flow.json
-|   |-- sandbox/                #   Dockerfile, docker-compose, martinprompt
-|   |-- slides/                 #   slide_utils.py, slides_task.md, example script
-|   +-- .github/workflows/      #   CI: tests, linting, paper build
+|   |-- .claude/                #   CLAUDE.md project instructions
+|   |   +-- skills/             #   8 research skills (slash commands)
+|   |-- knowledge/              #   GOAL.md, ENCYCLOPEDIA.md, RULES.md, etc.
+|   |-- paper/                  #   LaTeX template, references.bib
+|   |-- config/                 #   settings.yml, mcp configs
+|   |-- lab/                    #   Experimental scripts (chaotic)
+|   +-- stable/                 #   Validated code (promoted from lab/)
 |
-|-- docker/                     # Dockerfile & docker-compose
-|-- scripts/                    # Shell helpers (setup, overnight, interactive)
-|-- defaults/                   # Philosophy, code style, prompt library, MCP catalog
-+-- tests/                      # Pytest suite (40+ test modules)
+|-- defaults/                   # LEGISLATION.md, PHILOSOPHY.md, MCP catalog
+|-- scripts/                    # meta_learn_hook.py, shell helpers
+|-- docs/                       # GitHub Pages site, tutorials
++-- tests/                      # Pytest suite (50+ test modules)
 ```
 
 ### How it works
 
 ```
-You --> ricet start --> Master Agent --> Sub-agents (researcher, coder, ...)
+You --> ricet start --> Claude Code session (with skills + knowledge loaded)
                               |                    |
-                         claude-flow          Vector Memory
-                         (swarm, MCP)         (HNSW index)
+                         /lit-review          knowledge/
+                         /falsify             ENCYCLOPEDIA.md
+                         /paper-draft         RULES.md
+                         /overnight           DECISION_LOG.md
                               |                    |
-                         Docker sandbox     knowledge/ENCYCLOPEDIA.md
+                         meta_learn_hook      Auto-extracts rules,
+                         (every prompt)       insights, decisions
 ```
 
-1. `ricet init` scaffolds a project from templates and runs interactive onboarding.
-2. `ricet start` launches a Claude Code session governed by the master agent.
-3. The master agent reads your goal, plans subtasks, and dispatches them to specialized sub-agents.
-4. Each sub-agent executes inside the project environment, commits results, and updates shared memory.
-5. The falsifier agent validates outputs before anything is marked complete.
-6. `ricet overnight` repeats this cycle unattended until the task list is done.
+1. `ricet init` scaffolds a project from templates, runs interactive onboarding, installs toolchain (uv, tectonic, biber), and registers the meta-learn hook.
+2. `ricet start` launches a Claude Code session with project instructions, knowledge files, and 8 research skills loaded.
+3. You invoke skills (`/lit-review`, `/falsify`, `/paper-draft`, etc.) for structured research workflows, or just work with Claude directly.
+4. The meta-learn hook automatically captures behavioral rules, domain insights, and decisions from every interaction.
+5. Knowledge compounds across sessions via ENCYCLOPEDIA.md, RULES.md, and DECISION_LOG.md.
+6. `ricet overnight` runs the TODO list autonomously with auto-debug and checkpointing.
 
 ## Disclaimer
 
@@ -512,13 +493,17 @@ See the [Contributing Guide](CONTRIBUTING.md) for full details.
 
 This project was inspired by and builds upon the work of several open-source projects and communities:
 
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) by Anthropic -- The core AI coding agent that powers all execution in this system.
+- [gstack](https://github.com/garrytan/gstack) by Garry Tan -- Skill-based workflow patterns that influenced the design of ricet's research slash commands. The "Important Rules", "Priority Hierarchy", and persistence patterns in ricet's skills are directly inspired by gstack's approach.
 - [claude-flow](https://github.com/ruvnet/claude-flow) by ruvnet -- Multi-agent orchestration patterns, HNSW vector memory, and swarm coordination. The project's agent bridge (`core/claude_flow.py`) integrates directly with claude-flow when available.
-- [MCP Servers](https://github.com/modelcontextprotocol/servers) by the Model Context Protocol team -- Official MCP server implementations (filesystem, git, memory, fetch, GitHub, Puppeteer, and others) used as the foundation for the 70+ MCP integrations configured in this project.
-- [awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers) by punkpeye -- Comprehensive catalog of MCP servers that guided the selection and tiering of integrations in the MCP nucleus configuration.
-- [arxiv-mcp-server](https://github.com/blazickjp/arxiv-mcp-server) by blazickjp -- ArXiv paper search MCP server used for literature discovery in the researcher agent pipeline.
+- [MCP Servers](https://github.com/modelcontextprotocol/servers) by the Model Context Protocol team -- Official MCP server implementations (filesystem, git, memory, fetch, GitHub, Puppeteer, and others) used as the foundation for MCP integrations.
+- [awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers) by punkpeye -- Comprehensive catalog of MCP servers that guided the selection and tiering of integrations.
+- [arxiv-mcp-server](https://github.com/blazickjp/arxiv-mcp-server) by blazickjp -- ArXiv paper search MCP server used for literature discovery.
+- [context-hub](https://github.com/andrewyng/context-hub) by Andrew Ng -- Versioned API documentation registry for coding agents, integrated as `ricet chub`.
+- [manuscript_lipiddevatlas](https://github.com/weigertlab/manuscript_lipiddevatlas) by Albert Dominguez, Gioele La Manno & Martin Weigert -- LaTeX manuscript template adapted for ricet's paper pipeline.
 - [Claude Code Tutorial](https://lamanno-epfl.github.io/tutorial_claude_code/) by the La Manno Lab (EPFL) -- Research workflow patterns and paper-writing guidance that informed the project's academic automation design.
-- [claude-code-tips](https://github.com/ykdojo/claude-code-tips) by ykdojo -- Practical Claude Code best practices that shaped the agent instruction protocols and progressive prompting strategy.
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) by Anthropic -- The core AI coding agent that powers all sub-agent execution in this system.
+- [claude-code-tips](https://github.com/ykdojo/claude-code-tips) by ykdojo -- Practical Claude Code best practices that shaped instruction protocols and progressive prompting strategy.
+- [PaperBoat](https://paperboatch.com/) -- Recommended external service for daily cross-discipline paper discovery.
 
 ## License
 

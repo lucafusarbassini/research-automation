@@ -19,11 +19,17 @@ from core.claude_flow import AGENT_TYPE_MAP, ClaudeFlowUnavailable, _get_bridge
 
 logger = logging.getLogger(__name__)
 
-AGENTS_DIR = Path(".claude/agents")
 PROGRESS_FILE = Path("state/PROGRESS.md")
 
 
 class AgentType(str, Enum):
+    """Agent types used for task routing and claude-flow bridge dispatch.
+
+    Note: research workflows are now handled by skills (.claude/skills/*.md),
+    not agent prompt files. These enum values are still used by the routing
+    functions and falsification checkpoints for claude-flow bridge dispatch.
+    """
+
     MASTER = "master"
     RESEARCHER = "researcher"
     CODER = "coder"
@@ -36,87 +42,26 @@ class AgentType(str, Enum):
 
 # Default budget allocation (percentage of session tokens)
 DEFAULT_BUDGET_SPLIT = {
-    AgentType.RESEARCHER: 15,
-    AgentType.CODER: 35,
-    AgentType.REVIEWER: 10,
-    AgentType.FALSIFIER: 20,
-    AgentType.WRITER: 15,
+    AgentType.MASTER: 15,
+    AgentType.RESEARCHER: 10,
+    AgentType.CODER: 25,
+    AgentType.REVIEWER: 5,
+    AgentType.FALSIFIER: 15,
+    AgentType.WRITER: 10,
     AgentType.CLEANER: 5,
     AgentType.SLIDE_MAKER: 15,
 }
 
-# Keywords used as last-resort fallback when Opus and claude-flow are unavailable
+# Keywords used as last-resort fallback routing
 ROUTING_KEYWORDS = {
-    AgentType.RESEARCHER: [
-        "literature",
-        "paper",
-        "search",
-        "survey",
-        "review",
-        "cite",
-        "arxiv",
-        "pubmed",
-        "reference",
-    ],
-    AgentType.CODER: [
-        "code",
-        "implement",
-        "write",
-        "function",
-        "class",
-        "script",
-        "bug",
-        "fix",
-        "feature",
-        "test",
-    ],
-    AgentType.REVIEWER: [
-        "review",
-        "check",
-        "audit",
-        "inspect",
-        "quality",
-        "improve",
-    ],
-    AgentType.FALSIFIER: [
-        "validate",
-        "attack",
-        "falsify",
-        "verify",
-        "test",
-        "leak",
-        "statistical",
-        "reproducib",
-    ],
-    AgentType.WRITER: [
-        "write",
-        "draft",
-        "paper",
-        "abstract",
-        "introduction",
-        "methods",
-        "results",
-        "discussion",
-        "document",
-    ],
-    AgentType.CLEANER: [
-        "refactor",
-        "clean",
-        "optimize",
-        "document",
-        "style",
-        "lint",
-        "format",
-        "organize",
-    ],
-    AgentType.SLIDE_MAKER: [
-        "slide",
-        "presentation",
-        "deck",
-        "pptx",
-        "powerpoint",
-        "talk",
-    ],
+    AgentType.MASTER: ["orchestrate", "coordinate", "overnight", "autonomous"],
+    AgentType.RESEARCHER: ["search", "literature", "paper", "citation", "review", "pubmed", "arxiv"],
+    AgentType.CODER: ["implement", "code", "script", "function", "bug", "fix", "test", "run"],
+    AgentType.REVIEWER: ["audit", "check", "inspect", "quality", "experiment"],
+    AgentType.FALSIFIER: ["falsify", "leakage", "validate", "adversarial", "reproduce", "break"],
+    AgentType.WRITER: ["write", "draft", "section", "abstract", "manuscript", "paper"],
+    AgentType.CLEANER: ["refactor", "clean", "organize", "retro", "retrospective"],
+    AgentType.SLIDE_MAKER: ["slide", "presentation", "deck", "pptx", "powerpoint", "talk"],
 }
 
 
@@ -416,36 +361,50 @@ def _route_task_keywords(task_description: str) -> AgentType:
 
 
 def get_agent_prompt(agent_type: AgentType, *, project_root: Path | None = None) -> str:
-    """Load the agent's system prompt from its markdown file.
+    """Load a prompt for the agent type.
 
-    Looks for the prompt in the project's ``.claude/agents/`` directory first,
-    then falls back to the bundled templates directory so agents always get
-    their prompts even if deployment was incomplete.
+    Looks for a matching skill in ``.claude/skills/`` first (the current
+    system), then falls back to the bundled templates directory.
 
     Args:
         agent_type: The agent to load.
         project_root: Project root directory.  Defaults to ``Path.cwd()``.
 
     Returns:
-        The agent's prompt text, or empty string if not found.
+        The prompt text, or empty string if not found.
     """
     if project_root is None:
         project_root = Path.cwd()
-    agent_file = project_root / ".claude" / "agents" / f"{agent_type.value}.md"
-    if agent_file.exists():
-        return agent_file.read_text()
+
+    # Map agent types to their corresponding skill files
+    _agent_to_skill = {
+        AgentType.RESEARCHER: "lit-review",
+        AgentType.REVIEWER: "experiment-review",
+        AgentType.WRITER: "paper-draft",
+        AgentType.FALSIFIER: "falsify",
+        AgentType.CODER: "reproduce",
+        AgentType.CLEANER: "research-retro",
+        AgentType.SLIDE_MAKER: "slides",
+        AgentType.MASTER: "overnight",
+    }
+
+    skill_name = _agent_to_skill.get(agent_type, agent_type.value)
+    skill_file = project_root / ".claude" / "skills" / f"{skill_name}.md"
+    if skill_file.exists():
+        return skill_file.read_text()
+
     # Fallback: try the bundled templates directory
     template_file = (
         Path(__file__).resolve().parent.parent
         / "templates"
         / ".claude"
-        / "agents"
-        / f"{agent_type.value}.md"
+        / "skills"
+        / f"{skill_name}.md"
     )
     if template_file.exists():
-        logger.info("Using template agent prompt for %s", agent_type.value)
+        logger.info("Using template skill prompt for %s", agent_type.value)
         return template_file.read_text()
-    logger.warning("Agent file not found: %s", agent_file)
+    logger.warning("Skill file not found for agent %s: %s", agent_type.value, skill_file)
     return ""
 
 

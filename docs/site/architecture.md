@@ -127,7 +127,7 @@ research-automation/
 │   └── gallery.py                # Figure gallery viewer
 │
 ├── core/                         # Business logic (50+ modules)
-│   ├── agents.py                 # Agent types, routing, DAG execution (incl. Slide-Maker)
+│   ├── agents.py                 # Task DAG execution, output ring buffers
 │   ├── session.py                # Session CRUD, snapshots
 │   ├── tokens.py                 # Token estimation, budget checks
 │   ├── knowledge.py              # Encyclopedia CRUD, vector search
@@ -161,6 +161,11 @@ research-automation/
 │   ├── mobile_pwa.py             # PWA HTML/CSS/JS/manifest/service worker
 │   ├── social_media.py           # Medium, LinkedIn, Twitter/X publishing
 │   ├── adopt.py                  # Repository adoption (fork + scaffold)
+│   ├── code_index.py             # Code indexing for semantic search
+│   ├── collaboration.py          # Multi-user sync, merge, morning-sync
+│   ├── promotion.py              # Lab → stable promotion with provenance
+│   ├── slack_delivery.py         # Slack file uploads via v2 API
+│   ├── updater.py                # Cascading self-update for existing projects
 │   ├── report.py                 # Report generation
 │   ├── rag_mcp.py                # RAG index for MCP discovery
 │   ├── lazy_mcp.py               # Lazy MCP loading
@@ -175,7 +180,7 @@ research-automation/
 │   └── verification.py           # Result verification
 │
 ├── templates/                    # Copied into new projects
-│   ├── .claude/                  # Agent prompts (incl. slide-maker), hooks, skills
+│   ├── .claude/                  # CLAUDE.md project instructions + 8 research skills
 │   ├── config/                   # MCP config, settings template
 │   │   └── mcp-nucleus.json      # 34 MCPs installed at startup
 │   ├── knowledge/                # GOAL.md, ENCYCLOPEDIA.md, CONSTRAINTS.md
@@ -185,11 +190,10 @@ research-automation/
 │
 ├── defaults/                     # Shared defaults (not copied into projects)
 │   ├── PHILOSOPHY.md             # Core research principles
-│   ├── LEGISLATION.md            # Non-negotiable rules
-│   ├── CODE_STYLE.md             # Code style guide
-│   ├── PROMPTS.md                # Default prompt collection
-│   ├── MCP_NUCLEUS.json          # Master MCP catalog
-│   └── ONBOARDING.md             # Onboarding question bank
+│   ├── LEGISLATION.md            # Non-negotiable rules (18 sections)
+│   ├── MCP_CATALOG.md            # Searchable MCP catalog
+│   ├── MCP_NUCLEUS.json          # Master MCP config
+│   └── raggable_mcps.md          # MCP catalog indexed for RAG
 │
 ├── docker/                       # Container setup
 │   ├── Dockerfile                # Ubuntu 24.04 + full toolchain
@@ -246,30 +250,25 @@ sequenceDiagram
 
 ---
 
-## Data Flow: Task Execution
+## Data Flow: Task Execution (Skill-Based)
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant M as Master Agent
-    participant R as Model Router
-    participant T as Token Budget
-    participant S as Sub-Agent
-    participant K as Knowledge
-    participant P as Progress
+    participant CC as Claude Code
+    participant SK as Skill (.md)
+    participant ML as Meta-Learn Hook
+    participant K as Knowledge Files
 
-    U->>M: "Implement a data loader"
-    M->>R: classify_complexity()
-    R-->>M: MEDIUM -> claude-sonnet
-    M->>T: check_budget()
-    T-->>M: can_proceed: true
-    M->>S: Route to Coder agent
-    S->>S: Execute task
-    S->>K: append_learning("What Works", ...)
-    S->>P: Update state/PROGRESS.md
-    S-->>M: TaskResult
-    M->>T: Update usage
-    M-->>U: Result summary
+    U->>CC: /falsify lab/analysis.py
+    CC->>SK: Load .claude/skills/falsify.md
+    SK->>CC: Structured workflow (leakage → stats → code → methodology)
+    CC->>CC: Execute each step
+    CC->>K: Update ENCYCLOPEDIA.md (findings)
+    CC-->>U: Falsification report
+    U->>CC: "don't mock the database in tests"
+    CC-->>U: Acknowledged
+    ML->>K: Append rule to RULES.md (auto)
 ```
 
 ---
@@ -324,18 +323,22 @@ def some_function(args):
 
 This ensures the system works identically with or without claude-flow installed. The bridge is a singleton (`_get_bridge()`) that checks for `npx` and `claude-flow@v3alpha` availability on first call.
 
-### Agent Type Mapping
+### Skills vs Agents
 
-| ricet | claude-flow Equivalent |
-|--------------------|-----------------------|
-| MASTER | hierarchical-coordinator (queen) |
-| RESEARCHER | researcher |
-| CODER | coder |
-| REVIEWER | code-reviewer |
-| FALSIFIER | security-auditor |
-| WRITER | api-docs |
-| CLEANER | refactorer |
-| SLIDE_MAKER | presentation-builder |
+ricet v1 replaced the programmatic agent hierarchy with skill-based slash commands. The old agent types (RESEARCHER, CODER, REVIEWER, FALSIFIER, WRITER, CLEANER) are now research skills deployed as Markdown files to `.claude/skills/`. Claude Code loads these directly when the user invokes a slash command.
+
+The `core/agents.py` module still provides Task DAG execution, output ring buffers (for mobile), and the claude-flow bridge, but task routing is now handled by Claude's native skill system rather than programmatic dispatch.
+
+| Old Agent | New Skill |
+|-----------|-----------|
+| Researcher | `/lit-review` |
+| Reviewer | `/experiment-review` |
+| Writer | `/paper-draft` |
+| Falsifier | `/falsify` |
+| Coder | `/reproduce` |
+| Cleaner | `/research-retro` |
+| Slide-Maker | `/slides` |
+| Master (overnight) | `/overnight` |
 
 ---
 
