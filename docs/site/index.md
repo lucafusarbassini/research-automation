@@ -82,8 +82,8 @@ The `ricet init` wizard auto-detects your system (GPU, conda, Docker), installs 
 - **gstack Integration** -- `ricet gstack install` adds Garry Tan's startup workflow skills alongside ricet's research skills.
 - **Voice Prompting** -- `ricet voice` transcribes audio in 30+ languages and executes the prompt.
 - **Cascading Self-Update** -- When ricet is updated, existing projects get refreshed skills and defaults automatically.
-- **Cross-Repository RAG** -- Link external repos with `ricet link` so agents can search across all your code.
-- **context-hub** -- Versioned API documentation for agents via `ricet chub`.
+- **Cross-Repository Code Search** -- Link external repos with `ricet link` so Claude can search across all your code.
+- **context-hub** -- Versioned API documentation via `ricet chub`.
 - **MCP Discovery** -- `ricet mcp-search` searches 1300+ MCP servers and installs on demand.
 - **Auto-Commit & Push** -- Every state-modifying command automatically commits and pushes.
 - **Global Credential Store** -- `~/.ricet/credentials.env` stores API keys once across all projects.

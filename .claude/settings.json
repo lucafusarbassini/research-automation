@@ -22,5 +22,183 @@
   "attribution": {
     "commit": "Co-Authored-By: ricet <ricet@research-automation>",
     "pr": "Generated with [ricet](https://github.com/lucafusarbassini/research-automation)"
+  },
+  "mcpServers": {
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "claude-flow": {
+      "command": "npx",
+      "args": [
+        "claude-flow@v3alpha",
+        "mcp",
+        "serve"
+      ]
+    },
+    "paper-search-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@openags/paper-search-mcp"
+      ]
+    },
+    "arxiv-mcp-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@blazickjp/arxiv-mcp-server"
+      ]
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ]
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem"
+      ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "fetch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres"
+      ]
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sqlite"
+      ]
+    },
+    "chroma-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@chroma-core/chroma-mcp"
+      ]
+    },
+    "apidog-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "apidog-mcp-server@latest"
+      ]
+    },
+    "jupyter-mcp-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@datalayer/jupyter-mcp-server"
+      ]
+    },
+    "huggingface-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@shreyaskarnik/huggingface-mcp"
+      ]
+    },
+    "mlflow-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mlflow/mlflow"
+      ]
+    },
+    "wolfram-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@paraporoco/wolfram-mcp"
+      ]
+    },
+    "latex-mcp-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@Yeok-c/latex-mcp-server"
+      ]
+    },
+    "overleaf-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mjyoo2/overleaf-mcp"
+      ]
+    },
+    "slack-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-slack"
+      ]
+    },
+    "aws-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@awslabs/mcp"
+      ]
+    },
+    "terraform-mcp-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@hashicorp/terraform-mcp-server"
+      ]
+    },
+    "nano-banana": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "nanana-app/mcp-server-nano-banana"
+      ]
+    },
+    "notion-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@notion-community/notion-mcp"
+      ]
+    }
   }
 }

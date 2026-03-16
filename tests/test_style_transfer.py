@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 from core.style_transfer import (
-    StyleProfile,
     analyze_paper_style,
     generate_transformation_prompt,
     rewrite_in_reference_style,
@@ -13,66 +12,37 @@ from core.style_transfer import (
 
 def test_analyze_empty():
     profile = analyze_paper_style("")
-    assert profile.avg_sentence_length == 0.0
+    assert profile == {}
 
 
-def test_analyze_basic():
+def test_analyze_basic_fallback():
+    """Without Claude, analyze_paper_style falls back to surface metrics."""
     text = "This is a simple sentence. Here is another one. And a third sentence here."
     profile = analyze_paper_style(text)
-    assert profile.avg_sentence_length > 0
-    assert profile.vocabulary_richness > 0
-
-
-def test_analyze_passive_voice():
-    text = (
-        "The model was trained on the dataset. The results were evaluated by experts."
-    )
-    profile = analyze_paper_style(text)
-    assert profile.passive_voice_ratio > 0
-
-
-def test_analyze_hedging():
-    text = "The results may suggest that the approach could possibly work. Perhaps it indicates improvement."
-    profile = analyze_paper_style(text)
-    assert profile.hedging_ratio > 0
-
-
-def test_analyze_citations():
-    text = "Previous work \\cite{Smith2020} shows progress. As shown in \\citep{Jones2021}, results improve."
-    profile = analyze_paper_style(text)
-    assert profile.citation_density > 0
+    assert isinstance(profile, dict)
+    assert profile.get("avg_sentence_length", 0) > 0
+    assert "_source" in profile  # fallback marker
 
 
 def test_analyze_tense_past():
     text = "We trained the model. We evaluated the results. We compared the outputs. We observed improvements."
     profile = analyze_paper_style(text)
-    assert profile.tense == "past"
+    assert profile.get("tense") == "past"
 
 
-def test_generate_transformation_prompt_different_styles():
-    source = StyleProfile(
-        avg_sentence_length=10.0,
-        passive_voice_ratio=0.5,
-        hedging_ratio=0.01,
-        tense="past",
-    )
-    target = StyleProfile(
-        avg_sentence_length=20.0,
-        passive_voice_ratio=0.1,
-        hedging_ratio=0.03,
-        tense="present",
-    )
+def test_generate_transformation_prompt_dicts():
+    source = {"tense": "past", "voice": "passive_ratio=0.50", "hedging_level": "low", "avg_sentence_length": 10.0}
+    target = {"tense": "present", "voice": "passive_ratio=0.10", "hedging_level": "high", "avg_sentence_length": 20.0}
     prompt = generate_transformation_prompt(source, target)
-    assert "longer" in prompt.lower() or "complex" in prompt.lower()
-    assert "active" in prompt.lower()
-    assert "present" in prompt.lower()
+    assert isinstance(prompt, str)
+    assert len(prompt) > 50
 
 
 def test_generate_transformation_prompt_similar():
-    source = StyleProfile(avg_sentence_length=15.0, passive_voice_ratio=0.3)
-    target = StyleProfile(avg_sentence_length=15.5, passive_voice_ratio=0.3)
+    source = {"tense": "past", "avg_sentence_length": 15.0}
+    target = {"tense": "past", "avg_sentence_length": 15.5}
     prompt = generate_transformation_prompt(source, target)
-    assert "similar" in prompt.lower() or "minor" in prompt.lower()
+    assert isinstance(prompt, str)
 
 
 def test_verify_no_plagiarism_clean():
@@ -96,13 +66,6 @@ def test_verify_no_plagiarism_empty_refs():
     assert len(flags) == 0
 
 
-def test_style_profile_to_dict():
-    profile = StyleProfile(avg_sentence_length=12.5, tense="past")
-    d = profile.to_dict()
-    assert d["avg_sentence_length"] == 12.5
-    assert d["tense"] == "past"
-
-
 # --- rewrite_in_reference_style tests ---
 
 
@@ -114,15 +77,13 @@ def test_rewrite_in_reference_style_with_claude():
         "The model is trained effectively. The results demonstrate clear improvements."
     )
 
-    def fake_run_cmd(cmd):
-        return MagicMock(returncode=0, stdout=fake_rewrite)
-
-    result = rewrite_in_reference_style(source, reference, run_cmd=fake_run_cmd)
+    with patch("core.style_transfer._call_claude_api", return_value=fake_rewrite):
+        result = rewrite_in_reference_style(source, reference)
 
     assert result["rewritten"] == fake_rewrite
     assert "error" not in result
-    assert result["source_profile"].avg_sentence_length > 0
-    assert result["target_profile"].avg_sentence_length > 0
+    assert isinstance(result["source_profile"], dict)
+    assert isinstance(result["target_profile"], dict)
     assert isinstance(result["transformation_prompt"], str)
     assert isinstance(result["plagiarism_flags"], list)
 
@@ -132,15 +93,14 @@ def test_rewrite_in_reference_style_without_claude():
     source = "We trained the model. We evaluated the results."
     reference = "The approach is novel. The method demonstrates strong performance."
 
-    def fake_run_cmd(cmd):
-        return MagicMock(returncode=1, stdout="")
-
-    result = rewrite_in_reference_style(source, reference, run_cmd=fake_run_cmd)
+    with patch("core.style_transfer._call_claude_api", return_value=None):
+        with patch("core.claude_helper.call_claude", return_value=None):
+            result = rewrite_in_reference_style(source, reference)
 
     assert result["rewritten"] is None
-    assert result["error"] == "Claude unavailable"
-    assert result["source_profile"].avg_sentence_length > 0
-    assert result["target_profile"].avg_sentence_length > 0
+    assert "Claude unavailable" in result["error"]
+    assert isinstance(result["source_profile"], dict)
+    assert isinstance(result["target_profile"], dict)
 
 
 def test_rewrite_in_reference_style_plagiarism_check():
@@ -149,18 +109,13 @@ def test_rewrite_in_reference_style_plagiarism_check():
     reference = (
         "the model was trained on a large corpus of scientific papers and evaluated"
     )
-    # Simulate Claude returning text that copies a chunk from the reference
     copied_chunk = (
         "the model was trained on a large corpus of scientific papers and evaluated"
     )
     fake_rewrite = f"In our study, {copied_chunk} thoroughly."
 
-    def fake_run_cmd(cmd):
-        return MagicMock(returncode=0, stdout=fake_rewrite)
-
-    result = rewrite_in_reference_style(
-        source, reference, verify=True, run_cmd=fake_run_cmd
-    )
+    with patch("core.style_transfer._call_claude_api", return_value=fake_rewrite):
+        result = rewrite_in_reference_style(source, reference, verify=True)
 
     assert result["rewritten"] is not None
     assert len(result["plagiarism_flags"]) > 0

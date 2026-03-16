@@ -114,8 +114,6 @@ A complete LaTeX publication workflow ships with every project:
 ricet paper build
 ```
 
-For exhaustive cross-discipline paper discovery, we recommend [PaperBoat](https://paperboatch.com/) -- an AI-powered service that scans thousands of journals daily and delivers personalized paper matches.
-
 ### Remote Access & Background Sessions {#remote-access-via-mobile}
 
 Run ricet unattended on a remote workstation and control it from your phone or another machine:
@@ -193,7 +191,7 @@ ricet implement-features    # select which to build, each gets a worktree
 
 ### Cross-Repository RAG
 
-Link external repositories so agents can search across all your code while only editing the current project:
+Link external repositories so Claude can search across all your code while only editing the current project:
 
 ```bash
 ricet link /path/to/other-repo --name my-lib   # index for search
@@ -503,8 +501,6 @@ This project was inspired by and builds upon the work of several open-source pro
 - [manuscript_lipiddevatlas](https://github.com/weigertlab/manuscript_lipiddevatlas) by Albert Dominguez, Gioele La Manno & Martin Weigert -- LaTeX manuscript template adapted for ricet's paper pipeline.
 - [Claude Code Tutorial](https://lamanno-epfl.github.io/tutorial_claude_code/) by the La Manno Lab (EPFL) -- Research workflow patterns and paper-writing guidance that informed the project's academic automation design.
 - [claude-code-tips](https://github.com/ykdojo/claude-code-tips) by ykdojo -- Practical Claude Code best practices that shaped instruction protocols and progressive prompting strategy.
-- [PaperBoat](https://paperboatch.com/) -- Recommended external service for daily cross-discipline paper discovery.
-
 ## License
 
 [MIT](LICENSE)

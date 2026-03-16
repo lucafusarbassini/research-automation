@@ -3,8 +3,8 @@
 Scientific research project. Read these files before starting any work:
 - `knowledge/GOAL.md` — project description and objectives
 - `knowledge/CONSTRAINTS.md` — hard rules and preferences
-- `knowledge/LEGISLATION.md` — detailed behavioral rules (coding style, paper writing, figure making, answer style)
-- `knowledge/PHILOSOPHY.md` — core research principles
+- `knowledge/LEGISLATION.md` — detailed behavioral rules (coding, writing, figures, communication)
+- `knowledge/PHILOSOPHY.md` — core research principles (Popperian falsification, the Mantra)
 - `state/TODO.md` — current task list
 
 ## Session Start Checklist
@@ -13,9 +13,27 @@ Scientific research project. Read these files before starting any work:
 2. Scan `knowledge/DECISION_LOG.md` for recent entries relevant to current work
 3. For domain questions, search `knowledge/ENCYCLOPEDIA.md` before answering
 
-## Memory Hierarchy
+## Research Skills (slash commands)
 
-Knowledge persists across sessions in three files, each with a different purpose:
+| Command | What it does |
+|---------|-------------|
+| `/lit-review` | Search PubMed/arXiv, synthesize findings, update Encyclopedia |
+| `/experiment-review` | Audit experiment results for statistical issues and leakage |
+| `/paper-draft` | Draft a paper section with lab style conventions |
+| `/falsify` | Adversarial validation — try to break current results (Popper mode) |
+| `/reproduce` | Re-run analysis with different seeds/splits, test reproducibility |
+| `/research-retro` | Session retrospective — what worked, what failed, update Encyclopedia |
+| `/slides` | Generate a polished presentation (.pptx) with AI diagrams |
+| `/overnight` | Autonomous overnight session — execute TODO list unattended |
+| `/style-transfer` | Match writing style to reference papers from the lab |
+| `/add-citations` | Find, verify, and insert citations (PubMed/arXiv) |
+| `/verify` | Fact-check claims against data, code, and literature |
+| `/figure-audit` | Audit figures for publication readiness (fonts, labels, accessibility) |
+| `/debug` | Systematic debugging: reproduce, isolate, bisect, fix, verify |
+| `/code-review` | Research code audit: leakage, seeds, metrics, parameter logging |
+| `/doability` | Assess research goal feasibility before committing resources |
+
+## Memory Hierarchy
 
 | File | Loaded | Purpose | Updated by |
 |------|--------|---------|------------|
@@ -25,36 +43,37 @@ Knowledge persists across sessions in three files, each with a different purpose
 
 The meta-learn hook runs on every user prompt via Haiku. It extracts rules, insights, and decisions and appends them to the appropriate file. Do not duplicate this by manually writing the same information.
 
-## Core Philosophies
+## The Mantra
 
-1. **Break big problems into small ones.** Decompose every task into the smallest useful subtasks. Execute one at a time. Checkpoint after each.
-2. **Context is milk — best served fresh and condensed.** Keep files, prompts, and docs short. Prune stale information. Prefer re-reading source over relying on memory.
-3. **Double-check everything.** After completing any task, verify the result: re-read the changed file, run the test, compare to the goal. Never mark done without validation.
+**Do not guess — verify when uncertain. Minimal code edits and concise answers, to the point, unless otherwise stated.**
 
 ## Anti-Drift Rules (MANDATORY)
 
 - ONLY make changes that were directly requested.
 - Do NOT refactor, rename, or reformat surrounding code.
 - Do NOT add features, helpers, or abstractions not asked for.
-- Do NOT add docstrings, comments, or type hints to code you didn't change.
 - If tempted to "improve" something adjacent — stop. Note it and ask first.
 
 ## Work Protocol
 
-1. **Orient** — Read goal, constraints, and TODO. Summarize understanding.
-2. **Plan** — Propose approach and subtasks. Get approval before executing.
-3. **Execute** — One subtask at a time. Keep changes minimal and focused.
-4. **Verify** — After each subtask: re-read changed files, run tests, compare to goal.
-5. **Record** — Commit after each subtask. Update `knowledge/ENCYCLOPEDIA.md` only when genuinely useful.
+1. **Orient** — Read goal, constraints, and TODO.
+2. **Plan** — Propose approach. Get approval before executing.
+3. **Execute** — One subtask at a time. Minimal, focused changes.
+4. **Verify** — Re-read changed files, run tests, compare to goal.
+5. **Record** — Commit after each subtask.
+
+## Directory Convention
+
+- `lab/` — experimental scripts, notebooks, WIP analysis
+- `stable/` — validated code promoted via `ricet promote` (with provenance tracking)
 
 ## Operating Rules
 
 - Never guess — search or ask when uncertain.
-- Test small first — downsample data, run 1 epoch, then scale.
+- Test small first — downsample, 1 epoch, then scale.
 - Be objective — challenge assumptions, report flaws, don't flatter.
-- Estimate token cost before expensive operations (~4 chars/token).
 - Prefer simple solutions. Less code is better code.
 
 ## Self-Maintenance
 
-This file must stay under 80 lines. Every 5 sessions, review it and trim anything stale or redundant. If a rule hasn't been useful, remove it.
+This file must stay under 80 lines. Every 5 sessions, trim stale content.

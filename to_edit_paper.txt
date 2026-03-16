@@ -1,0 +1,3153 @@
+736 | Nature | Vol 650 | 19 February 2026
+Article
+Intratumoural vaccination via checkpoint
+degradation-coupled antigen presentation
+Yu Han1,2,3,6, Yicong Ma2,3,6, Miao Pei1,6, Shenyi Yin4
+, Jiahao Wang4
+, Liyu Guo1
+, Yike Fang1
+,
+Weiming Guo2,5, Chunjiang Deng1
+, Su Zhao1
+, Xueyin Lu1
+, Jianzhong Jeff Xi4 ✉, Heng Zhang1 ✉ &
+Peng R. Chen1,2,3,5 ✉
+Decreased cross-presentation by antigen-presenting cells induces the scarcity of
+tumour-reactive T cells within the tumour bed, rendering in situ T cell rejuvenation
+through immunogenicity reprogramming highly desirable yet challenging1–3
+. Here we
+developed an intratumoural vaccination chimera (iVAC) to reprogram tumour cells
+into an antigen-presenting state (APC-like tumour cells) with restored anti-tumour
+immunity. The iVAC chimeras consist of a covalently engineered PD-L1 degrader
+conjugated to immunogenic antigens, which could relieve immune checkpoint
+inhibition while enforcing the cross-presentation of exogenous antigens. Functionally,
+the iVAC-induced antigen processing and presentation elicited potent tumour killing
+through reactivation of resident antigen-specific CD8+
+ T cells, which simultaneously
+remodelled the tumour microenvironment to promote durable tumour-specific
+immunity. Extending this strategy, we used iVAC with a cytomegalovirus (CMV)-derived
+antigen to activate CMV-specific T cells against breast cancer in vitro, in a humanized
+mouse model as well as in a patient-derived tumour model. This study establishes a
+foundation for chemically reprogramming cancer cells within tumour beds to endow
+APC-like functions, providing an avenue for stimulating anti-tumour immunity.
+Tumours use various mechanisms to reduce immunogenicity and evade
+immune surveillance1,2
+, including the overexpression of inhibitory
+checkpoint proteins, neoantigen editing and impairments in antigen
+presentation. Restoring anti-tumour immunity fundamentally depends
+on supplementing and activating tumour-reactive T cells3
+ by enhancing
+tumour antigen presentation. Immune checkpoint blockade therapy
+has transformed cancer treatment4
+; however, response rates remain
+limited due to the deficiency or dysfunction of tumour-specific cytotoxic T lymphocytes (CTLs)5
+. Although adoptive T cell transfer and
+cancer vaccines have been designed to increase CTL presence and
+bolster anti-tumour responses, vaccine-induced CTLs often succumb to
+immunosuppressive conditions within the tumour microenvironment
+(TME), necessitating combination with other therapies6–9
+. An integrated
+vaccination strategy to replenish and reactivate intratumoural T cells
+both at the generation and effector phases remains highly desirable
+but challenging.
+Recent evidence indicates that the tumour bed can act as a site for
+T cell priming and activation10,11, initiating the cancer-immunity cycle,
+as highlighted by the essential role of tertiary lymphoid structures in
+supporting anti-tumour immunity12–14. During antigen-specific T cell
+activation, APCs bridge tumour antigens with T cell receptors (TCRs)
+on CTLs15. In vaccine development, these APCs—primarily dendritic
+cells (DCs)—are targeted to deliver and present exogenous antigens
+in lymph nodes and tumours16. However, tumours contain abundant
+cancer cells but few functional APCs, particularly DCs15,17. Moreover,
+most tumour-resident T cells are bystanders, recognizing non-tumour
+antigens (such as viral epitopes) rather than tumour-specific antigens18–21. Reprogramming tumour cells into APCs (APC-like tumour
+cells) capable of cross-presenting tumour antigens could facilitate
+direct T cell activation and expansion within the tumour bed. Effective
+APC-like tumour cells would need to (1) internalize exogenous antigens;
+(2) process and present them; and (3) activate antigen-specific T cells22.
+Emerging strategies have explored converting tumour cells into APCs
+through enforced expression of specific transcription factors to drive
+reprogramming23,24. However, these genetic methods can be inefficient,
+heterogeneous and raise safety concerns, such as oncogene activation
+and genomic instability, highlighting the need for a direct, controllable
+approach through exogenous small molecules or antibodies25.
+Inspired by cellular reprogramming, we hypothesized that coupling
+intracellular protein degradation machinery with exogenous antigen
+processing and presentation could endow tumour cells with APC-like
+functions, which may serve as the vaccination targets for intratumoural
+T cell supplement. To implement this strategy, we established an immunogenicity reprogramming approach with an iVAC to enforce antigen
+presentation in tumour cells. This would take advantage of immune
+checkpoint protein degradation to simultaneously alleviate immune
+suppression and boost tumour antigenicity with a remodelled TME, culminating in tumour-specific T cell activation and durable therapeutic
+efficacy. Our iVAC uses a covalently engineered nanobody (GlueBody)
+to enhance target engagement, promoting rapid PD-L1 degradation
+https://doi.org/10.1038/s41586-025-09903-1
+Received: 15 December 2024
+Accepted: 11 November 2025
+Published online: 7 January 2026
+ Check for updates
+1
+Institute of Chemical Biology, Shenzhen Bay Laboratory, Shenzhen, China. 2
+Synthetic and Functional Biomolecules Center, Beijing National Laboratory for Molecular Sciences, College of
+Chemistry and Molecular Engineering, Peking University, Beijing, China. 3
+Peking-Tsinghua Center for Life Sciences, Academy for Advanced Interdisciplinary Studies, Peking University, Beijing,
+China. 4
+Department of Biomedical Engineering, College of Future Technology, Peking University, Beijing, China. 5
+Key Laboratory of Bioorganic Chemistry and Molecular Engineering of Ministry
+of Education, Peking University, Beijing, China. 6
+These authors contributed equally: Yu Han, Yicong Ma, Miao Pei. ✉e-mail: jzxi@pku.edu.cn; zhangheng@szbl.ac.cn; pengchen@pku.edu.cn
+Nature | Vol 650 | 19 February 2026 | 737
+while delivering exogenous antigenic peptides for cross-presentation
+by tumour cells. This degradation-coupled-presentation approach
+effectively converts cancer cells into an APC-like state, reactivating
+and expanding T cells specific to non-tumour antigens to eliminate
+cancer cells. In mouse models, iVAC boosted immune responses against
+the delivered exogenous antigen (such as ovalbumin peptide SIINFEKL) and generated durable tumour-specific T cell responses. Notably, iVAC bearing the human CMV antigen was capable of harnessing
+k Positively charged degron Cleavable linker Exogeneous antigen
+N
+H
+H
+N N
+H
+H
+N N
+H
+H
+N H
+N
+O
+O
+O
+O
+O
+O
+N
+H
+H
+N N
+H
+NH
+HN NH2
+NH
+HN NH2
+NH
+HN NH2
+O
+O
+O
+NH
+HN NH2
+NH
+HN NH2
+NH
+HN NH2
+NH
+HN NH2
+NH
+HN NH2
+NH
+HN NH2
+H
+N N
+H
+H
+N N
+H
+H
+N N
+H
+H
+N N
+H
+H
+N N
+H
+H
+N
+O
+O
+O
+O
+OH O
+O
+HN
+H2N O
+O
+O
+O
+O OH
+O
+N
+H
+H
+N N
+H
+H
+N OH
+O
+O
+O
+O
+O
+O
+NH2
+O OH
+NH2
+O
+F
+F
+S
+O
+O
+F
+P < 0.0001
+j
+Intratumoural targeting
+PD-L1-humanized
+C57BL/6J
+hPD-L1endo/MC38
+0
+1
+2
+6
+24
+48
+72
+AF647-labelled
+drug injection
+Live-mouse
+imaging
+h 0 20 40 60 80
+0
+1.5 × 1010
+1 × 1010
+5 × 109
+Time (h)
+Fluorescence intensity
+GlueBody
+GlueBody2
+iVAC
+Heart
+Liver
+Spleen
+Lung
+Kidney
+Lymph node
+Tumour
+0
+10
+20
+30
+Relative intensity
+compared to control
+GlueBody
+GlueBody2
+iVAC
+G G G S G G G G S I I N F E K L
+G G G S V Cit G G S I I N F E K L
+G G G S V Cit
+V Cit
+S I I N F E K L
+S I I N F E K L
+D1
+D2
+D3
+D4
+100
+0
+200
+300
+Blank
+GlueBody2
+iVAC
+CPP–OVApep
+GlueBody2–CPP
+D1
+D2
+D3
+D4
+P = 0.0005
+i Antigen presentation Relative MFI of OVApep–MHC-I (%)
+h
+0.001 0.01 0.1 1 10 100 1,000
+0
+1
+2
+3
+4
+log-transformed concentration (nM)
+Relative luminescence
+compared with the PBS control
+GlueBody–CPP
+GlueBody2–CPP
+P < 0.0001
+P < 0.0001
+Remaining PD-L1
+relative to PBS control (%)
+0.1 1 10 100
+0
+50
+100
+log-transformed concentration (nM)
+GlueBody–CPP
+GlueBody2–CPP
+g
+Percentage 76 80 83 84 87 100 8 15 24 36 69 100
+100 25 6.3 1.6 0.4 PBS 100
+70
+25 6.3 1.6 0.4 PBS kDa
+GlueBody–CPP (nM) GlueBody2–CPP (nM)
+Cross-link
+hPD-L1
+GAPDH
+HCC2935
+55
+40
+35
+f
+Enhanced PD-L1 degradation
+P = 0.0002
+Time (min)
+0 30 60 90 120
+0
+20
+40
+60
+80
+100
+Cross-linking relative to
+ total hPD-L1 (%)
+3a
+3b
+3c
+3d
+3e
+3f
+3g
+e
+d
+FnFSY
+FSY (3a) 3-F FSY (3b) 2-F FSY (3c)
+2,5-diF FSY (3d) 2,6-diF FSY (3e) 2,3-diF FSY (3f) 3,5-diF FSY (3g)
+O S F
+O O
+H2N CO2H
+O S F
+O O
+F
+H2N CO2H
+O S F
+O O
+F
+H2N CO2H
+O S F
+O O
+F
+F
+H2N CO2H
+O S F
+O O
+F
+F H2N CO2H
+O S F
+O O
+F
+F
+H2N CO2H
+O S F
+O O
+F
+F
+H2N CO2H
+c
+L108Y
+V68
+L53
+H69
+Nb-PD-L1
+hPD-L1
+I54
+V68
+L53
+H69
+b
+LPETGG
+Leu108
+LPETGG
+Leu to FnFSY
+(2) GlueBody2
+(3) GlueBody2–CPP
++++
+CPP: 9× D-Arg
+(4) iVAC
++++
+Epitope: SIINFEKL
+Genetic code expansion
+Linker optimization for
+antigen conjugation
+Sortase-mediated ligation
+O
+F
+F
+S F O
+O
+O
+F
+F
+S F O
+O
+O
+F
+F
+S F O
+O
+In situ remodelling Tumour repression Long-term
+protection
+APC-like
+tumour cell
+Killing
+PD-L1
+Tumour cell
+TCR
+PD-1
+Resident
+T cell
+Activated
+T cell
+iVAC
+(2) Internalization
+(3) Degradation (4) Presentation
+Nu
+(1) Cross-linking
+Epitope
+PD-L1 MHC-I
+Cell level Intratumoural level
+PD-L1
+PD-1
+TCR
+T cell Tumour
+Blockade
+Low immunogenicity
+Reprogramming
+High immunogenicity
+Cold microenvironment
+++++++++ Anti-PD-L1
+ nanobody
+Degron
+Cleavable
+linker
+Antigenic
+epitope
+Proximal reactive
+ amino acid
++++
+---
+a
+Immune
+evading
+Chemical reprogramming
+Stimulat oi n
+(1) Anti-PD-L1 Nb
+GlueBody2
+s.c.
+Fig. 1 | See next page for caption.
+738 | Nature | Vol 650 | 19 February 2026
+Article
+endogenous specific T cells to suppress triple-negative breast cancer
+progression both in vitro and in vivo. Finally, we further evaluated
+the high anti-tumour responses of iVACs in patient-derived tumour
+models. Our findings highlight chemical reprogramming of APC-like
+tumour cells as a promising basis for intratumoural vaccination therapy through targeted protein degradation, advancing the potential of
+cancer immunotherapy.
+Design and validation of iVAC
+APC-like tumour cells must satisfy three essential criteria: (1) antigen
+uptake and internalization; (2) antigen processing and presentation;
+(3) activation of antigen-specific T cells. To overcome the time-intensive
+nature of cell-fate reprogramming with transcription factors, which can
+take several days, we used biomacromolecules to chemically convert
+cancer cells to an APC-like status, directly targeting these three functional characteristics to restore tumour immunogenicity and potentiate tumour therapies (Fig. 1a). In contrast to conventional APCs that
+rely on pattern-recognition receptors for antigen internalization, our
+approach used a lysosome-targeting receptor-independent membrane
+protein degrader through the conjugated cell-penetrating peptide
+(CPP), namely, the covalent nanobody-based chimera (GlueBody–CPP).
+This method uses the endosomal–lysosomal degradation pathway after
+CPP-mediated internalization of the target–chimera complex, together
+with associated antigenic peptide presentation machinery. By coupling
+antigenic peptides with the degrader, we engineered chimeric entities
+to facilitate forced presentation of exogenous antigens (Fig. 1b). The
+efficiency of this antigenicity reprogramming therefore depends on
+both the degrader’s targeting affinity and its ability to deliver antigens
+into tumour cells for cross-presentation.
+To optimize degrader engagement with membrane targets, we
+designed a next-generation covalent nanobody that forms irreversible
+bonds with membrane proteins through in situ cross-linking. We optimized the proximity-reactive warhead fluorosulfate-L-tyrosine (FSY)
+by synthesizing fluoride-modified FSY variants (FnFSYs) to react with
+target residue His69 on human PD-L1 (Fig. 1c) with enhanced reactivity
+through sulfur fluoride exchange26–28. Testing these fluoride-substituted
+phenyl sulfurofluoridates with imidazole as a model confirmed that the
+di-ortho-fluoro variant yielded the highest reactivity (Extended Data
+Fig. 1a–c). To produce FnFSYs (Fig. 1d), we used tyrosine phenol lyase
+(TPL)-catalysed biosynthesis and successfully obtained mono- and
+di-fluoro FSYs (Extended Data Fig. 1d). Reactivity studies revealed that
+3,5-difluoro FSY had optimal yields (Extended Data Fig. 1e–g).
+We next assessed the cross-linking efficiency of FnFSYs with PD-L1 in
+the anti-PD-L1 nanobody KN035 (Nb-PD-L1) using a genetic code expansion strategy29,30. After selecting the orthogonal aminoacyl tRNA synthetase with the V366A mutant (Extended Data Fig. 2), we synthesized
+PD-L1-targeting GlueBodies and verified FnFSY incorporation at site
+Leu108 of Nb-PD-L1. In vitro tests showed that GlueBody (2,3-difluoro
+FSY) had the highest PD-L1 coupling efficiency within 30 min (Extended
+Data Fig. 3a), achieving over 40% cross-linking within 30 min and 80%
+after 2 h (Fig. 1e). This GlueBody variant was renamed GlueBody2 and
+was conjugated to functional peptides (CPP for degradation and CPPOVA for degradation-coupled antigen presentation) by sortase A.
+In HCC2935 cells, the GlueBody2–CPP construct degraded 92% of PD-L1
+at 100 nM within 4 h (Fig. 1f,g and Extended Data Fig. 3b), while demonstrating a more potent ability to restore T cell function as confirmed
+by a PD-L1–PD-1 luciferase reporter assay31 (Fig. 1h).
+GlueBody2–CPP was further linked to the OVA257–264 (SIINFEKL) antigenic peptide through different peptide linkers (D1–D4; Fig. 1i), and the
+following antigen presentation test on human PD-L1 (hPD-L1)/MC38
+model cells identified the D4 variant, termed iVAC, as the most efficient
+chimera for cathepsin recognition and antigen processing (Fig. 1i and
+Extended Data Fig. 3c). This efficiency was shown to be dependent
+on hPD-L1 expression (Extended Data Fig. 3d). Comparative analysis
+indicated that iVAC exhibited similar efficiency in target degradation
+and T cell reactivation as GlueBody2–CPP (Extended Data Fig. 3e,f).
+To validate the use of targeted antigen presentation by PD-L1 degradation in more physiologically relevant settings, PD-L1 humanized
+transgenic C57 mice bearing the hPD-L1endo/MC38 cell derived xenograft
+that express the endogenous level of hPD-L1 was used for systematic
+analysis (Extended Data Fig. 4a–f). The obtained results demonstrated
+that the endogenous PD-L1 expression level is sufficient to mediate
+exogenous antigen presentation by iVAC. Meanwhile, the intratumoural
+retention and biodistribution of iVAC were evaluated on the same
+xenograft models. Notably, iVAC exhibited persistent intratumoural
+retention, diminished potential off-tumour effects and negligible toxicity (Fig. 1j and Extended Data Fig. 5a–g). Collectively, iVAC achieved
+efficient targeted degradation, exogenous antigen presentation as
+well as excellent intratumoural retention—satisfying prerequisites for
+APC-like reprogramming (Fig. 1k).
+iVAC boosts tumour cross-presentation
+We next investigated the mechanism of iVAC-mediated antigen presentation on the cell surface as pMHC-I complexes. Mass spectrometry
+(MS)-based immunopeptidomics of iVAC-treated MC38 cells identified
+peptides binding predominantly to MHC-I, with OVApep observed at
+high levels (Fig. 2a and Supplementary Table 1), demonstrating iVAC’s
+potential to facilitate rapid tumour cell antigen uptake and presentation. A time-course study showed that OVApep delivered by iVAC
+continued to accumulate over 24 h, while passively bound OVApep dissociated after 6 h (Fig. 2b). Further experiments showed that OVApep
+in the medium formed pMHC-I complexes under all conditions, while
+iVAC antigen presentation was blocked at 4 °C (Fig. 2c). To delineate
+how APC-like cross-presentation operates in tumour cells, we combined
+Fig. 1 | Design and development of iVAC, which restores immunogenicity
+through checkpoint degradation-coupled antigen presentation. a, iVAC
+uses a covalently engineered checkpoint degrader to enable tumour cells to
+internalize, process and present exogenous antigens, facilitating in situ APC-like
+reprogramming to restore tumour immunogenicity. This PD-L1 degradationmediated conversion enhances bystander T cell activation within the TME,
+redirecting them against tumours to establish durable tumour-specific immunity.
+b, The design and assembly of iVAC based on optimized GlueBody2 linked to CPP.
+c, Structural model of PD-L1 in a complex with Nb-PD-L1, showing His69 on PD-L1
+and the mutated Leu108Tyr on Nb-PD-L1 within a distance of 6 Å (Protein Data
+Bank (PDB): 5JDS). d, Optimization of FnFSYs. 3,5-diF FSY, 3,5-difluoro FSY.
+e, Optimization of PD-L1 engagement. A quantitative analysis of the cross-linking
+efficiency between GlueBody (FnFSY) at 5 μM and PD-L1 at 0.5 μM over time is
+shown. n = 3 biological replicates. f, Western blot analysis of PD-L1 degradation in
+HCC2935 cells treated with GlueBody–CPP or GlueBody2–CPP for 4 h. Data are
+representative of three biological replicates. Gel source data are provided in
+Supplementary Fig. 1. g, Quantitative analysis of PD-L1 degradation in HCC2935
+cells by western blotting after 4 h of treatment with GlueBody–CPP or
+GlueBody2–CPP. n = 3 biological replicates. h, Quantitative luciferase assay in
+PD-1/Jurkat reporter cells co-cultured with PD-L1/CHO-K1 cells, treated with
+GlueBody–CPP or GlueBody2–CPP, showing the restoration of T cell activity.
+n = 3 biological replicates. i, Relative mean fluorescence intensity (MFI) analysis
+of OVApep–MHC-I complexes presented on tumours. n = 3 biological replicates.
+Cit, citrulline. j, Quantification of intratumoural retention and different organ
+distribution (24 h after administration) of Alexa Fluor 647 (AF647)-labelled drugs
+until 72 h after injection into hPD-L1endo/MC38 tumours. n = 4 mice per group.
+s.c., subcutaneous. k, Schematic of the optimized iVAC chemical structure.
+Data are mean ± s.d. Statistical analysis was performed using one-way analysis
+of variance (ANOVA) (i) and two-way ANOVA (e, g, h and j), each followed by
+Tukey’s multiple-comparison test. The mouse diagrams in a and j were created
+using SciDraw under a Creative Commons CC BY 4.0 licence.
+Nature | Vol 650 | 19 February 2026 | 739
+pharmacological inhibition with subcellular antigen tracking to monitor the cross-presentation process inside cells. The blockade of lysosomes, proteasome, endoplasmic reticulum (ER) or Golgi apparatus
+abolished OVApep presentation (Fig. 2d), indicating the participation
+of these compartments as essential mediators in cross-presentation32.
+The visualization of iVAC with Cy3-fluorophore-conjugated epitope in
+MDA-MB-231 cells further revealed that only iVAC-delivered epitopes
+were internalized into lysosomes and subsequently translocated to
+the ER, the central site for assembling exogenous antigens with MHC-I
+(Fig. 2e,f). Using Förster resonance energy transfer (FRET)-labelled
+5
+6
+7
+8
+4
+5
+6
+a
+Intensity score
+log10[intensity]
+OVA epitope
+6 SIINFEKL
+4
+2
+–1 0 1
+0
+500
+1,000
+1,500
+2,000
+Peptide count
+Peptide length
+Total =
+8,061
+Canonical peptide
+Non-canonical peptide
+7,433
+628
+7 8 9 10 11 12 13 14 15 16
+OVApep iVAC
+0 6 12 18 24
+0
+4
+8
+12
+16
+Fold change in tumour OVApep–MHC-I
+Time (h)
+b
+102 103 104 102 103 104 102 103 104
+OVApep–MHC-I-APC
+iVAC OVApep
+100
+100
+50
+50
+0
+0
+4 °C
+PD-L1–FITC
+37 °C
+Drug treatment
+HBSS control
+c
+d
+P < 0.0001
+P < 0.0001
+Baseline
+No inhibitor
+Chloroquine
+MG132
+Brefeldin A
+ERAP-1-IN-1
+Fold change in tumour
+OVApep–MHC-I 0
+2
+4
+6
+Process of cross-presentation
+(1) Lysosome leakage
+Internalized
+proteins
+(2) Cut by proteasome
+(3) Assembly in ER
+(5) Present on surface (4) Transport to Golgi
+e PD-L1 HBSS Epitope only GlueBody2–CPP + epitope iVAC
+Lysosome Epitope Merge f
+HBSS Epitope only
+GlueBody2–
+CPP + epitope iVAC
+PD-L1 ER Epitope Merge
+OVApep–MHC-I on cell surface
+4 h 24 h 3
+2
+1
+0
+Fold change in tumour MHC-I
+P = 0.0004
+HBSS
+OVApep
+HBSS
+iVAC
+OVApep
+iVAC
+4 h 24 h 2
+1
+Fold change in OVApep-MHC-I
+0
+P < 0.0001
+HBSS
+OVApep
+HBSS
+iVAC
+OVApep
+iVAC
+4 h 24 h 1.5
+1.0
+0.5
+0
+Fold change in surface PD-L1
+HBSS
+OVApep
+HBSS
+iVAC
+OVApep
+iVAC
+P < 0.0001 P = 0.0004
+g
+2
+HBSS OVApep iVAC
+0
+Expression
+–2 –1 1
+Antigen-processing activation
+H2-Q7
+Psmb8
+Nfya
+Ifngr1
+B2m
+Hspa8
+H2-DMb1
+Ctss
+H2-Q6
+Ciita
+H2-M3
+Psme2b
+Psme2
+Rfxap
+Pdia3
+Canx
+Hspa4
+Hsp90aa1
+Cd74
+Tapbp
+Lgmn
+Tap2
+Psme1
+Psmb10
+H2-DMa
+H2-T23
+H2-Aa
+Psmb9
+Tap1
+Nlrc5
+H2-K1
+H2-T22
+Ctsb
+H2-Ab1
+H2-Eb1
+H2-D1
+Hspa5
+H2-T24
+Calr
+Nfyb
+Creb1
+h
+Antigen-processing machinery
+H2-d expression (log2) Tapbp expression (log2)
+H2-k expression (log2) Tap2 expression (log2)
+Nlrc5 expression (log2) Tap1 expression (log2)
+2
+3
+4
+5 P < 0.0001
+P = 0.0003
+P < 0.0001
+HBSS
+iVAC
+P = 0.0113
+4.5
+5.0
+5.5
+6.0
+HBSS
+OVApep
+iVAC
+OVApep
+HBSS
+OVApep
+iVAC
+P = 0.0011
+P = 0.0014
+i
+7
+8
+9
+10
+6
+7
+8
+Fig. 2 | See next page for caption.
+740 | Nature | Vol 650 | 19 February 2026
+Article
+chimeras, in which the Cy3 signal on the epitope is quenched until
+the proteolytic cleavage, we observed that Cy3 fluorescence emerged
+exclusively within the cell, indicating the intracellular processing of the
+epitope (Extended Data Fig. 6a). Given that perforin-2 (PFN2, encoded
+by Mpeg1) mediates the lysosomal escaping underpinning antigen
+cross-presentation in DCs33, we examined its role in iVAC-treated cancer cells. The results showed that iVAC upregulated PFN2 expression
+levels, while its knockdown markedly reduced OVApep presentation
+in tumours (Extended Data Fig. 6b). Collectively, these data support that our iVAC-mediated antigen presentation depends on the
+endogenous MHC-I assembly pathway as well as the involvement of
+cross-presentation machinery in cancer cells.
+We also assessed the ability of iVAC to enhance tumour cell immunogenicity. In poorly immunogenic B16 cells (hPD-L1/B16) with minimal
+surface MHC-I expression, OVApep treatment alone elicited no response
+due to low MHC-I levels. However, prolonged iVAC treatment increased
+MHC-I molecules and displayed OVApep on the cell surface (Fig. 2g).
+RNA-sequencing (RNA-seq) analysis of iVAC-treated B16 cells revealed
+upregulation of antigen-presenting genes and reduced tumorigenicity
+(Fig. 2h,i, Extended Data Fig. 6c and Supplementary Table 2). Consistent with increased immunogenicity, iVAC treatment induced IFNγ and
+STING pathway signatures (Extended Data Fig. 6d,e). Gene set enrichment analysis further confirmed activation of innate immune responses
+(Extended Data Fig. 6f). Similar changes in antigen-processing transcripts were observed in iVAC-treated MC38 cells (Extended Data
+Fig. 6g,h). Collectively, these findings demonstrate that iVAC activates
+MHC-I pathways by inducing lysosomal degradation of the chimera–target complex, enabling tumour cells to process and present exogenous
+antigens on their surface, conferring APC-like characteristics.
+APC-like tumour cells become immunogenic
+To determine whether iVAC-reprogrammed APC-like tumour cells
+exhibit improved immunogenicity for T cell activation, tumour cells
+were treated with 200 nM iVAC for 1 h, washed extensively and cocultured with OT-I CD8+
+ T cells preactivated with OVApep and maintained in a memory state (Fig. 3a). After 24 h, reprogrammed APClike tumour cells displayed reduced PD-L1 levels and increased MHC-I
+expression, suggesting enhanced immunogenicity (Fig. 3b,c). This
+reduction in inhibitory checkpoint proteins combined with increased
+antigen presentation may accelerate and amplify OT-I memory CD8+
+T cell proliferation. To validate this, CFSE-labelled OT-I memory CD8+
+T cells were co-cultured with APC-like tumour cells or bone-marrowderived DCs (BMDCs) at a 10:1 ratio for 48 h. APC-like tumour cells
+derived from MC38 cells induced similar T cell activation and expansion
+to BMDCs, while free OVApep addition induced only moderate T cell
+proliferation in hPD-L1/B16 cells, which inherently have low MHC-I
+expression (Fig. 3d,e and Extended Data Fig. 7a,b). Comparable effects
+were observed with naive T cell proliferation, where APC-like tumour
+cells achieved functionality akin to BMDCs, in contrast to the original
+tumour cells (Extended Data Fig. 7c,d).
+T cell activation markers, including CD69, CD25 and CD44, along with
+cytotoxic markers like granzyme B (GZMB) and PFN, were significantly
+upregulated after 12 h in T cells co-cultured with iVAC-reprogrammed
+tumour cells, demonstrating effective activation of antigen-specific
+T cells (Fig. 3f). This effect exceeded that of extracellular peptide-based
+antigen loading (OVApep control). Reprogrammed APC-like tumour
+cells also induced stronger responses in naive T cells compared with
+direct OVApep addition, although slightly less than professional
+BMDCs, probably due to the absence of co-stimulatory molecules
+(Extended Data Fig. 7e). Memory T cells activated by iVAC secreted
+cytokines such as IFNγ and TNF (Fig. 3g), critical for enhancing T cell
+cytotoxicity and further remodelling the TME. Consistent with this
+T cell expansion and activation, iVAC-induced immunogenicity reprogramming led to more effective CTL-mediated tumour lysis than OVApep or PD-L1 degrader treatments (Fig. 3h), highlighting the potential
+of checkpoint degradation chimeras to deliver exogenous antigen
+and convert tumour cells to APC-like entities capable of redirecting
+OVA-specific T cells for tumour cell killing.
+iVAC elicits durable anti-tumour response
+After in vitro characterization of iVAC-remodelled APC-like tumour
+cells, we evaluated the in vivo efficacy of iVAC. To generate OVA-specific
+resident T cells for in situ APC-like reprogramming, PD-L1-humanized
+C57BL/6J mice were preimmunized with OVApep before inoculation
+with hPD-L1/MC38 tumours (Fig. 4a). Flow cytometry using SIINFEKLspecific H-2Kb
+ tetramers confirmed the presence of OVA-specific
+T cells in peripheral blood mononuclear cells (PBMCs; Extended Data
+Fig. 8a,b). Intratumoural iVAC injections significantly suppressed
+tumour growth compared with OVApep alone (Fig. 4b), and iVAC treatment cured tumours of all mice in this group (Fig. 4c), with no detectable tumours long after treatment (Fig. 4d). Tumour-free mice were
+resistant to rechallenge with hPD-L1/MC38 tumours, demonstrating
+durable, tumour-specific immunity induced by iVAC (Fig. 4e).
+Mechanistically, analysis of tumours and tumour-infiltrating lymphocytes revealed reduced PD-L1 expression (Extended Data Fig. 8c–e),
+increased CD8+
+ T cell infiltration (Fig. 4f,g) and higher CD69+
+ activation
+among tumour-infiltrating lymphocytes (Fig. 4h). Reprogrammed
+tumour cells presented OVA antigens (Extended Data Fig. 8f,g),
+resulting in elevated levels of OVA-specific CD8+
+ T cells in tumours
+(Fig. 4i). Moreover, iVAC treatment reduced immunosuppressive CD4+
+regulatory T (Treg) cells, promoting anti-tumour immunity (Fig. 4j).
+Analysis of macrophage polarization within the tumour showed that
+iVAC treatment significantly increased pro-inflammatory M1 macrophages and decreased anti-inflammatory M2 macrophages, crucial
+for immunotherapy efficacy (Fig. 4k,l). Previous reports showed that
+CTL-mediated tumour lysis may lead to immunogenic cell death34,35,
+which not only releases antigens but also induces pro-inflammatory
+cytokine secretion, APC recruitment and TME modulation for generating tumour-specific immunity. iVAC-treated tumours exhibited
+increased expression of co-stimulatory molecules CD80 and CD86
+Fig. 2 | iVAC directly stimulates antigen uptake, processing and presentation
+in tumour cells. a, Peptide length distribution and ranking by normalized
+intensity of predicted MHC-I binders. MS-based immunopeptidomics analysis
+shows dominant presentation of delivered OVApep on MHC-I. b, Time-course
+study of antigen presentation efficiency, comparing iVAC-mediated presentation
+with direct loading of free OVApep. n = 3 biological replicates. c, iVAC-mediated
+antigen presentation occurs through internalization and intracellular processing
+at 37 °C but not at 4 °C, whereas direct extracellular loading of OVApep on MHC-I
+is detectable under both conditions. d, Quantitative assessment of presented
+OVA antigen after iVAC treatment, indicating the involvement of various
+intracellular pathways in antigen processing and presentation. Inhibitors
+targeting endosome–lysosome (chloroquine), proteasome (MG132), ER
+aminopeptidase 1 (ERAP1-IN-1) and Golgi complex (brefeldin A) were used to
+assess their impact on the presentation efficiency. n = 3 biological replicates.
+e,f, Representative immunofluorescence imaging of iVAC internalization in
+MDA-MB-231 cells, suggesting a potential pathway involving lysosome escape
+(e) and transport to the ER (f) for MHC-I assembly. Experiments were repeated
+independently twice. Scale bars, 10 μm. g, Relative MFI analysis of surface
+MHC-I, OVApep–MHC-I complexes and hPD-L1 on hPD-L1/B16 cells treated with
+iVAC for 4 or 24 h. n = 3 biological replicates. h,i, Gene expression changes
+(heat maps (h) and plots (i)) after iVAC reprogramming, with upregulation of
+antigen-processing genes. hPD-L1/B16 cells were treated with 200 nM OVApep
+or iVAC and profiled by bulk RNA-seq. n = 3 biological replicates. Data are
+mean ± s.d. Statistical analysis was performed using one-way ANOVA with
+Tukey’s multiple-comparison test (d, g and i).
+Nature | Vol 650 | 19 February 2026 | 741
+on type one conventional DC (cDC1; CD11c+
+MHC-II+
+XCR1+
+) cells
+(Fig. 4m,n), which are essential for antigen cross-presentation and
+initiating an endogenous cancer-immunity cycle36. In the spleen, iVAC
+treatment not only amplified pre-existing responses to OVApep but
+also induced immune responses to MC38 tumour antigens, indicating antigen spreading (Fig. 4o,p). These findings suggest that iVAC
+a
+c
+b
+e f
+d
+g h
+0.01 0.1 1 10 100 1,000
+0
+20
+40
+60
+80
+100
+log-transformed concentration (nM)
+MC38
+Cytotoxicity (%)
+Degradation-coupled
+antigen presentation
+T cell
+Effector T cell
+APC-like
+tumour cell
+DC
+Tumour cell
+Proliferation,
+activation
+Cell tracer
+HBSS
+0.11 84.5 0.21 87.1 88.9
+0.27 24.6 0.20 64.8 89.5
+OVApep GlueBody2–CPP iVAC BMDC B16 MC38
+B16 MC38
+CD25-PE
+MC38
+MC38
+B16
+B16
+MC38 B16
+B16
+0.01 0.1 1 10 100 1,000
+0
+20
+40
+60
+80
+100
+Cytotoxicity (%)
+log-transformed concentration (nM)
+Tumour PD-L1 and MHC-I
+MHC-I-PE
+HBSS OVApep GlueBody2–CPP iVAC
+B16 MC38
+hPD-L1-APC
+94.0 2.76 62.5 34.1 43.6 1.38 26.9 40.9
+3.16 0.078 2.88 0.58 54.4 0.65 15.3 16.9
+67.0 31.7 10.2 88.4 33.2 24.0 8.29 60.1
+1.16 0.089 0.89 0.55 33.3 9.54 8.13 23.4
+OVApep GlueBody2–CPP iVAC
+NS
+P = 0.0011
+0
+5
+10
+15
+CD69+CD25+ cells of CD8+
+T cells (%)
+NS
+P = 0.0254
+P < 0.0001
+NS
+NS
+P = 0.0012
+0
+20
+40
+60
+80
+100
+CD25+CFSElow cells of CD8+
+T cells (%)
+0
+20
+40
+60
+80
+100
+CD25+CFSElow cells of CD8+
+T cells (%)
+NS
+P = 0.0137
+NS
+NS
+NS NS
+NS P = 0.0004 NS P < 0.0001
+NS
+P < 0.0001
+P < 0.0001
+P < 0.0001
+P < 0.0001
+P < 0.0001
+0 105 104 103
+0 105 104 103 –103 0 105 104 103 –103 0 105 104 103 –103 0 105 104 103 –103
+–102
+102
+103
+104
+0 105 104 103 0 105 104 103 0 105 104 103 0 105 104 103
+–103
+0
+103
+104
+105
+–103
+0
+103
+104
+105
+0
+–102
+102
+103
+104
+0
+0
+500
+1,000
+1,500
+2,000
+MFI of tumour hPD-L1
+0
+500
+1,000
+1,500
+2,000
+2,500
+MFI of tumour hPD-L1
+0
+1,000
+2,000
+3,000
+4,000
+MFI of tumour MHC-I
+0
+500
+1,000
+1,500
+2,000
+2,500
+MFI of tumour MHC-I
+0
+5
+10
+15
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+BMDC
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+BMDC
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+BMDC
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+BMDC
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+BMDC
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+BMDC
+0
+10
+20
+30
+40
+IFNγ+TNF+ in CD8+
+T cells (%)
+0
+10
+20
+30
+40
+IFNγ+TNF+ in CD8+
+T cells (%)
+15
+20
+25
+30
+35
+CD44+ cells of CD8+ T cells (%)
+15
+20
+25
+30
+35
+0
+20
+40
+60
+80
+100
+GZMB+PFN+ cells of CD8+
+T cells (%)
+CD69+CD25+ cells of CD8+
+T cells (%)
+CD44+ cells of CD8+ T cells (%)
+GZMB+PFN+ cells of CD8+
+T cells (%)
+0
+20
+40
+60
+80
+100
+Fig. 3 | See next page for caption.
+742 | Nature | Vol 650 | 19 February 2026
+Article
+reprograms APC-like tumour cells to enhance antigen presentation,
+reactivate resident T cells, reshape the TME and establish durable,
+tumour-specific immunity.
+iVAC reprograms human cancer cells
+To demonstrate the generality of our strategy, we investigated whether
+iVAC could reprogram human breast cancer cells (MDA-MB-231; hereafter, MDA) and stimulate corresponding specific human T cells. Given the
+high prevalence of CMV and the significant population of CMV-specific
+tumour-resident memory T cells18,21,37, we loaded iVAC with the immunodominant CMV pp65495–503 peptide antigen (NLVPMVATV; hereafter,
+NLVpep) to produce iVAC-CMV. The NLVpep was conjugated to the
+GlueBody2–CPP degrader through a G4S linker. Immunopeptidomic
+analysis of iVAC-CMV-treated MDA cells revealed that the exogenous
+CMV antigen was dominantly presented by HLA complexes (Fig. 5a–c).
+Notably, peptides derived from endogenous MDA antigens (TP53BP,
+PGAP6) were also robustly presented, with a high ranking among
+HLA ligands (Fig. 5c and Supplementary Tables 3 and 4). Moreover,
+iVAC-reprogrammed MDA cells exhibited enhanced binding affinity
+for epitopes (Fig. 5d) and acquired APC-like characteristics.
+We next evaluated the ability of reprogrammed MDA cells to activate NLV-specific T  cells. After 6 h of iVAC treatment, MDA cells
+were co-cultured for 12 h with JC5 reporter cells transduced with an
+NLV-specific TCR. This elicited significantly elevated surface CD69,
+indicating T cell activation (Fig. 5e). For improved antigen processing,
+several linkers between GlueBody2–CPP and NLVpep were tested and
+D8 was found as the most efficient variant for JC5 activation (Fig. 5f and
+Supplementary Table 5). We further investigated the therapeutic potential of iVAC-CMV by quantifying NLV-specific T cells in human samples.
+Among randomly selected HLA-A*02:01-positive donors, we observed a
+high frequency of circulating NLVPMVATV-specific tetramer+
+ T cells, with
+75% showing response rates exceeding 2%. Authentic NLV-specific T cell
+responses were validated through clonal expansion after specific NLVpep
+stimulation (Fig. 5g). Subsequently, we evaluated the responsiveness of
+these expanded T cells to iVAC-reprogrammed tumour cells. First, after
+co-culture with iVAC-treated MDA cells, in vitro expanded NLV-specific
+T cells exhibited marked CD69 upregulation (Fig. 5h (left)), albeit with
+limited sensitivity. Subsequently, we performed cytokine-release assays,
+which confirmed the secretion of IFNγ by these activated T cells after
+their exposure to iVAC-reprogrammed tumour cells. This finding demonstrated the occurrence of functional NLV antigen presentation and
+the activation of T cells. Responses were observed in 75% (12 out of 16)
+of HLA-A*02:01+
+ donors (Fig. 5i), indicating iVAC’s ability to stimulate
+resident NLV-specific T cells and redirect them against tumours.
+In vitro cytotoxicity assays further showed that iVAC-induced checkpoint degradation-coupled antigen presentation led to enhanced
+tumour killing compared with PD-L1 degradation alone (Fig. 5j).
+Finally, in a humanized mouse model, co-inoculated MDA cells and
+PBMCs treated with iVAC significantly slowed tumour growth compared with control and PD-L1 degrader groups (Fig. 5k). Together, these
+results highlight the therapeutic promise of iVAC to endow tumour
+cells with APC-like properties while simultaneously overcoming
+immune checkpoint inhibition, offering a versatile strategy for cancer
+treatment.
+Efficacy in patient-derived tumour models
+To evaluate iVAC in a clinically relevant setting, we used a recently
+established patient-derived tumour-like cell cluster (PTC) system,
+which faithfully recapitulates key genomic and drug-response features
+of primary tumours, enabling personalized therapeutic assessment38
+(Fig. 6a). We started by assessing the accessibility of virus-specific
+T cells in patients with tumours. Focusing on the three most frequent
+HLA alleles in the Chinese population, namely HLA-A*02:01, HLA-A*11:01
+and HLA-A*24:02 (collectively accounting for over 50% allele frequency),
+we selected 21 epitope peptides derived from CMV, EBV and influenza
+virus, with seven peptides chosen specifically for each HLA allele
+(Supplementary Table 6). We aimed to validate the response ratio of
+virus-specific T cells in 28 tumour patients expressing these alleles
+by quantifying IFNγ secretion after the stimulation by each peptide
+(10 μg ml−1) for 6–9 days. Bystander antiviral T cells in patients with all
+three HLA subtypes showed reactivity to the viral epitope pools (Fig. 6b
+and Extended Data Fig. 9). Notably, HLA-A*02:01-positive patients had
+an 80% response rate to the CMV epitope 02C1 (NLVPMVATV, NLVpep).
+On the basis of these response profiles, we constructed HLA-matched
+iVACs (iVAC-0201, iVAC-1101, iVAC-2402) using the epitopes with the
+highest response for each allele.
+These iVACs were applied to HLA-matched PTC models. Immunofluorescence analysis of colorectal cancer PTCs derived from patient 1
+revealed that iVAC treatment induced significant intratumoural T cell
+clonal expansion, GZMB secretion as well as decreased epithelial cell
+density (Fig. 6c), contrasting to the minimal-to-absent responses
+observed in control groups (epitope peptide alone or GlueBody2–CPP
+degrader). This indicates successful redirection of CMV-reactive T cells
+against tumours. iVAC also enhanced the cytokine secretion of TNF and
+IFNγ, correlating with reduced PTC viability (Extended Data Fig. 10a).
+Comparable results were observed in renal cell carcinoma PTCs from
+patient 2, confirming iVAC-stimulated, virus-specific T-cell-mediated
+tumour killing (Fig. 6d). Extended analysis of PTC viability in additional
+patient-derived models (Fig. 6e and Extended Data Fig. 10b) revealed an
+overall tumour response rate of 61% (17 out of 28). Stratified by HLA allele,
+efficacy rates were 69% (9 out of 13) for HLA-A*02:01, 62.5% (5 out of 8) for
+HLA-A*11:01 and 40% (4 out of 10) for HLA-A*24:02, respectively, which was
+consistent with previous T cell response data. We further examined the
+correlation between the PD-L1 expression levels of tumour cells and iVAC
+efficacy, which indicated that elevated PD-L1 expression correlates with
+enhanced treatment response (Extended Data Fig. 10c,d). These results
+established that iVAC effectively redirects virus-antigen-responsive
+T cells to eliminate tumour cells, demonstrating potent anti-tumour
+activity and therapeutic potential in clinically relevant settings.
+Discussion
+Here we introduce an iVAC to convert cancer cells into APC-like immunogenic cells, thereby restoring anti-tumour immunity. Using chemically
+Fig. 3 | iVAC-reprogrammed tumour cells exhibit immunogenic properties.
+a, Schematic of tumour immunogenicity reprogramming by iVAC. b,c, The
+iVAC-converted APC-like tumour cells exhibit upregulated MHC-I expression
+and maintain low PD-L1 levels 12 h after co-culture with OT-I memory T cells.
+n = 3 biological replicates. Shown are representative flow cytometry plots (b)
+and quantitative analysis (c) of tumour MHC-I and PD-L1 levels. d,e, APC-like
+tumour cells enhance the expansion of OT-I memory T cells similarly to BMDCs.
+n = 3 biological replicates. Representative flow cytometry plots (d) and
+quantification (e) of CD8+
+ T cell proliferation, assessed by cell tracer dilution,
+and activation (CD25+
+) after 48 h of co-culture with iVAC-reprogrammed
+tumours. f, Quantification of activation markers (CD69+
+CD25+
+, CD44+
+) and
+cytotoxic markers (GZMB+
+PFN+
+, GZMB+
+PFN+
+) on CD8+
+ T cells after 12 h of
+co-culture with reprogrammed APC-like tumours. n = 3 biological replicates.
+g, Quantification of cytokines IFNγ and TNF secreted by CD8+
+ T cells after 12 h
+of co-culture with reprogrammed APC-like tumours. n = 3 biological replicates.
+h, Quantification of tumour cell killing (MC38 or B16) by CD8+
+ T cells co-cultured
+with increasing concentrations of iVAC for 12 h. n = 3 biological replicates. In
+these experiments, the MC38 and B16 cells used were all mouse PD-L1-knockout
+cells expressing human PD-L1. Data are mean ± s.d. Statistical analysis was
+performed using one-way ANOVA with Tukey’s multiple-comparison test
+(c and e–g). NS, not significant.
+Nature | Vol 650 | 19 February 2026 | 743
+optimized FnFSYs and cleavable linkers, iVAC facilitates rapid PD-L1
+degradation and targeted antigen delivery with enhanced on-tumour
+retention, enabling tumour cells to cross-present antigens with boosted
+immunogenicity. Our results demonstrate that iVAC converted cancer
+cells to an APC-like state with boosted antigen presentation, which
+stimulated antigen-specific CD8+
+ T cells, remodelled the suppressive
+IR MC38
+IFNγ
++ spots per 106 splenocytes
+OVApep Ctrl peptide
+a
+c
+b
+e
+P = 0.0221
+0 20 40 60 80
+20
+40
+60
+80
+100
+0
+Time after tumour inoculation (days)
+Survival (%)
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+d
+f g h i
+P = 0.0261
+0
+5
+10
+15
+20
+25
+CD80+CD86+ cells of cDC1 cells (%)
+j k l m
+n o p
+0
+1
+2
+3
+4
+5
+CD8+ T cells per g tumour
+(×100,000)
+0
+2
+4
+6
+8
+SIINFEKL-tetramer+ cells of
+CD8+ T cells (%)
+0
+10
+20
+30
+40
+50
+CD86+ M1 cells of macrophages (%) Tumour volume
+~60 mm3
+Day –21
+OVA immunization
+–14 –7 0
+hPD-L1/MC38
+5 × 105
+ cells
+12 18 21 24 27 30
+Drugs were injected intratumourally
+at 0.5 mg per kg every 3 days
+15
+Rechallenge
+hPD-L1/C57BL/6J
+70
+T cell
+analysis
+Imaging
+35
+CD8 DAPI
+HBSS OVApep GlueBody2–CPP iVAC
+0.2 × 107
+1.0 × 107
+Maximum
+Minimum
+0.8 × 107
+0.6 × 107
+0.4 × 107
+Radiance
+(p s–1
+ cm–2
+ sr–1)
+GlueBody2–CPP iVAC
+Day 35
+6.67 9.71
+10.1 20.6
+CD80-PerCP-Cy5.5
+CD86-APC-Cy7
+HBSS OVApep
+GlueBody2–CPP iVAC
+–103
+0 103
+104
+105
+–103
+0 103
+104
+105
+–103
+0
+103
+104
+105
+–103
+0
+103
+104
+105
+P < 0.0001
+P < 0.0001
+P < 0.0001
+NS
+P = 0.0422
+P = 0.0428
+P = 0.0193
+P = 0.0159
+P = 0.0027
+P = 0.0253
+P = 0.0272
+0 5 10 15 20 25
+2
+4
+8
+16
+32
+64
+128
+256
+512
+1,024
+2,048
+Tumour volume (mm3
+)
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+Time after drug injection (days)
+0 5 10 15 20 25
+0
+200
+400
+600
+800
+1,000
+Time after tumour rechallenge (days)
+Tumour volume (mm3
+)
+Naive Cured
+0
+5
+10
+15
+20
+CD69+ cells of CD8+ T cells (%)
+0
+10
+20
+30
+40
+Treg cells of CD4+ T cells (%)
+0
+10
+20
+30
+40
+50
+CD206+ M2 cells of macrophages (%)
+Control OVApep IR MC38
+0
+500
+1,000
+1,500
+HBSS
+OVApep
+GlueBody2–CPP
+iVAC
+GlueBody2–CPP
+HBSS
+OVApep
+iVAC
+GlueBody2–CPP
+HBSS
+OVApep
+iVAC
+GlueBody2–CPP
+HBSS
+OVApep
+iVAC
+GlueBody2–CPP
+HBSS
+OVApep
+iVAC
+GlueBody2–CPP
+HBSS
+OVApep
+iVAC
+GlueBody2–CPP
+HBSS
+OVApep
+iVAC
+GlueBody2–CPP
+HBSS
+OVApep
+iVAC
+HBSS OVApep GlueBody2–CPP iVAC
+s.c.
+Fig. 4 | See next page for caption.
+744 | Nature | Vol 650 | 19 February 2026
+Article
+TME and generated durable systemic anti-tumour immunity in vitro
+and in vivo. Notably, iVAC can promote bystander virus-specific T cells
+(CMV and EBV) to retarget tumour cells and induce pronounced killing
+effects in patient-derived tumour models.
+Oncolytic viruses represent a promising in  situ vaccination
+approach using whole tumour cells as antigen sources39, yet safety
+concerns arise from potential viral replication in normal tissues and
+distracting antiviral responses that may overshadow tumour-specific
+antigens40. Oncolytic viruses often induce PD-L1 overexpression, further dampening T cell activity41–43. In contrast to oncolytic viruses, iVAC
+uses reprogrammed APC-like tumour cells to synergize checkpoint
+degradation with direct T cell activation inside tumour. The generated tumour-specific immune responses may derive from two main
+sources: (1) reactivation and redirection of bystander memory T cells
+within the TME or recruited from peripheral circulation to eradicate
+tumour cells; and (2) the induction of immunogenic cell death, which
+releases tumour antigens to further stimulate tumour-specific T cell
+responses.
+Reduced antigen presentation is a known immune evasion mechanism in tumours, and exogenous antigen presentation by cancer cells
+is rare, typically occurring only during infections that increase tumour
+immunogenicity44. Higher tumour cell immunogenicity correlates with
+better patient responses to immune checkpoint inhibitors, as immune
+checkpoint blockade therapy reactivates suppressed T cells across
+various cancers. Recent transmembrane and extracellular targeted
+protein degradation strategies have shown promise by irreversibly
+clearing immune checkpoints like PD-L1, offering enhanced efficacy
+over conventional immune checkpoint inhibitors45–49. However, the
+small population of tumour-specific T cells within tumours often exists
+in an exhausted state, while more abundant bystander T cells, which
+recognize non-tumour antigens, have greater potency18,21,43. Previous
+attempts to redirect these bystander T cells through viral epitope delivery achieved limited success due to inefficiencies in epitope loading as
+well as the lack of regulation over intrinsic signalling pathways50–52. By
+contrast, iVAC uses natural endocytic pathways to efficiently present
+exogenous peptides on MHC-I while concurrently degrading immune
+checkpoints, enhancing tumour immunogenicity, activating IFN signalling and remodelling the TME. This strategy further boosts MHC-I
+expression, rescues tumour antigen presentation, promotes cDC1
+maturation and eliminates immunosuppressive microenvironment,
+collectively driving a robust anti-tumour response.
+Cellular reprogramming strategies hold promise for cancer therapy, with approaches targeting tumorigenicity reduction through
+transcriptional reprogramming53–55. However, these methods often
+have a low conversion efficiency, limiting their clinical use. Recent
+studies have reprogrammed tumour cells into macrophages56 or
+DCs23,24 through transcription factor manipulation, which enhanced
+antigen presentation and CD8+
+ T cell activation. However, such strategies have certain safety risks due to viral vectors, even when administered intratumourally, and the epigenetic reprogramming is slow
+and asynchronous57–59. Alternatively, our chemical reprogramming
+approach based on targeted membrane protein degradation rapidly
+enhances tumour immunogenicity at the protein and immunopeptidome level. By directly initiating the APC-like remodelling of cancer cells within the tumour bed, iVAC may offer a general platform
+for in situ activation of anti-tumour immunity across diverse patient
+populations.
+Online content
+Any methods, additional references, Nature Portfolio reporting summaries, source data, extended data, supplementary information, acknowledgements, peer review information; details of author contributions
+and competing interests; and statements of data and code availability
+are available at https://doi.org/10.1038/s41586-025-09903-1.
+1. Kalbasi, A. & Ribas, A. Tumour-intrinsic resistance to immune checkpoint blockade.
+Nat. Rev. Immunol. 20, 25–39 (2020).
+2. Sharma, P., Hu-Lieskovan, S., Wargo, J. A. & Ribas, A. Primary, adaptive, and acquired
+resistance to cancer immunotherapy. Cell 168, 707–723 (2017).
+3. Oliveira, G. & Wu, C. J. Dynamics and specificities of T cells in cancer immunotherapy.
+Nat. Rev. Cancer 23, 295–316 (2023).
+4. Emens, L. A. et al. Cancer immunotherapy: opportunities and challenges in the rapidly
+evolving clinical landscape. Eur. J. Cancer 81, 116–129 (2017).
+5. Chow, A., Perica, K., Klebanoff, C. A. & Wolchok, J. D. Clinical implications of T cell
+exhaustion for cancer immunotherapy. Nat. Rev. Clin. Oncol. 19, 775–790 (2022).
+6. Larson, R. C. & Maus, M. V. Recent advances and discoveries in the mechanisms and
+functions of CAR T cells. Nat. Rev. Cancer 21, 145–161 (2021).
+7. Lin, M. J. et al. Cancer vaccines: the next immunotherapy frontier. Nat. Cancer 3, 911–926
+(2022).
+8. Kirchhammer, N., Trefny, M. P., Maur, P. A. D., Läubli, H. & Zippelius, A. Combination cancer
+immunotherapies: emerging treatment strategies adapted to the tumor microenvironment.
+Sci. Transl. Med. 14, eabo3605 (2022).
+9. Miller, C. L. et al. Systemic delivery of a targeted synthetic immunostimulant transforms
+the immune landscape for effective tumor regression. Cell Chem. Biol. 29, 451–462
+(2022).
+10. Marabelle, A., Tselikas, L., de Baere, T. & Houot, R. Intratumoral immunotherapy: using the
+tumor as the remedy. Ann. Oncol. 28, 33–43 (2017).
+11. Melero, I., Castanon, E., Alvarez, M., Champiat, S. & Marabelle, A. Intratumoural
+administration and tumour tissue targeting of cancer immunotherapies. Nat. Rev. Clin.
+Oncol. 18, 558–576 (2021).
+12. Dieu-Nosjean, M. C. et al. Long-term survival for patients with non-small-cell lung cancer
+with intratumoral lymphoid structures. J. Clin. Oncol. 26, 4410–4417 (2008).
+13. Lee, Y. et al. Recruitment and activation of naive T cells in the islets by lymphotoxin
+β receptor-dependent tertiary lymphoid structure. Immunity 25, 499–509 (2006).
+14. Peske, J. D. et al. Effector lymphocyte-induced lymph node-like vasculature enables naive
+T-cell entry into tumours and enhanced anti-tumour immunity. Nat. Commun. 6, 7114
+(2015).
+15. Heras-Murillo, I., Adán-Barrientos, I., Galán, M., Wculek, S. K. & Sancho, D. Dendritic cells
+as orchestrators of anticancer immunity and immunotherapy. Nat. Rev. Clin. Oncol. 21,
+257–277 (2024).
+16. Saxena, M., van der Burg, S. H., Melief, C. J. M. & Bhardwaj, N. Therapeutic cancer vaccines.
+Nat. Rev. Cancer 21, 360–378 (2021).
+17. Lin, J. H. et al. Type 1 conventional dendritic cells are systemically dysregulated early in
+pancreatic carcinogenesis. J. Exp. Med. 217, e20190673 (2020).
+18. Meier, S. L., Satpathy, A. T. & Wells, D. K. Bystander T cells in cancer immunology and
+therapy. Nat. Cancer 3, 143–155 (2022).
+19. Simoni, Y. et al. Bystander CD8+
+ T cells are abundant and phenotypically distinct in
+human tumour infiltrates. Nature 557, 575–579 (2018).
+20. Kalaora, S. et al. Identification of bacteria-derived HLA-bound peptides in melanoma.
+Nature 592, 138–143 (2021).
+Fig. 4 | APC-like tumour cells remodel the TME and induce durable tumourspecific responses in vivo. a, Schematic of the tumour suppression study.
+The diagram in a was created using SciDraw under a Creative Commons CC
+BY 4.0 licence. b, Growth curves of hPD-L1/MC38 tumours treated with HBSS,
+OVApep, GlueBody2–CPP and iVAC (plotted on a log2 scale). n = 7 mice per
+group. c, Tumour volume changes visualized by bioluminescence imaging on
+day 35. d, Survival curves of treated mice. e, The long-term protective effects
+of iVAC against MC38 tumours. On day 70, cured mice were rechallenged with
+1 × 107
+ MC38 cells. n = 5 (naive) and 7 (cured) mice. f, CD8+
+ T cell infiltration in
+tumours after iVAC treatment. Representative images from four biological
+replicates per group are shown. Scale bar, 100 μm. g–n, Remodelling of the TME
+by iVAC reprogrammed tumours to initiate anti-cancer immunity. Quantification
+includes tumour-infiltrating CD8+
+ T cells (CD3+
+CD8+
+) (g), activated CD8+
+ T cells
+(CD3+
+CD8+
+CD69+
+) (h), OVA-specific CD8+
+ T cells (CD3+
+CD8+
+Tetramer+
+) (i),
+Treg cells (CD3+
+CD4+
+CD25+
+CD127−
+) (j), M1 macrophages (lineage−
+MHC-II+
+CD11b+
+F4/
+80+
+CD86+
+CD206−
+) (k), M2 macrophages (lineage−
+MHC-II+
+CD11b+
+F4/80+
+CD86−
+CD206+
+) (l) and mature cDC1 cells (lineage−
+MHC-II+
+CD11c+
+F4/80−
+XCR1+
+CD80+
+CD86+
+) (m). n, Representative flow cytometry plots of mature cDC1 cells.
+o,p, iVAC treatment induced tumour-specific T cells in mice. Splenocytes from
+treated and control mice were stimulated with either OVApep or irradiated
+hPD-L1/MC38 cells (IR MC38). Ctrl peptide, NLVpep. Antigen-specific T cells
+were detected using enzyme-linked immunosorbent spot assay (ELISpot);
+representative spots are shown in p and quantification is shown in o. For g–m and
+o, n = 4 mice per group. Data are mean ± s.d. Statistical analysis was performed
+using one-way ANOVA (g–m) and two-way ANOVA (b, e and o), each followed by
+Tukey’s multiple-comparison test, and the log-rank Mantel-Cox test for survival
+analysis (d).
+Nature | Vol 650 | 19 February 2026 | 745
+21. Rosato, P. C. et al. Virus-specific memory T cells populate tumors and can be repurposed
+for tumor immunotherapy. Nat. Commun. 10, 567 (2019).
+22. Jhunjhunwala, S., Hammer, C. & Delamarre, L. Antigen presentation in cancer: insights
+into tumour immunogenicity and immune evasion. Nat. Rev. Cancer 21, 298–312 (2021).
+23. Zimmermannova, O. et al. Restoring tumor immunogenicity with dendritic cell
+reprogramming. Sci. Immunol. 8, eadd4817 (2023).
+24. Ascic, E. et al. In vivo dendritic cell reprogramming for cancer immunotherapy. Science
+386, eadn9083 (2024).
+e
+a
+c Endogenous antigen presentation
+HBSS treatment iVAC treatment
+–10 –5 0
+Intensity score
+NLVPMVATV LCSDLGKPSTLR
+TP53BP
+SLVGPLGTV
+PGAP6
+CMV epitope
+–10 –5 0
+2
+4
+6
+Intensity score
+log10[intensity]
+2
+4
+6
+log10[intensity]
+SLVGPLGTV
+PGAP6
+LCSDLGKPSTLR
+TP53BP
+d
+h
+i j k
+f g
+P = 0.0004
+P < 0.0001
+Positive Negative
+P = 0.0040
+P < 0.0001
+NS
+P = 0.0006
+P = 0.0290
+NS
+NS
+Peptide length
+7 8 9 10 11 12 13 14 15 16
+iVAC treatment
+Total =
+16,630
+12,936
+3,674
+7 8 9 10 11 12 13 14 15 16
+0
+2,000
+4,000
+6,000
+8,000
+10,000
+Peptide count
+0
+2,000
+4,000
+6,000
+8,000
+10,000
+Peptide count
+Peptide length
+HBSS treatment
+Total =
+15,624
+11,974
+3,650
+HBSS
+treatment
+iVAC
+treatment
+Strong binding Moderate binding Weak binding
+79%
+9%
+12%
+30%
+8%
+62%
+b
+100 200 300 400 500 600 700 800 900
+100
+50
+NL V P M V A T V bM VT A V M P V L N
+y6
+617.33
+y6-NH3
+600.32
+y5-H2O
+502.26 b3
+327.20
+y4-H2O
+371.22 y8-H2O
+811.43
+y7-NH3
+699.40
+y6
+617.33
+y5-H2O
+502.26
+y4-H2O
+371.22 y8-H2O
+811.43
+y7-NH3
+699.40
+Da
+0.05
+0
+–0.05
+N L V P M V A T V Canonical peptide Intensity (%)
+Non-canonical peptide
+Canonical peptide
+Non-canonical peptide
+PBS iVAC PBS iVAC
+0
+10
+20
+30
+40
+50
+CD69+ cells of CD8+ T cells (%)
+Untreated
+NLVpep
+GlueBody2–CPP
+iVAC
+0
+20
+40
+60
+80
+100
+CD69+ cells of CD8+ T cells (%)
+0
+20
+40
+60
+80
+100
+CD69+ cells of CD8+ T cells (%)
+Ctrl
+D1
+D2
+D3
+D4
+D5
+D6
+D7
+D8
+Fresh Stimulated
+0
+20
+40
+60
+80
+NLVPMVATV-tetramer+ cells of
+CD8+ T cells (%)
+Positive Negative Positive Negative
+0
+500
+L003
+NC0085
+T0099
+T0154
+Y1713
+Y1734
+Y1845
+Y1896
+Y1899
+YB3075
+YB3076
+YB3078
+YB3097 Z0400
+Z0404
+Z0572
+NC0086
+NC0087
+NF0055 NF0080
+T0037
+Y1581
+Y1744
+Y1746
+Y1733
+Z0444
+Z0456 Z0458
+Z0460
+Z0651
+Z0474
+1,000
+Donors
+Secreted IFNγ (pg ml–1)
+PBS
+iVAC
+PBS
+GlueBody2–CPP
+iVAC
+0
+20
+40
+60
+80
+100
+Cytotoxicity (%)
+0 5 10 15
+0
+200
+400
+600
+Time after drug injection (days)
+Tumour volume (mm3
+)
+HBSS
+GlueBody2–CPP
+iVAC
+Fig. 5 | iVAC enhances the anti-tumour activity of CMV-specific T cells in a
+humanized mouse model. a–d, iVAC induced MDA-MB-231 cells to present
+the CMV immunodominant epitope and enhanced the endogenous antigen
+presentation. a, Immunopeptidome of human cancer cells. The number of the
+distinct peptides predicted as canonical binders (red) and non-canonical
+binders (grey) is shown. Peptide length distributions by normalized intensity
+of predicted binders. b, Epitope identification of the delivered CMV antigen.
+c, Peptide ranking by normalized intensity of predicted binders. Peptides
+derived from CMV, tumour suppressor p53-binding protein (TP53BP) and
+post-glycosylphosphatidylinositol attachment to proteins factor 6 (PGAP6)
+antigens are highlighted. d, The percentage of epitope affinity. e, iVAC
+reprogrammed MDA-MB-231 cells activate TCR (NLV)-transduced JC5 reporter
+cells. n = 3 biological replicates. f, Linker optimization for iVAC-CMV through
+CD69 upregulation of TCR (NLV)-transduced JC5 reporter cells. n = 3 biological
+replicates. g, NLV-specific CD8+
+ T cells in healthy donors can be expanded by
+NLVpep stimulation. n = 31 healthy donors, 16 for HLA-A*02:01 positive and 15
+for HLA-A*02:01 negative. h, CD69 expression of NLVpep-stimulated CD8+
+T cells from HLA-A*02:01-positive donors was upregulated after exposure to
+iVAC-reprogrammed MDA cells, indicating the specificity of NLV antigen
+presentation. n = 31 healthy donors. i, IFNγ release showing T cell activation in
+response to iVAC-reprogrammed MDA tumour cells after NLVpep stimulation
+of bystander CMV-specific T cells. n = 31 healthy donors. j, The cytotoxicity of
+iVAC-reprogrammed versus control tumour cells mediated by NLV-specific
+T cells. n = 10 HLA-A*02:01-positive donors. k, Evaluation of iVAC anti-tumour
+efficacy in vivo. Drugs were administered intratumourally at 0.5 mg per kg
+every 3 days. n = 7 mice per group. Data are mean ± s.d. Statistical analysis was
+performed using one-way ANOVA (e, f and j) and two-way ANOVA (g, h and k),
+each followed by Tukey’s multiple-comparison test.
+746 | Nature | Vol 650 | 19 February 2026
+Article
+iVAC treatment
+T cell supplement
+Ex vivo
+Tumour samples
+Patient
+Clinical efcacy
+evaluation
+PTCs
+HLA-A*02:01 HLA-A*11:01 HLA-A*24:02
+a
+e
+b c
+d
+iVAC
+GlueBody2–CPP
+PBS
+0
+100
+200
+300
+400
+TNF (pg ml–1)
+P = 0.0036
+P = 0.0001
+P = 0.0059
+P = 0.0023 P = 0.0076
+P = 0.0387
+P = 0.0075
+P = 0.0466
+iVAC
+GlueBody2–CPP
+PBS
+iVAC
+GlueBody2–CPP
+PBS
+0
+500
+1,000
+1,500
+IFNγ (pg ml–1)
+Patient 1 PanCK CD3 GZMB
+iVAC Epitope only
+GlueBody2–CPP PBS
+CD3+ GZMB+ PanCK+ cells
+P = 0.0001
+P = 0.0298
+P = 0.0001
+Patients 3-8 (HLA-A*02:01)
+Patients 9–12 (HLA-A*11:01) Patients 12–14 (HLA-A*24:02)
+0
+0.5
+1.0
+1.5
+2.0
+2.5
+PTC viability
+0
+1
+2
+3
+PTC viability
+Epitope
+0
+0.5
+1.0
+1.5
+2.0
+PTC viability
+0
+0.2
+0.4
+0.6
+0.8
+PTC viability
+02C1
+02C2
+02C3
+02E1
+02E2
+02I1
+02I2
+0
+50
+100
+Response rate (%)
+0
+50
+100
+Response rate (%)
+0
+50
+100
+Response rate (%)
+11C1
+11C2
+11E1
+11E2
+11E3
+11I1
+11I2
+24C1
+24C2
+24C3
+24E1
+24E2
+24I1
+24I2
+0
+0.2
+0.4
+0.6
+0.8
+Percentage of live cells
+PBS
+Epitope only
+GlueBody2–CPP
+iVAC
+0
+0.5
+1.0
+1.5
+2.0
+2.5
+PTC viability
+0
+1
+2
+3
+4
+PTC viability
+0
+2
+4
+6
+8
+PTC viability
+iVAC PBS iVAC PBS
+0
+5
+10
+PTC viability
+0
+0.5
+1.0
+1.5
+2.0
+2.5
+PTC viability
+0
+0.5
+1.0
+1.5
+PTC viability
+0
+0.2
+0.4
+0.6
+0.8
+1.0
+PTC viability
+iVAC-1101
+iVAC-2402
+PBS
+0
+1
+2
+3
+PTC viability
+0
+0.5
+1.0
+1.5
+2.0
+PTC viability
+iVAC PBS iVAC PBS iVAC PBS iVAC PBS
+iVAC PBS iVAC PBS iVAC PBS iVAC PBS iVAC PBS
+Fig. 6 | See next page for caption.
+Nature | Vol 650 | 19 February 2026 | 747
+25. Zhu, Y. et al. Bioorthogonal cleavage chemistry: harnessing the bond-break reactions for
+biomolecule manipulations in living systems. Chin. J. Chem. 43, 553–566 (2025).
+26. Dong, J. J., Krasnova, L., Finn, M. G. & Sharpless, K. B. Sulfur(VI) fluoride exchange
+(SuFEx): another good reaction for click chemistry. Angew. Chem. Int. Edn 53,
+9430–9448 (2014).
+27. Wang, N. X. et al. Genetically encoding fluorosulfate-L-tyrosine to react with lysine,
+histidine, and tyrosine via SuFEx in proteins. J. Am. Chem. Soc. 140, 4995–4999 (2018).
+28. Yu, B. et al. Accelerating PERx reaction enables covalent nanobodies for potent
+neutralization of SARS-CoV-2 and variants. Chem 8, 2766–2783 (2022).
+29. Wang, L. & Schultz, P. G. Expanding the genetic code. Angew. Chem. Int. Edn 44, 34–66
+(2005).
+30. Chin, J. W. Expanding and reprogramming the genetic code. Nature 550, 53–60 (2017).
+31. Cheng, Z. J. J. et al. Novel PD-1 blockade bioassay to assess therapeutic antibodies in PD-1
+and PD-L1 immunotherapy programs. Cancer Res. 75, 5440 (2015).
+32. Joffre, O. P., Segura, E., Savina, A. & Amigorena, S. Cross-presentation by dendritic cells.
+Nat. Rev. Immunol. 12, 557–569 (2012).
+33. Rodríguez-Silvestre, P. et al. Perforin-2 is a pore-forming effector of endocytic escape in
+cross-presenting dendritic cells. Science 380, 1258–1265 (2023).
+34. Kroemer, G., Galassi, C., Zitvogel, L. & Galluzzi, L. Immunogenic cell stress and death.
+Nat. Immunol. 23, 487–500 (2022).
+35. Jin, M. Z. & Wang, X. P. Immunogenic cell death-based cancer vaccines. Front. Immunol.
+12, 697964 (2021).
+36. Oba, T. et al. Overcoming primary and acquired resistance to anti-PD-L1 therapy by induction
+and activation of tumor-residing cDC1s. Nat. Commun. 11, 5415 (2020).
+37. Vescovini, R. et al. Massive load of functional effector CD4+
+ and CD8+
+ T cells against
+cytomegalovirus in very old subjects. J. Immunol. 179, 4283–4291 (2007).
+38. Lin, F. et al. Multimodal targeting chimeras enable integrated immunotherapy leveraging
+tumor-immune microenvironment. Cell 187, 7470–7491 (2024).
+39. Shalhout, S. Z., Miller, D. M., Emerick, K. S. & Kaufman, H. L. Therapy with oncolytic viruses:
+progress and challenges. Nat. Rev. Clin. Oncol. 20, 160–177 (2023).
+40. Harrington, K., Freeman, D. J., Kelly, B., Harper, J. & Soria, J. C. Optimizing oncolytic
+virotherapy in cancer treatment. Nat. Rev. Drug Discov. 18, 689–706 (2019).
+41. Wang, G. et al. An engineered oncolytic virus expressing PD-L1 inhibitors activates tumor
+neoantigen-specific T cell responses. Nat. Commun. 11, 1395 (2020).
+42. Chen, Y. X. et al. An oncolytic virus–T cell chimera for cancer immunotherapy.
+Nat. Biotechnol. 42, 1876–1887 (2024).
+43. Chen, X. Y. et al. An oncolytic virus delivering tumor-irrelevant bystander T cell epitopes
+induces anti-tumor immunity and potentiates cancer immunotherapy. Nat. Cancer 5,
+1063–1081 (2024).
+44. Cruz, F. M., Chan, A. M. D. & Rock, K. L. Pathways of MHC I cross-presentation of exogenous
+antigens. Semin. Immunol. 66, 101729 (2023).
+45. Banik, S. M. et al. Lysosome-targeting chimaeras for degradation of extracellular proteins.
+Nature 584, 291–297 (2020).
+46. Ahn, G. et al. LYTACs that engage the asialoglycoprotein receptor for targeted protein
+degradation. Nat. Chem. Biol. 17, 937–946 (2021).
+47. Zhou, Y. X., Teng, P., Montgomery, N. T., Li, X. L. & Tang, W. P. Development of triantennary
+N-acetylgalactosamine conjugates as degraders for extracellular proteins. ACS Cent. Sci.
+7, 499–506 (2021).
+48. Cotton, A. D., Nguyen, D. P., Gramespacher, J. A., Seiple, I. B. & Wells, J. A. Development of
+antibody-based PROTACs for the degradation of the cell-surface immune checkpoint
+protein PD-L1. J. Am. Chem. Soc. 143, 593–598 (2021).
+49. Zhang, H. et al. Covalently engineered nanobody chimeras for targeted membrane protein
+degradation. J. Am. Chem. Soc. 143, 16377–16382 (2021).
+50. Sefrin, J. P. et al. Sensitization of tumors for attack by virus-specific CD8+
+ T-cells through
+antibody-mediated delivery of immunogenic T-cell epitopes. Front. Immunol. 10, 1962
+(2019).
+51. Millar, D. G. et al. Antibody-mediated delivery of viral epitopes to tumors harnesses
+CMV-specific T cells for cancer therapy. Nat. Biotechnol. 38, 420–425 (2020).
+52. van der Wulp, W. et al. Comparison of methods generating antibody-epitope conjugates
+for targeting cancer with virus-specific T cells. Front. Immunol. 14, 1183914 (2023).
+53. Zimmermannova, O., Caiado, I., Ferreira, A. G. & Pereira, C. F. Cell fate reprogramming in
+the era of cancer immunotherapy. Front. Immunol. 12, 714822 (2021).
+54. Rapino, F. et al. C/EBPα induces highly efficient macrophage transdifferentiation of B
+lymphoma and leukemia cell lines and impairs their tumorigenicity. Cell Rep. 3, 1153–1163
+(2013).
+55. McClellan, J. S., Dove, C., Gentles, A. J., Ryan, C. E. & Majeti, R. Reprogramming of primary
+human Philadelphia chromosome-positive B cell acute lymphoblastic leukemia cells into
+nonleukemic macrophages. Proc. Natl Acad. Sci. USA 112, 4074–4079 (2015).
+56. Linde, M. H. et al. Reprogramming cancer into antigen-presenting cells as a novel
+immunotherapy. Cancer Discov. 13, 1164–1185 (2023).
+57. Wang, J. L., Sun, S. C. & Deng, H. K. Chemical reprogramming for cell fate manipulation
+methods, applications, and perspectives. Cell Stem Cell 30, 1130–1147 (2023).
+58. Guan, J. Y. et al. Chemical reprogramming of human somatic cells to pluripotent stem
+cells. Nature 605, 325–331 (2022).
+59. Hu, Y. Y. et al. Induction of mouse totipotent stem cells by a defined chemical cocktail.
+Nature 617, 792–797 (2023).
+Publisher’s note Springer Nature remains neutral with regard to jurisdictional claims in
+published maps and institutional affiliations.
+Springer Nature or its licensor (e.g. a society or other partner) holds exclusive rights to this
+article under a publishing agreement with the author(s) or other rightsholder(s); author
+self-archiving of the accepted manuscript version of this article is solely governed by the
+terms of such publishing agreement and applicable law.
+© The Author(s), under exclusive licence to Springer Nature Limited 2026
+Fig. 6 | iVAC triggers virus-specific T cell redirection with effective human
+tumour inhibition in the patient-derived tumour model. a, The PTC model
+for iVAC testing. Patient samples were collected and cultured to generate PTCs.
+PTCs with diameters of over 40 μm were processed for iVAC evaluation.
+b, Evaluation of the virus epitope-mediated response rates in bystander T cells
+from tumour patients carrying different HLA alleles. n = 28 patients with cancer.
+c, Evaluation of the iVAC-mediated T cell redirection and activation in PTCs by the
+immunofluorescence assay. The colorectal cancer PTCs (patient 1, HLA-A*02:01)
+treated with iVAC or controls for 7 days were followed by immunofluorescence
+staining for pan-cytokeratin (panCK; tumour marker), CD3 (T cell marker) and
+granzyme B (T cell activation marker). Scale bar, 100 μm. d, Evaluation of the
+iVAC-mediated T cell redirection and activation. The renal cell carcinoma PTCs
+(patient 2, HLA-A*02:01) were treated with iVAC or controls. TNF as well as IFNγ
+were measured using enzyme-linked immunosorbent assay (ELISA) and
+tumour inhibition was determined by testing the PTC viability after 7 days.
+e, Tumour inhibition on PTCs from 12 patients (patients 3–14) was evaluated by
+testing the PTC viability after 7 days. For c–e, data are mean ± s.d. derived from
+two or three independent biological replicates. Statistical analysis was
+performed using two-way ANOVA with Tukey’s multiple-comparison test (c)
+and unpaired two-sided Student’s t-tests (e).
+Article
+Methods
+Cell line and primary cell culture
+The human cancer MDA-MB-231, HCC2935, NCI-H1975, HCC827 and
+mouse MC38 and B16 cells were purchased from ATCC or Procell. PD-L1
+aAPC/CHO-K1 and PD-1 NFAT-luciferase/Jurkat cells were purchased
+from Promega. Mouse PD-L1-knockout MC38 cells stably expressing
+human PD-L1 (hPD-L1/MC38) were constructed by GemPharmatech. Mouse PD-L1-knockout MC38 cells expressing endogenous levels of human PD-L1 (hPD-L1endo/MC38) were generated by infecting
+PD-L1-knockout MC38 cells with lentivirus encoding a chimeric PD-L1
+construct consisting of the human PD-L1 extracellular domain and
+the mouse PD-L1 intracellular domain followed by sorting based on
+the surface PD-L1 level using flow cytometry. Mouse PD-L1-knockout
+B16 cells expressing endogenous level human PD-L1 (hPD-L1/B16)
+were constructed similarly to that of hPD-L1endo/MC38. All cell lines
+were identified by short-tandem-repeat profiling, and were tested
+and verified to be free of mycoplasma. HCC2935, NCI-H1975, HCC827
+and hPD-L1/B16 cells were maintained in RPMI 1640 medium (Gibco)
+supplemented with 10% FBS (Invitrogen). MDA-MB-231 and MC38 cells
+were maintained in DMEM medium (Gibco) supplemented with 10% FBS
+(Invitrogen), and all of them were cultured in a humidified incubator at
+37 °C under 5% CO2. hPD-L1/MC38 cells expressing luciferase were constructed by infecting hPD-L1/MC38 cells with lentivirus containing the
+firefly luciferase gene followed by sorting based on puromycin resistance. OVA-specific naive CD8+
+ T cells were isolated from the spleens of
+female OT-1 mice that were 6–8 weeks old (Cyagen Biosciences) with the
+negative CD8 isolation kit (StemCell Technologies, 19853) according to
+manufacturer’s instructions. OVA-specific memory T cells were generated and cultured according to the literature60. CMV-specific TCR (NLV)
+JC5 cells were a gift from M. M. Xu. Human PBMCs of healthy donors
+were provided by Oribiotech, Shanghai, China (PB002-C). Detailed
+information of healthy donors is summarized in Supplementary Table 7.
+Mice
+C57BL/6J PD-L1 humanized mice (hPD-L1/C57BL/6J) were purchased
+from Shanghai Model Organisms Center. NCG mice were purchased
+from GemPharmatech. All mice were maintained at 20–26 °C with
+40–70% humidity under a 12 h–12 h light–dark cycle. All animal procedures were approved by the Animal Experimentation Ethics Committee
+of Shenzhen Bay Laboratory (AECP202201) and were conducted in full
+compliance with its guidelines, including the humane euthanasia of
+mice when the tumour burden reached 10% of the body weight.
+Patient samples
+Tumour tissues and blood samples were obtained from patients undergoing tumour resection. Tumour tissues in the current study were
+obtained across a broad spectrum of solid cancers, including colorectal
+cancer (CRC), renal cell carcinoma (RCC), gastric carcinoma, breast
+cancer and ovarian cancer. Detailed information of patients is provided
+in Supplementary Table 8. This study was approved by the medical ethics committee of Peking University Cancer Hospital (NCT05280210),
+Peking University People’s Hospital (NCT04130750). All of the patients
+gave informed consent for collection of clinical information, tissue
+collection and HLA-A typing.
+Expression and purification of FnFSY incorporated GlueBodies
+The plasmids pBAD-Nb-PD-L1-108TAG (Amp+
+) and pSup-chFSYRS
+V366A (Cm+
+) were co-transformed into DH10B competent cells. For
+incorporation of FnFSY into proteins, transformed bacteria were
+cultured at 37 °C in 2× YT medium with 100 μg ml−1 ampicillin and
+34 μg ml−1 chloramphenicol. When the OD600 reached 0.6, indicated
+FnFSY was added into the medium at the final concentration of 1 mM
+and induced with 0.2% arabinose when the optical density at 600 nm
+(OD600) reached 1.0. After induction of expression at 30 °C for 12 h,
+bacteria were collected by centrifugation at 4,500 rpm for 20 min at
+4 °C. The cell pellets were resuspended in 10 ml lysis buffer (20 mM
+Tris, pH 8.0, 150 mM NaCl) per g of wet weight. The cell suspension
+was lysed in an ice-water bath for 20 min by sonication. The cell lysate
+was centrifuged at 20,000g for 30 min at 4 °C and the supernatant was
+loaded onto the Ni-NTA column (HisTrap HP, 5 ml, GE Healthcare) and
+washed with 10 column volumes of wash buffer (20 mM Tris, pH 8.0,
+150 mM NaCl, 50 mM imidazole). The protein was then eluted with
+elution buffer (20 mM Tris, pH 8.0, 150 mM NaCl, 250 mM imidazole). The eluted protein solution was concentrated by ultrafiltration centrifugation (Millipore, UFC900324; MWCO, 3 kDa) and then
+further purified by size-exclusion chromatography on the Superdex
+75 10/300 GL (GE Healthcare) column equilibrated with PBS immediately. The protein concentration was measured using the NanoDrop
+2000 (Thermo Fisher Scientific) based on the molecular mass and
+extinction coefficient.
+Sortase-A-mediated conjugation
+Recombinant mgSrtA was expressed and purified as described previously61. The conjugation reactions between GlueBodies with a
+C-terminal LPETGG-His6 sequence and substrate peptides with a
+N-terminal GGG sequence were conducted by incubating 50 μM proteins (1 equiv.), 500 μM substrate peptides (10 equiv.) and 5 μM mgSrtA
+(0.1 equiv.) in reaction buffer (1 mM CaCl2 in Tris, pH 7.8) for 1 h at room
+temperature. Terminator MTSET (2 mM) was added into the reaction
+mixture with a further 10 min incubation at room temperature followed
+by desalting with Micro Bio-Spin P-6 Gel Columns (Bio-Rad, 7326221).
+The unreacted proteins and mgSrtA were removed from the desired
+products by magnetic Ni-NTA beads (Promega, V8565).
+Analysis of PD-L1 degradation in vitro
+Adherent cells (70% confluency) were treated with HBSS, GlueBody–
+CPP, GlueBody2–CPP or iVAC in complete growth medium. At the indicated time, the growth medium was removed and the cells were lysed on
+ice by adding cold 60 μl RIPA buffer (Thermo Fisher Scientific, 89901)
+with 1× protease inhibitor cocktail (CST, 5872). The protein concentration was quantified using the BCA protein assay kit (Thermo Fisher
+Scientific, 23222). The samples were then heated at 95 °C for 20 min
+after adding 5× reducing loading buffer (CWBio, CW0027). The denatured samples were analysed by electrophoresis in 4–20% SDS–PAGE
+followed by western blot. For western blots shown in figures, the following antibodies were used at the indicated dilutions: human PD-L1
+(CST, 13684, 1:1,000), GAPDH (Abcam, ab128915, 1:1,000) and β-actin
+(CST, 4970, 1:1,000), GFP tag (CST, 2956, 1:1,000) and goat anti-rabbit
+IgG, HRP-linked antibody (CST, 7074, 1:5,000) or horse anti-mouse IgG,
+HRP-linked antibody (CST, 7076, 1:5,000).
+PD-L1 degradation induces restored T cell activity in vitro
+PD-1 NFAT-luciferase/Jurkat cells were cultured in RPMI 1640 medium
+with 10% FBS, 1% penicillin–streptomycin, and 200 μg ml−1 of hygromycin B. PD-L1 aAPC/CHO-K1 cells were cultured in Ham’s F12 with 10%
+FBS, 1% penicillin–streptomycin, 1 mg ml−1 Geneticin and 500 μg ml−1
+hygromycin B (growth medium). To perform the in vitro efficacy assay,
+PD-L1 aAPC/CHO-K1 cells were seeded at a density of 20,000 cells per
+well in a white 96-well microplate with 100 μl of growth medium. After
+cell attachment, the medium was removed from the CHO-K1 cells, and
+cells were incubated with the fresh growth medium supplemented
+with serially diluted GlueBody–CPP, GlueBody2–CPP or iVAC for 4 h.
+After treatment, the medium was removed and cells were washed twice
+with PBS followed by adding 30,000 PD-1 NFAT-luciferase/Jurkat cells
+in assay medium (RPMI 1640, 10% FBS, 1% penicillin–streptomycin)
+without drugs. After 5–6 h of co-culture, cells were lysed and luciferase
+assay was performed using Luciferase Reporter Gene Assay Kit (Yeasen,
+11401ES76). Luminescence was measured using a BioTek Synergy H4
+hybrid reader.
+Flow cytometry and FACS
+Analysis of surface marker expression was performed in dissociated
+cells. In brief, cells were washed, incubated with 2% FBS and a mixture
+of anti-human or anti-mouse fluorescently labelled antibodies for
+20–30 min, and washed twice with FACS buffer (PBS supplemented with
+2% FBS). To exclude dead cells, Zombie Auqa/NIR (Zombie, BioLegend)
+or 4′,6-diamidino-2-phenylindole (DAPI) were added shortly before
+analysis. Flow cytometry analysis was performed using the LSR Fortessa
+flow cytometer (BD Biosciences). FACS sorting was performed on the
+BD FACS Aria III sorter, using a 100-µm nozzle. Data were analysed using
+FlowJo v.X.0.7. Fluorophore-labelled antibodies were incubated with
+dissociated cells at a 1:200 dilution unless otherwise indicated. Gates
+were determined according to the fluorescence minus one controls.
+For analysis of OVApep presentation, tumour cells were treated with
+HBSS, GlueBody2, GlueBody2-CPP or iVAC for 12 h. For the studies of
+intracellular processing pathways of iVAC-mediated antigen presentation, hPD-L1/MC38 cells were treated with iVAC with or without various
+inhibitors (20 µM chloroquine, 15 μM MG132, 100 µM ERAP1-IN-1 or
+15 µM brefeldin A) for 12 h. After treatment, cells were detached using
+a non-enzymatic cell dissociation solution, washed and resuspended
+at 1 × 107
+ cells per ml in 100 μl HBSS. Then cells were labelled with APC
+anti-mouse H-2Kb
+ bound to SIINFEKL antibody (1:100) according to
+the manufacture protocol. Cells were incubated on ice for 30 min and
+washed twice with HBSS to remove the excess fluorescent antibody
+for flow cytometry using LSRFortessa Cell Analyzer (BD Biosciences).
+Data were analysed using FlowJo v.X.0.7.
+Construction of FRET-based iVAC
+The preparation of fluorescent drug molecules for imaging follows a
+strategy of first attaching fluorescent molecules to peptides (H-GGG-
+(D-R)9-GGGS-K(N3)-V-Cit-C-SIINFEKL-OH) and then conjugating the
+fluorescent peptides to GlueBodies with sortase-A-mediated ligation. For Cy3 signal, maleimide was chosen as the handle for ligation. The Cy3-conjugated peptide was obtained by incubating the
+cysteine-bearing peptide (1 equiv.) with the Cy3-maleimide (5 equiv.)
+for 60 min at room temperature in reaction buffer (double-distilled
+H2O with 10% DMSO). To further introduce Cy5 signal into the peptide, DBCO was chosen as another handle for dye attachment. The
+final FRET peptide with both Cy3 and Cy5 was obtained by incubating the Cy3-conjugated peptide including azido lysine (1 equiv.)
+with the Cy5-DBCO molecule (10 equiv.) for 2 h at 37 °C in reaction
+buffer. To prevent excess Cy3-maleimide molecules from reacting
+with the sortase A, an excess of N-cysteine (10 equiv.) was added to
+the system to quench the free maleimide moiety. The conjugation
+between FRET peptide and GlueBodies was conducted according to
+the mgSrtA-mediated peptide ligation process mentioned above. All
+excess dye molecules in the system were removed during the desalting procedure.
+Immunofluorescence and confocal microscopy
+Wild-type MDA-MB-231 cells were seeded in confocal dishes and
+cultured overnight for complete adherence. Cells were then treated
+with various compounds (for example, degrader, epitope peptide
+or iVAC) at a final concentration of 100 nM. To ensure simultaneous
+processing, treatments for different time-course experiments were
+staggered accordingly. After treatment, cells were washed three times
+with PBS, fixed with 4% paraformaldehyde (PFA) for 1 h at room temperature and then washed with PBST (PBS with 0.1% Tween-20). Cells
+were subsequently permeabilized with 0.5% Triton X-100 for 30 min,
+and non-specific binding sites were blocked with 5% BSA for 1 h. For
+colocalization analysis, cells were incubated overnight at 4 °C with a
+mixture of primary antibodies containing anti-PD-L1 antibody (Abcam,
+ab279292, 1:100) and an organelle marker (anti-calreticulin, ER marker,
+Abcam, ab2907, 1:100; anti-LAMP1, lysosome marker, Abcam, ab320851,
+1:100). The next day, cells were washed with PBST and incubated for
+1 h at room temperature with a mixture of species-specific secondary
+antibodies conjugated to spectrally distinct fluorophores. After thorough washing with PBST, cells were imaged on a Zeiss LSM 710 confocal
+laser-scanning microscope using ×20 and ×69 objectives. Images from
+individual channels were merged to generate composite images.
+Generation of BMDCs
+Total bone marrow cells were collected from long bones of the leg (tibias
+and femurs) by crushing. Cells were collected in PBS supplemented
+with 2% FBS and filtered with a 40-μm cell strainer. After centrifugation, the total bone marrow cells were plated in 10 cm dishes (1 × 107
+cells per plate) in 20 ml RPMI complete medium supplemented with
+5 ng ml−1 GM-CSF (Peprotech). Then, 10 ml RPMI complete medium
+supplemented with 5 ng ml−1 GM-CSF was added carefully to each dish
+every 2 days. After induction for 8 days, BMDCs were collected and
+validated by flow cytometry.
+RNA-seq analysis
+Paired-end reads were aligned to the mouse genome (Ensembl, release
+113) using HISAT v.2.2.0 using the default parameters. Gene counts
+from this alignment were processed with the R package EdgeR, where
+normalization was performed using the counts per million and the
+trimmed mean of M-value methods. Differential expression analysis
+was subsequently conducted with EdgeR, applying the limma-based
+approach. Genes were considered upregulated when exhibiting a fold
+change (FC) > 0 with an adjusted P value (Padj) <0.05, as determined by
+the Benjamini-Hochberg correction. Conversely, downregulated genes
+were defined by an FC < 0 and Padj < 0.05. The normalized counts were
+then log2-transformed and visualized using either the ggplot2 package
+in R or GraphPad Prism v.10.
+Gene set enrichment analysis
+Enrichment analysis of gene lists for KEGG pathways, gene ontology
+biological processes, and molecular functions was conducted using the
+GSEA software (https://www.gsea-msigdp.org/gsea). The input gene
+set included genes that were consistently upregulated throughout the
+entire process of tumour antigenicity reprogramming. Results for each
+database were ranked by the log10-transformed P value to prioritize
+significant pathways and functions.
+Signature of APC-like tumour cells
+To construct gene lists for antigen presentation, IFNγ and STING
+pathways, relevant genes were selected from mouse KEGG pathway
+datasets for MHC-I assembly pathway and cytosolic DNA sensing, supplemented by a thorough literature review. Expression values for these
+genes underwent z-score normalization, followed by MinMax scaling,
+where values exceeding the specified maximum were capped at this
+maximum, and values below the minimum were adjusted accordingly.
+Genes were then clustered using the complete linkage method, with
+results visualized using the pheatmap package in R.
+qPCR with reverse transcription
+Total RNA was extracted by adding 0.5 ml of isopropanol per 1 ml of
+TRIzol reagent (Invitrogen, 15596026), followed by incubation at 4 °C
+for 10 min and centrifugation at 12,000g for 10 min at 4 °C. The resulting
+RNA pellet was washed with 1 ml of 75% ethanol, briefly vortexed and
+centrifuged at 7,500g for 5 min at 4 °C. After removing the supernatant,
+the pellet was air-dried for 10 min, resuspended in 20 µl of RNase-free
+water and incubated at 60 °C for 10 min. For cDNA synthesis, genomic
+DNA was removed by combining 4 µl of 4× gDNA wiper Mix with 0.5 µg
+of total RNA in an RNase-free tube, gently mixing and incubating at 42 °C
+for 2 min. Then, 4 µl of 5× HiScript III qRT SuperMix (Vazyme, R323-01)
+was added to the mixture, followed by incubation at 37 °C for 15 min
+and 85 °C for 5 s. Amplification data were analysed using Rotor-Gene 
+Article
+6000TM software, with GAPDH used as the reference gene for normalization. Data are presented as FC relative to the control group,
+based on at least three biological replicates. A list of the primers used
+for quantitative PCR (qPCR) is provided in Supplementary Table 9.
+The acquisition of immunopeptidome MS data
+MHC-I peptide complexes were enriched and eluted using the NEODiscovery MHC-I Immuno-peptide Enrichment Kit (Baizhen Biotechnologies). In brief, cells were lysed in lysis buffer, incubated on ice
+for 60 min, and sonicated for 5 min. After high-speed centrifugation,
+the supernatant was collected for immunopeptidomics enrichment.
+MHC–peptide complexes were purified by immunoprecipitation and
+separated on a reversed-phase column (2215-C18, CDS Analytical) to
+isolate MHC-I peptides, which were then analysed by liquid chromatography coupled with tandem MS (LC–MS/MS). Peptide samples,
+redissolved in formic acid solution (A117-50, Thermo Fisher Scientific), were separated on a Bruker Nano-Elute nano-UPLC system with
+a column temperature of 60 °C and a flow rate of 0.3 µl min−1. Mobile
+phase A was 0.1% formic acid in water, purified using the Direct-Q
+5UV system, and mobile phase B was 0.1% formic acid in acetonitrile
+(A889-4L, Sigma-Aldrich). The gradient started at 96% A and 4% B held
+for 48 min; followed by 80% A/20% B at 48 min; 70% A/30% B at 50 min;
+and 0% A/100% B from 55 to 60 min. MS data were acquired on a Bruker
+timsTOF Pro2 high-resolution mass spectrometer in data-dependent
+acquisition mode over 60 min, with an m/z scan range of 100–1,700.
+The parallel accumulation–serial fragmentation mode was configured for 10 MS/MS scans per cycle with a 2.27 s cycle time and an ion
+intensity threshold of 1,000. Raw data files were generated in .d format
+for analysis.
+Immunopeptidome MS data processing
+All raw data files were analysed using the DeepImmu Neoantigen Analysis Platform (Baizhen Biotechnologies), which integrates de novo
+sequencing, database searching and homology searching for peptide
+identification. Peptides of 7–16 amino acids in length were selected. This
+platform identifies both canonical immunopeptides matching database
+entries and non-canonical immunopeptides, including single-point
+mutations. Database searching was performed using the mouse UniProt
+database supplemented with OVA peptide sequence (SIINFEKL), with
+the following parameters: no enzyme specified, a precursor tolerance
+of 20.0 ppm, a fragment tolerance of 0.05 Da and variable oxidation
+(+15.99 Da) on methionine. The peptide false-discovery rate was set to
+1% for high-confidence identification. As for human cancer cell samples, the database search was performed against the human UniProt
+database supplemented with CMV peptide sequences (NLVPMVATV).
+The search parameters were the same.
+Assessment of tumour immunogenicity with T cell interaction
+Tumour cells were labelled with CFSE (AAT Bioquest) according to the
+manufacturer’s protocol and then were treated with HBSS, OVApep,
+GlueBody2-CPP and iVAC for 1 h at 37 °C. CFSE-labelled tumour cells
+(1 × 104
+) were incubated with 1 × 105
+ OT-I CD8+
+ memory T cells in 96-well
+round-bottom untreated tissue culture plates. After 24 h, tumour cells
+were collected; stained for viability (Zombie NIR, BioLegend), hPD-L1
+and MHC-I followed by flow cytometry. For T cell proliferation and
+activation analysis, OT-I memory/naive CD8+
+ T cells were labelled with
+CFSE according to the manufacturer’s protocol. Tumour cells were
+treated with HBSS, OVApep, GlueBody2-CPP or iVAC for 1 h at 37 °C,
+respectively. BMDCs were also incubated with OVApep (SIINFEKL)
+for 1 h as the control. APC-like tumour cells (1 × 104
+) were incubated
+with 1 × 105
+ CFSE-labelled OT-I CD8+
+ T cells in 96-well round-bottom
+untreated tissue culture plates. After 2 days of coculture, T cells were
+collected; stained for viability (Zombie NIR, BioLegend), CD8a and
+CD25 (memory) or CD44 (naive), and analysed using flow cytometry.
+T cell proliferation (dilution of CFSE and CD25/CD44 expression) was
+determined by gating on live, single and CD8+
+ T cells. For T cell activation assays, T cells were cocultured with APCs for 12 h, and stained for
+viability (Zombie NIR, BioLegend) and desired antibody cocktails. T cell
+activation (CD69+
+CD25+
+, CD44+
+ or GZMB+
+PFN+
+) was determined by
+gating on live, single and CD8+
+ T cells. For cytokine secretion analysis
+after T cell activation, OT-I memory CD8+
+ T cells were assessed by the
+production of IFNγ and TNF with intracellular staining. Tumour cells
+were treated with 200 nM OVApep, GlueBody2-CPP or iVAC for 1 h,
+followed by extensive washing and co-culture with OT-I memory CD8+
+T cells. After 12 h of incubation at 37 °C, the protein transport inhibitors
+brefeldin A and Monensin (BioLegend) were added to every well, and
+the cells were incubated at 37 °C for 4 h. Afterwards, cells were washed
+twice with FACS buffer and stained with Zombie Auqa and adequate
+antibodies for 30 min at 4 °C. Subsequently, cells were washed twice
+and fixated in 200 µl per well of Fixation Buffer (BioLegend) for 1 h at
+room temperature. The cells were then washed twice in 150 µl per well
+of permeabilization/wash buffer (BioLegend) and stained for intracellular cytokines for 30 min at 4 °C. Lastly, cells were washed twice with
+permeabilization/wash buffer and resuspended in FACS buffer before
+acquisition on the flow cytometer.
+Knockdown of Mpeg1 by RNAi
+To silence the expression of Mpeg1, B16 mouse melanoma cells were
+transfected with a pool of three Silencer Select predesigned siRNAs
+(assay IDs: s70006, s70007, s70008; 4390771, Thermo Fisher Scientific). Then, 1 day before transfection, cells were seeded into 24-well
+plates at a density that would ensure 80% confluency at the time
+of transfection. For each well, a total of 5.0 pmol of the siRNA pool
+(1.67 pmol of each individual siRNA) was diluted in 50 µl of Opti-MEM
+I reduced-serum medium. Concurrently, 1.0 µl of Lipofectamine 2000
+transfection reagent (11668019, Invitrogen) was diluted in 50 µl of OptiMEM I and incubated for 5 min at room temperature. The diluted siRNA
+and diluted Lipofectamine 2000 were then combined, mixed gently
+and incubated for 20 min at room temperature to allow for the formation of siRNA–lipid complexes. The entire 100 µl mixture was added
+dropwise to the cells, which were cultured in 500 µl of antibiotic-free
+complete medium. Cells were incubated at 37 °C in a 5% CO2 incubator
+for 48 h to achieve maximal protein knockdown before subsequent
+drug treatments were initiated. Assay ID s70006 targets exon 2 of the
+RefSeq transcript NM_010821.1 at nucleotide position 502. Assay ID
+s70007 targets exon 2 of the same transcript at nucleotide position
+2332. Assay ID s70008 also targets exon 2 of the transcript NM_010821.1,
+beginning at nucleotide position 2244.
+In vitro tumour cell killing assay
+In total, 1 × 104
+ hPD-L1/MC38 cells expressing luciferase or hPD-L1/B16
+cells were seeded in 96-well plates with 100 μl DMEM and treated with
+serially diluted SIINFEKL peptide, GlueBody2-CPP or iVAC for 12 h. After
+washing twice with PBS, 1 × 105
+ OVA-specific memory T cells were added
+and then co-incubated in 96-well plates for 24 h. The cell viability of
+hPD-L1/MC38 cells was measured by luminescence quantification with
+luciferase substrates. The viability of hPD-L1/B16 cells was assessed by
+staining with DAPI and analysing the cells using flow cytometry.
+In vivo characterization of tumour targeting and
+biodistribution
+Female C57BL/6J PD-L1 humanized mice that were 4–6 weeks old were
+implanted with 5 × 105
+ hPD-L1endo/MC38 cells at the right flank. When the
+tumour size reached 50–100 mm3
+, fluorophore-labelled chimeras and
+the corresponding controls were subcutaneously injected within the
+tumours. At the specified timepoints within 72 h, the mice underwent
+live-animal fluorescence imaging. Then, 24 h after administration,
+the mice were euthanized, and the tumours, lymph nodes and other
+organs were excised and then subjected to fluorescence imaging using
+IVIS-SPECTRUM.
+In vivo tumour model
+Female C57BL/6J PD-L1 humanized mice (aged 4–6 weeks) were immunized with OVA peptide (SIINFEKL) on day −21, day −14 and day −7. Then,
+1 week after the final immunization and before tumour cell implantation,
+peripheral blood cells were collected to measure the levels of endogenous OVA-specific T cells in the PBMCs. In brief, red blood cells in blood
+were lysed using 1× ACK lysis buffer (Beyotime) at room temperature
+for 5 min, followed by washing twice with PBS. The collected cells were
+incubated with FITC anti-mouse CD8a antibody (1:200), and APC mouse
+H2Kb
+ (SIINFEKL) tetramer (1:100) simultaneously for 60 min at 4 °C.
+Then, the cells were washed with PBS and resuspended in HBSS before
+flow cytometry. After the validation of the generation of endogenous
+OVA-specific T cells, mice were implanted with 5 × 105
+ hPD-L1endo/MC38
+or 5 × 105
+ hPD-L1/MC38 cells expressing luciferase at the right flank on
+day 0. The tumour size was measured every 3 days using digital callipers,
+and the tumour size was calculated by measuring the longest length and
+width of the tumour. When the tumour size reaches 50–100 mm3
+, HBSS,
+OVApep, GlueBody2-CPP or iVAC were administered intratumourally
+every 3 days at a dosage of 0.5 mg per kg. After achieving complete remission of tumours in the iVAC group, mice were reimplanted with 1 × 107
+hPD-L1/MC38 cells on the contralateral side. Proliferation of tumours
+were measured with callipers in two dimensions, and tumour volume
+was calculated using the formula: tumour volume = length × width2
+/2.
+Flow cytometry analysis of infiltrating cells in tumours
+First, 2.3 ml of serum-free DMEM, 50 μl of enzyme A, 125 μl of enzyme
+B and 25 μl of enzyme C (Tissue Enzymatic Dissociation Kit, DHTE5001) were added into an organizational processing tube. Tumours
+were then excised, weighed and dissected into small fragments using
+surgical scissors. The tumours were cut into pieces measuring 2–4 mm
+and transferred to the organizational processing tube containing the
+mixed enzyme solution. The organizational processing tube was tightly
+sealed, and the sample was processed using GentleMACS Dissociator
+Instruments. After processing, the sample was centrifuged, the mixed
+enzyme solution was removed, and the cells were washed twice with
+PBS. Single-cell suspensions were obtained by passing tumours through
+a 70 mM cell strainer with a 1 ml syringe plunger. Cells were pelleted
+and resuspended with 100 ml of FACS buffer per 100 mg tumour. For
+flow cytometry analysis, single-cell suspensions were pelleted in a
+96-well U-bottom plate and stained with Zombie Aqua (1:100) and
+mouse TruStain FcX (FcR blocker, BioLegend, 101320, 1:100) as well
+as desired antibody cocktails at a 1:200 dilution for tumour cells (ZombielowCD45−
+), activated CD8+
+ T cells (CD3+
+CD8+
+CD69+
+), OVA-specific
+CD8+
+ T cells (CD3+
+CD8+
+tetramer+
+), Treg (CD3+
+CD4+
+CD25+
+CD127−
+), M1
+macrophages (lineage−
+MHC-II+
+CD11b+
+F4/80+
+CD86+
+CD206−
+), M2 macrophages (lineage−
+MHC-II+
+CD11b+
+F4/80+
+CD86−
+CD206+
+) and cDC1
+(lineage−
+MHC-II+
+CD11c+
+F4/80−
+XCR1+
+). The lineage cocktail consisted
+of anti-CD3, anti-CD19, anti-NK1.1 and anti-Ly6G antibodies.
+IFNγ ELISpot analysis
+Splenocytes from iVAC-treated and control mice were collected for
+single-cell suspension preparation. Splenocytes (3 × 105
+) were seeded in
+each well with 5 μg ml−1 SIINFEKL peptide, irradiated hPD-L1/MC38 cells
+(3 × 104
+) or PMA + ion (positive control) to stimulate the antigen-specific
+T cells. After 48 h culture, the ELISpot assay was performed using the
+mouse IFNγ ELISpot kit (Dakewe, 2210005) according to the manufacturer’s instructions. Mouse IFNγ secretion spots were measured
+according to the kit protocol. The ELISPOT results were analysed by the
+Mabtech IRIS FluoroSpot/ELISpot reader using RAWspot technology
+for multiplexing at the single-cell level.
+In vitro activation of TCR (NLV) JC5 reporter cells
+In total, 2 × 104
+ of the indicated target cells were seeded into 96-well
+plates with 100 μl DMEM supplemented with 10% FBS and treated with
+HBSS, 200 nM GlueBody2–CPP or 200 nM iVAC (NLV) for 12 h, respectively. After removing the supernatant, 2 × 104
+ TCR (NLV) JC5 cells were
+added to the wells and co-incubated for another 7 h in RPMI-1640 supplemented with 10% FBS. The TCR (NLV) JC5 cells were collected and stained
+with APC anti-human CD69 before sending to flow cytometry analysis.
+In vitro stimulation of NLV-specific T cells by NLVpep
+First, 1 × 107
+ cryogenically frozen PBMCs from a healthy donor were
+thawed in 9 ml prewarmed RPMI-1640 supplemented with 10% FBS,
+and the cells were collected by centrifuging the tubes at 600g for
+5 min. After centrifugation to remove any remaining FBS, PBMCs were
+resuspended in 300 µl of RPMI complete medium and 100 µl of the cell
+suspension was pipetted. NLVpep (NLVPMVATA) was added to a final
+concentration of 10 µM to stimulate cells for 90 min at 37 °C with 5%
+CO2. Meanwhile, the remaining PBMCs (200 µl) were plated into 24-well
+plates. After stimulation, cells were washed twice with RPMI complete
+medium and centrifuged at 600g for 5 min to remove excess unbound
+peptide. Stimulators and responders were then mixed together, wells
+were topped with RPMI complete medium, then half of the medium
+from each well was removed. Prewarmed RPMI complete medium
+containing 20 IU ml−1 recombinant human IL-2 (rhIL-2) was added on
+day 4 followed by culturing for another 6 days. The cells were stained
+with human HLA-A*02:01 (NLVPMVATA) tetramer (FUBOSHENGWU,
+1:100) and anti-human CD8 antibody (1:200) on ice for 60 min before
+flow cytometry analysis.
+iVAC mediated CD8+
+ T cell activation and tumour cell killing
+To conduct the CMV antigen specific CD8+
+ T cell activation assay, 1 × 104
+MDA-MB-231 cells expressing luciferase were seeded in 96-well plates
+and treated with PBS, 200 nM GlueBody2-CPP or 200 nM iVAC-CMV in
+100 μl DMEM supplemented with 10% FBS for 24 h. Subsequently, the
+supernatant was removed and the wells were co-incubated with 3 × 104
+PBMCs for another 24 h in RPMI-1640 supplemented with 10% FBS.
+After co-culture, the mixed cells were stained on ice with anti-human
+CD69 and anti-human CD8 antibodies for 60 min before flow cytometry analysis. Meanwhile, the levels of IFNγ secretion were measured
+using the Human IFN gamma Uncoated ELISA Kit (Thermo Fisher Scientific, 88-7316-88) according to the manufacturer’s instructions. For the
+tumour-cell-killing assay, luciferin was added after co-culturing with
+PBMCs in an equal volume to the cell culture medium. The luciferase
+assay was performed using Firefly Glo Luciferase Reporter Gene Assay
+Kit (Yeasen, 11404ES80).
+In vivo anti-tumour efficacy of CMV-specific T cells with iVAC
+A mixture of MDA-MB-231 cells (2 × 105
+) and CMV-responsive PBMCs
+(2 × 105
+; ratio, 1:1) were subcutaneously injected into the right flank of
+4–6-week-old female NCG mice. After the tumour size reached approximately 50–100 mm3
+, 0.5 mg per kg GlueBody2-CPP or iVAC was intratumourally injected every 3 days. Tumour growth was measured with
+callipers in two dimensions, and the tumour volume was calculated
+using the formula: tumour volume = length × width2
+/2.
+Study of iVACs in HLA paired PTC models
+HLA-A typing. HLA-A allele was identified by PCR-sequence-based
+typing on patient tumour or peripheral blood (GeneX Health) samples.
+Establishment of the PTC models. The PTC models were established
+essentially as described previously38,62–65. Surgically resected tumour
+samples were washed five times with PBS and necrotic areas and adipose
+tissues were removed as completely as possible. The tissues were then
+minced and digested in 5 ml PBS buffer containing 1 mM EDTA, 1 mg ml−1
+of collagenase I, II and IV (Yuanye Biology, S10053, S10054, S10056) at
+37 °C for 1 h. The digestion was pipetted every 15 min to obtain single
+cells and 40-mm filters were used to collect dissociated cells. The cell
+suspensions were centrifuged (300g, 10 min), and the cell pellets were 
+Article
+resuspended in PTC growth medium. Malignant pleural effusions and
+ascites were centrifuged at 300g for 5 min, and cell pellets were resuspended in PBS and added over lymphocyte separation medium (MPbio)
+in a centrifuge tube. After centrifugation (400g, 20 min), the middle
+cell layer was collected and resuspended in PTC growth medium. All
+cell suspensions from surgical resections, ascites or pleural effusions in
+PTC growth medium were seeded in low-attachment-surface dish at the
+concentration of 105
+ cells per cm2
+ and cultured in incubator at 37 °C and
+5% CO2. PTC growth medium was refreshed every 2–3 days. PTCs were
+passaged by incubating in TrypLE Express (Thermo Fisher Scientific,
+12604013) for 5–10 min at 37 °C to dissociate PTCs to single cells and
+replacing in fresh PTC growth medium. Lymphocytes were isolated
+from peripheral blood using Ficoll Paque Plus (Cytiva, 17-1440-02)
+according to the manufacturer’s instructions and subsequently cryopreserved until analysis. The lymphocytes activated culture medium
+consisted of AIM-V (Thermo Fisher Scientific, A3021002), 10% FBS and
+20 IU ml−1 IL-2 (PeproTech, 200-02-10) for 48 h.
+To assess the inhibitory effects of iVACs (iVAC-0201, 1101, 2402) on
+PTC models, we have adapted a protocol that was established previously44. First, 100 PTCs cocultured with 1 × 105
+ activated HLA-paired
+lymphocytes, which were seeded into the U-bottom plates (Corning)
+within 100 μl medium. Then, the medium was treated with 100 nM iVAC,
+epitope or GlueBody2-CPP controls or equal volume PBS, and cultured
+at 37 °C, 5% CO2. The coculture assay was maintained for approximately
+7 days to allow for sufficient interaction and observation of the iVACs’
+effects.
+Cytokine detection on PTCs. After PTCs cocultured with lymphocytes,
+the plate was centrifuged at 400g for 10 min, and the supernatant was
+collected and assayed for cytokine detection using the human IFNγ
+and TNF ELISA kits (Thermo Fisher Scientific, KHC4021, KAC1751) and
+followed with the provided protocols.
+Immunofluorescence staining of PTCs. PTCs were collected and
+fixed with 4% PFA (Sigma-Aldrich, P6148) for 20 min, and followed by
+washing with M2 medium (Macgene, CE003) with 0.5% BSA (Meijing,
+A738328). PTCs were permeabilized with 1% Triton-X 100 in PBS for
+30 min, and blocked with 10% goat serum for 30 min. PTCs were then
+incubated with fluorescent antibodies AF488 anti-human panCK (eBioscience, 53-9003-80), BV421 anti-human CD3 (BioLegend, 344834) and
+PE anti-human GZMB (BioLegend, 372207) at 4 °C overnight. Images
+were obtained with Nikon Eclipse Ti2 laser scanning confocal microscopy (Nikon). The software ImageJ was used for image analysis.
+PTC viability detection. The PTC viability assay was conducted in
+96-well cell culture plates following the procedure described previously. In brief, before cocultured with lymphocytes, PTCs were seeded
+into Teflon-modified chip (GeneX Health, GX-01). Next, images of each
+well were screened with the Nikon Ti-U microscope system. After 7 days
+of coculture, the plates were screened again with the Nikon Ti-U microscope system. The cell viability was determined by an image-based
+approach and calculated by the following formula: p( ) x S = / t1 St0 ,
+p = ∑ p x( ) n i
+1 n
+=1 . St1 and St0 are the sum of PTC areas in a well before and
+after the drug treatment, p(x) is the PTC cell viability of the single well,
+n is the number of the replicates, p is the average PTC cell viability of
+all replicates. The PTC areas were analysed and quantified by the software ImageJ.
+Flow cytometry analysis of PTCs. PTCs were collected with 40-μm
+filters, and digested into single cells using trypsin followed with
+collagenase (I, II and IV). After centrifugation, a single-cell suspension was prepared in 2% FBS PBS. Cells were centrifuged at 400g for
+5 min, and pellets were resuspended in cell staining buffer at 106
+ cells
+per ml. Human TruStain FcX (BioLegend, 422302, 1:100) was used to
+block Fc receptors for 5 min. Then, PE anti-human CD45 (BioLegend,
+982322), FITC anti-human CD326 (also known as EPCAM; BioLegend,
+324204) and APC anti-human PD-L1 (BioLegend, 329708) antibodies
+were added at a 1:200 dilution and cell suspensions were incubated
+on ice for 30 min in the dark. Cells were washed twice with 2% FBS
+PBS and then analysed using a flow cytometer (BD). The proportion
+of PD-L1+
+ cells among CD326+
+ tumour cells was analysed using FlowJo
+v.10 software.
+Reporting summary
+Further information on research design is available in the Nature Portfolio Reporting Summary linked to this article.
+Data availability
+All data presented are available in the Article and its Supplementary
+Information. Raw RNA-seq data have been deposited in the Genome
+Sequence Archive of National Genome Data Center under accession
+identifier CRA031318. Raw proteomics data have been deposited in
+the ProteomeXchange consortium via the iProX partner repository
+under dataset identifier IPX0013811000. Source data are provided
+with this paper.
+60. Manjunath, N. et al. Effector differentiation is not prerequisite for generation of memory
+cytotoxic T lymphocytes. J. Clin. Invest. 108, 871–878 (2001).
+61. Ge, Y. et al. Enzyme-mediated intercellular proximity labeling for detecting cell-cell
+interactions. J. Am. Chem. Soc. 141, 1833–1837 (2019).
+62. Yin, S. et al. Patient-derived tumor-like cell clusters for drug testing in cancer therapy.
+Sci. Transl. Med. 12, eaaz1723 (2020).
+63. Dijkstra, K. K. et al. Generation of tumor-reactive T cells by co-culture of peripheral blood
+lymphocytes and tumor organoids. Cell 174, 1586–1598 (2018).
+64. Cattaneo, C. M. et al. Tumor organoid-T-cell coculture systems. Nat. Protoc. 15, 15–39
+(2020).
+65. Yin, S. et al. Patient-derived tumor-like cell clusters for personalized chemo- and
+immunotherapies in non-small cell lung cancer. Cell Stem Cell 31, 717–733 (2024).
+Acknowledgements We thank S. Liu for expert technical assistance; Y. Zhang, Y. Cao and S. Qin
+for discussions; and Z. Li and M. Li for their assistance in our OVA immunization. This work was
+funded by the Major Program of Shenzhen Bay Laboratory (S211101001 to P.R.C.); the National
+Key Research and Development Program of China (2016YFA0501500 to P.R.C.); the National
+Natural Science Foundation of China (grants 21740001, 21937001 and 22207076, 8200909770
+to P.R.C., and grant 22477083 to H.Z.); the Beijing Natural Science Foundation (Z200010
+to P.R.C.); the Tencent Foundation through the XPLORER PRIZE and the New Cornerstone
+Investigator Program (to P.R.C.); and the China National Postdoctoral Program for Innovation
+Talents (BX20220004 to Y.H.).
+Author contributions P.R.C. and H.Z. conceptualized the idea and conceived the project.
+P.R.C., H.Z. and J.J.X. supervised the work. Y.H. and Y.M. developed the methods. M.P., S.Z. and
+X.L. optimized FnFSYs. Y.H. performed iVAC experiments with the help of Y.M. and W.G.; Y.M.
+performed analysis of RNA-seq and immunopeptidome data. C.D. and M.P. performed analysis
+of animal samples. Y.F. and L.G. performed CMV-associated assays. S.Y. and J.W. performed
+PTC-associated assays. Y.H. and Y.M. contributed to the writing of the original draft. P.R.C., H.Z.
+and J.J.X. reviewed the manuscript. All of the authors contributed to revising the manuscript
+and approved the final version.
+Competing interests The authors declare no competing interests.
+Additional information
+Supplementary information The online version contains supplementary material available at
+https://doi.org/10.1038/s41586-025-09903-1.
+Correspondence and requests for materials should be addressed to Jianzhong Jeff Xi,
+Heng Zhang or Peng R. Chen.
+Peer review information Nature thanks Xin Zhou and the other, anonymous, reviewer(s) for
+their contribution to the peer review of this work.
+Reprints and permissions information is available at http://www.nature.com/reprints.
+Extended Data Fig. 1 | Development of optimized proximity-reactive FnFSYs
+for iVAC-mediated PD-L1 degradation-coupled antigen presentation.
+a, Model reactions of mono- or di-fluoro phenyl sulfurofluoridates (FnPSFs) with
+imidazole informed optimization of FnFSYs. 1 mM FnPSF reacted with 100 mM
+imidazole under the same conditions, analysed by LC-MS (n = 3 independent
+replicates). b, Representative LC curves of model reactions after 4 h. c, Relative
+reactivity of FnPSF variants with imidazole compared to the original form (n = 3
+independent replicates). d, Chemoenzymatic synthesis of FnFSYs: Tyrosine
+phenol lyase (TPL) enabled scalable production of fluoride-substituted
+tyrosines, creating two mono-fluoro and four di-fluoro FnFSYs through
+fluorosulfurylation. e, Crosslinking reactions between FnFSYs and imidazole:
+1 mM FnFSY reacted with 100 mM imidazole in Tris buffer (pH = 8.0) at 37 °C
+for 4 h; conversion was analysed by LC-MS (n = 3 independent replicates).
+f, Representative LC curves of FnFSYs reacting with imidazole after 4 h.
+g, Relative reactivity of FnFSYs with imidazole compared to the original FSY
+(n = 3 independent replicates). Data are the mean ± s.d. Statistics: one-way
+ANOVA (c, g) with Tukey’s multiple comparisons test. NS: not significant.
+Article
+Extended Data Fig. 2 | Engineering bioorthogonal aminoacyl-tRNA
+synthetase for site-specific incorporation of FnFSYs into GFP. a, Targeted
+saturation mutagenesis sites on PylRS. The chFSYRS V366A PylRS variant,
+identified after four rounds of positive selection, enables bio-orthogonal
+recognition of all FnFSYs. (PDB: 3QTC). b, Comparison of FnFSY incorporation
+into full-length GFP in E. coli by the chFSYRS V366A variant versus the
+original chFSYRS. PrUAA: proximity-reactive unnatural amino acids. Data
+are representative of three biological replicates. For gel source data, see
+Supplementary Fig. 1. c–e, Sequencing results of four targeted sites: (c) before
+selection, (d) after three rounds of positive selection, and (e) after a final
+round of positive selection. f,g, Quantitative analysis of EGFP expression by
+fluorescence: (f) Representative fluorescence imaging normalized by OD600,
+measured with a Typhoon FLA 9500 Fluorescence Imager. (g) Fluorescence
+intensity per group, measured by plate reader and normalized to FSY (n = 3
+biological replicates). Data are the mean ± s.d. Statistics: two-way ANOVA (g)
+with Tukey’s multiple comparisons test.
+Extended Data Fig. 3 | The enhanced proximal crosslinking reactivity of
+iVAC accelerated PD-L1 degradation that promoted antigen presentation.
+a, SDS-PAGE and quantitative analysis of proximal crosslinking efficiency of
+GlueBody variants with distinct FnFSYs to PD-L1. Purified proteins (5 μM) were
+incubated with PD-L1 (0.5 μM) in PBS buffer at 37 °C for 30 min (n = 3 biological
+replicates). b, Time-course analysis of PD-L1 degradation in HCC2935 cells
+treated with GlueBody-CPP or GlueBody2-CPP (n = 3 biological replicates).
+c, Enhanced antigen presentation on hPD-L1/MC38 cells mediated by iVAC with
+optimized GlueBody (n = 3 biological replicates). d, Targeted PD-L1 degradation
+and antigen presentation induced by iVAC on hPD-L1/MC38 cells. e,f, iVAC
+shows comparable effects on (e) PD-L1 degradation in HCC2935 cells and (f)
+T cell activity restoration in a PD-1/PD-L1 functional assay (n = 3 biological
+replicates). Data are the mean ± s.d. Statistics: one-way ANOVA (a) and two-way
+ANOVA (b, c, e, f), each followed by Tukey’s multiple comparisons test. NS: not
+significant.
+Article
+Extended Data Fig. 4 | The endogenous PD-L1 expression level is sufficient
+for iVAC-induced exogenous antigen delivery and presentation. a, Relative
+expression levels of hPD-L1 on various tumour cell lines validated by flow
+cytometry. b,c, iVAC exhibited comparable target degradation and antigen
+presentation abilities on hPD-L1endo/MC38 cells to those on hPD-L1/MC38 cells
+after 6 h. For a–c, data were derived from three biological replicates. d, In the
+in vivo tumour inhibition experiment, hPD-L1endo/MC38 cells demonstrate similar
+performance to that of hPD-L1/MC38 cells with iVAC treatment. Following three
+immunizations with OVApep, 5 × 105
+ hPD-L1endo/MC38 cells with the endogenous
+hPD-L1 level were subcutaneously injected into the right flank of PD-L1
+humanized C57BL/6J mice. When tumours reached 50–100 mm3
+, intratumoural
+administration of iVAC was given every three days for a total of four times
+(n = 7). Growth curves of hPD-L1endo/MC38 tumours treated with HBSS, OVApep,
+iVAC-CMV, CpG and iVAC-OVA (plotted on a Log2 scale). e, The activation ratio
+of CMV-specific JC5 cells following incubation with iVAC-CMV-treated wild-type
+(WT) MDA-MB-231 cells or hPD-L1/MDA-MB-231 cells that overexpress PD-L1
+(n = 3 biological replicates). f, The endogenous expression and up-regulation of
+CMTM6 in human cancer cells did not attenuate hPD-L1 degradation triggered
+by iVAC. Data are representative of two biological replicates. For gel source
+data, see Supplementary Fig. 1. Data are the mean ± s.d. Statistics: two-way
+ANOVA (b,c,e) with Tukey’s multiple comparisons test. NS: not significant.
+Extended Data Fig. 5 | See next page for caption.
+Article
+Extended Data Fig. 5 | Evaluation of iVAC in PD-L1 humanized C57BL/6J
+mice. a, Schematic overview of the biodistribution and plasma concentration
+study and treatment protocol. PD-L1 humanized mice were subcutaneously
+(s.c.) injected with 5 × 105
+ hPD-L1endo/MC38 cells in the right flank. When
+tumours reached 50–100 mm3
+, AF647-labelled drugs were administered
+intratumourally (i.t.) once. At different designated time points within 72 h, the
+fluorescence intensity in mouse serum (b) and the retention of fluorescence at
+the tumour site (c) were assessed (n = 4 mice per group). d, The biodistribution
+images of intratumourally injected drugs into hPD-L1endo/MC38 tumours 24 h
+post-administration (n = 4 mice per group). e, Tolerability of the iVAC in PD-L1
+humanized C57BL/6J mice after OVApep immunization. Different doses of iVAC
+were injected subcutaneously (s.c.) to mice for a total of 6 times once every
+3 days for tolerability evaluation. f, Mouse bodyweight was recorded during
+the treatment (n = 4 mice per group). g, On day 19, mice were euthanized,
+and organs were obtained and sliced for hematoxylin and eosin (H&E) staining
+and histology analysis. Scale bar: 500 µm. Data are representative of four mice
+per group.
+Extended Data Fig. 6 | See next page for caption.
+Article
+Extended Data Fig. 6 | APC-like tumour reprogramming induces an
+inflammatory profile in mouse cancer cells. a, Confocal imaging of iVAC
+internalization in MDA-MB-231 cells using a FRET assay. Cy3 signal represents
+released OVA antigen; FRET signal indicates intact iVAC. Experiments were
+repeated independently two times. Scale bar: 10 μm. b, Following iVAC-induced
+antigenicity reprogramming, the leakage of delivered antigen from lysosomes
+for cross-presentation in tumours occurs via perforin-2 (Mpeg1). RNAi-mediated
+knockdown of perforin-2 can almost abrogate the antigen presentation by iVAC
+(n = 3 biological replicates). c–e, Heatmaps showing expression of genes related
+to (c) cell cycle, (d) IFN-γ and (e) STING pathways (n = 3 biological replicates).
+f, Gene set enrichment analysis (GSEA) for innate immune system genes, immune
+effector processes, and cytokine production in immune response genes in APClike tumours derived from B16 cells compared to parental lines (HBSS, n = 3
+biological replicates). Normalized enrichment score (NES) and false discovery
+rate q-values (FDR q) are provided. g,h, Quantitative PCR analysis of mRNA
+expression for antigen processing and presentation-related genes in APC-like
+tumours derived from (g) B16 and (h) MC38 cells (n = 3 biological replicates).
+In these experiments, the MC38 and B16 cells utilized were all murine PD-L1
+knockout cells that expressed human PD-L1. Data are the mean ± s.d. Statistics:
+one-way ANOVA (b) and two-way ANOVA (g, h), each followed by Tukey’s multiple
+comparisons. NS: not significant.
+Extended Data Fig. 7 | The iVAC-converted APC-like tumour cells become
+immunogenic and elicit CD8+
+ T cell responses.a,b, Expansion of OT-I memory
+T cells in the presence of APC-like tumours and BMDCs with or without iVAC
+treatment. Representative flow cytometry plots (a) and quantification (b) of
+CD8+
+ T cell proliferation (measured by cell tracer dilution) and activation
+(CD25+
+) after 48 h of co-culture with APC-like tumours and BMDCs. c,d, APC-like
+tumour cells promote the expansion of OT-I naive T cells. Representative flow
+cytometry plots (c) and quantification (d) of CD8+
+ T cell proliferation (measured
+by cell tracer dilution) and activation (CD44+
+) after 48 h of co-culture with
+APC-like tumours. e, Quantification of early activation markers CD69+
+CD25+
+and CD44+
+ on CD8+
+ T cells after 12 h of co-culture with APC-like tumour cells. In
+these experiments, the MC38 and B16 cells utilized were all murine PD-L1
+knockout cells that expressed human PD-L1. For b, c and e, data were derived
+from three biological replicates and are presented as mean ± s.d. Statistics:
+one-way ANOVA (b, d, e) with Tukey’s multiple comparisons test. NS: not
+significant.
+Article
+Extended Data Fig. 8 | iVAC induces tumours to acquire APC-like functions
+via PD-L1 degradation and OVA antigen presentation. a,b, Representative
+flow cytometry plots (a) and quantification (b) of OVA (SIINFEKL) tetramer+
+CD8+
+ T cells in PBMCs from mice immunized with OVApep (n = 5 mice per group).
+c, iVAC treatment induced PD-L1 degradation similar to GlueBody2-CPP and
+resulted in increased infiltration of CD3+
+ and CD11c+
+ cells in tumours. Data are
+representative of three mice per group. Scale bar: 100 μm. d,e, Representative
+flow cytometry plots (d) and quantification (e) of tumour PD-L1 levels (n = 3 mice
+per group). f,g, Representative flow cytometry plots (f) and quantification (g) of
+OVApep-MHC-I complexes on tumour cells (n = 3 mice per group). Data are the
+mean ± s.d. Statistics: the unpaired two-sided Student’s t-test (b) and one-way
+ANOVA (e, g) with Tukey’s multiple comparisons test. NS: not significant.
+Extended Data Fig. 9 | Evaluation of the responses against virus epitopes in
+tumour patients. a–c, The secreted IFN-γ was measured via ELISA after 6–9
+days of stimulation with 7 epitopes separately derived from CMV, EBV, or
+influenza virus antigens. The responses of selected virus-specific T cells in
+patients with HLA-A*02:01 (a), HLA-A*11:01 (b), and HLA-A*24:02 (c) were
+ascertained by comparing them (red) with the irrelevant control OVApep
+(grey). Data are derived from two or three independent biological replicates
+and are presented as mean ± s.d.
+Article
+Extended Data Fig. 10 | Evaluation of the iVAC strategy in a PTC model.
+a, Evaluation of the iVAC-mediated T cell redirection and activation. The CRC
+PTCs (patient 1, HLA-A*02:01) were treated with iVAC or controls. TNF-α as well
+as IFN-γ were measured by ELISA and tumour inhibition was determined by
+testing the PTC viability after 7 days (n = 3 biological replicates). b, Tumour
+inhibition on PTCs from other patients (patients 15–17) was evaluated by testing
+the PTC viability after 7 days (n = 3 biological replicates). c, Percentage of PD-L1+
+tumour cells (within EpCAM+
+ primary tumour cells) as determined by flow
+cytometry. Patients exhibiting a response to iVAC are highlighted in red.
+d, Response rates to iVAC treatment in tumours stratified as PD-L1low (<20%) and
+PD-L1high (≥20%), demonstrating a correlation between PD-L1 expression level
+and treatment efficacy. Data are the mean ± s.d. Statistics: one-way ANOVA (a)
+with Tukey’s multiple comparisons test and the unpaired two-sided Student’s
+t-test (b). NS: not significant.
+1nature portfolio | reporting summary April 2023
+Corresponding author(s): Peng R. Chen
+Last updated by author(s): Oct 20, 2025
+Reporting Summary
+Nature Portfolio wishes to improve the reproducibility of the work that we publish. This form provides structure for consistency and transparency
+in reporting. For further information on Nature Portfolio policies, see our Editorial Policies and the Editorial Policy Checklist.
+Statistics
+For all statistical analyses, confirm that the following items are present in the figure legend, table legend, main text, or Methods section.
+n/a Confirmed
+The exact sample size (n) for each experimental group/condition, given as a discrete number and unit of measurement
+A statement on whether measurements were taken from distinct samples or whether the same sample was measured repeatedly
+The statistical test(s) used AND whether they are one- or two-sided
+Only common tests should be described solely by name; describe more complex techniques in the Methods section.
+A description of all covariates tested
+A description of any assumptions or corrections, such as tests of normality and adjustment for multiple comparisons
+A full description of the statistical parameters including central tendency (e.g. means) or other basic estimates (e.g. regression coefficient)
+AND variation (e.g. standard deviation) or associated estimates of uncertainty (e.g. confidence intervals)
+For null hypothesis testing, the test statistic (e.g. F, t, r) with confidence intervals, effect sizes, degrees of freedom and P value noted
+Give P values as exact values whenever suitable.
+For Bayesian analysis, information on the choice of priors and Markov chain Monte Carlo settings
+For hierarchical and complex designs, identification of the appropriate level for tests and full reporting of outcomes
+Estimates of effect sizes (e.g. Cohen's d, Pearson's r), indicating how they were calculated
+Our web collection on statistics for biologists contains articles on many of the points above.
+Software and code
+Policy information about availability of computer code
+Data collection Gel-imaging and western blotting: Image Lab Touch (version 2.3)
+LC-MS collection for proteins: MassLynx (version 4.1)
+aaRS validation with FnFSY-incorporated GFP: Typhoon FLA 9500 Fluorescence Imager
+Confocal microscopy: ZEN (version 3.0)
+Flow cytometry: FACS Diva (version 8)
+LC-MS/MS data collection for immunopeptidomics: Bruker timsTOF Pro2 mass spectrometer
+ELISA and cytotoxicity measurement: BioTek Synergy H4 hybrid reader
+ELISpot: Mabtech IRIS FluoroSpot/ELISpot reader
+Live-animal imaging and biodistribution: IVIS™-SPECTRUM
+Immunohistochemistry imaging: 3DHISTECH CaseViewer (Pannoramic SCAN)
+PTC imaging: Nikon Eclipse Ti2 laser scanning confocal microscopy
+PTC viability: Nikon Ti-U microscope system
+2nature portfolio | reporting summary April 2023
+Data analysis Image analysis: Image Lab (version 6.1), Fiji/ImageJ (version 2.3.0), ZEN (version 3.0)
+Flow cytometry analysis: FlowJo (version 10.0)
+Statistics: GraphPad Prism 10
+LC-MS data analysis: MassLynx (version 4.1)
+NMR analysis: MestReNova (version 12.0.3)
+LC-MS/MS analysis for immunopeptidomics: DeepImmu™ Neoantigen Analysis Platform (Baizhen Biotechnologies)
+Bulk RNA sequencing: HISAT (version 2.2)
+Immunohistochemistry analysis: SlideViewer (version 2.5)
+For manuscripts utilizing custom algorithms or software that are central to the research but not yet described in published literature, software must be made available to editors and
+reviewers. We strongly encourage code deposition in a community repository (e.g. GitHub). See the Nature Portfolio guidelines for submitting code & software for further information.
+Data
+Policy information about availability of data
+All manuscripts must include a data availability statement. This statement should provide the following information, where applicable:
+- Accession codes, unique identifiers, or web links for publicly available datasets
+- A description of any restrictions on data availability
+- For clinical datasets or third party data, please ensure that the statement adheres to our policy
+All data presented are available in the main text and supplementary materials. Raw RNA sequencing data have been deposited in the Genome Sequence Archive of
+National Genome Data Center with the accession identifier CRA031318. Raw proteomics data have been deposited in the ProteomeXchange consortium via the
+iProX partner repository with the dataset identifier IPX0013811000.
+Research involving human participants, their data, or biological material
+Policy information about studies with human participants or human data. See also policy information about sex, gender (identity/presentation),
+and sexual orientation and race, ethnicity and racism.
+Reporting on sex and gender For PTC experiments, samples were obtained from tumor patients irrespective of gender.
+Reporting on race, ethnicity, or
+other socially relevant
+groupings
+For PTC experiments, samples were obtained from tumor patients in the Chinese population.
+Population characteristics For PTC experiments, samples were obtained from tumor patients with HLA-A*02:01, HLA-A*11:01 and HLA-A*24:02 alleles.
+Supplementary Table 8 summarizes the gender and age of the patients.
+Recruitment Participants were unbiasedly recruited from Peking University Cancer Hospital (No. NCT05280210) and Peking University
+People’s Hospital (No. NCT04130750). Tumor tissues in the current study were obtained across a broad spectrum of solid
+cancers, including colorectal cancer, renal cell carcinoma, gastric carcinoma, breast cancer and ovarian cancer. All patients
+gave informed consent for collection of clinical information, tissue collection and HLA-A typing.
+Ethics oversight This study was approved by the medical ethics committee of Peking University Cancer Hospital (No. NCT05280210), Peking
+University People’s Hospital (No. NCT04130750).
+Note that full information on the approval of the study protocol must also be provided in the manuscript.
+Field-specific reporting
+Please select the one below that is the best fit for your research. If you are not sure, read the appropriate sections before making your selection.
+Life sciences Behavioural & social sciences Ecological, evolutionary & environmental sciences
+For a reference copy of the document with all sections, see nature.com/documents/nr-reporting-summary-flat.pdf
+Life sciences study design
+All studies must disclose on these points even when the disclosure is negative.
+Sample size No statistical method was used to determine sample size. Sample size choice was based on our experience with variability in these assays and
+our ability to detect meaningful differences between treatments. In order to ensure reproducibility , all experiments were repeated a
+minimum of two times.
+Data exclusions There were no data exclusions except those resulting from technical errors making data interpretation impossible.
+Replication All data were successfully replicated with multiple biological replicates as indicated in the Figure legends.
+Randomization All samples and cells were randomly allocated into experimental groups.
+3nature portfolio | reporting summary April 2023
+Blinding Tumor-bearing mice grouping and MS sample processing and MS analysis were blinded from one another. No additional blinding was
+employed for western blot analysis or flow cytometry analysis in order to make comparisons between specific treatments.
+Reporting for specific materials, systems and methods
+We require information from authors about some types of materials, experimental systems and methods used in many studies. Here, indicate whether each material,
+system or method listed is relevant to your study. If you are not sure if a list item applies to your research, read the appropriate section before selecting a response.
+Materials & experimental systems
+n/a Involved in the study
+Antibodies
+Eukaryotic cell lines
+Palaeontology and archaeology
+Animals and other organisms
+Clinical data
+Dual use research of concern
+Plants
+Methods
+n/a Involved in the study
+ChIP-seq
+Flow cytometry
+MRI-based neuroimaging
+Antibodies
+Antibodies used The primary antibodies for human PD-L1 (Cell Signaling Technologies, Cat#13684), GAPDH (Abcam, Cat#ab128915), β-Actin (Cell
+Signaling Technologies, Cat#4970), human CMTM6 (ABClonal, Cat#A21292), GFP tag (Cell Signaling Technologies, Cat#2956), goat
+anti-rabbit IgG, HRP-linked antibody (Cell Signaling Technologies, Cat#7074) and horse anti-mouse IgG, HRP-linked antibody (Cell
+Signaling Technologies, Cat#7076) were commercially available.
+Antibodies for immunofluorescence analysis were human PD-L1 (Abcam, Cat#ab279292), calreticulin (ER marker, Abcam,
+Cat#ab2907), LAMP1 (lysosome marker, Abcam, Cat#ab320851), AF488 anti-human PanCK antibody (eBioscience, Cat#53-9003-80),
+BV421 anti-human CD3 antibody (Biolegend, Cat#344834), and PE anti-human Granzyme B antibody (BioLegend, Cat#372207).
+Antibodies for flow cytometry analysis were APC anti-human PD-L1 antibody (Sino biological, Cat#10084-MM36-A), PE anti-mouse
+H-2Kb antibody (MHC-I, BioLegend, Cat#116507), FITC anti-mouse CD8a antibody (BioLegend, Cat#100705), APC anti-mouse H-2Kb
+bound to SIINFEKL antibody (BioLegend, Cat#141605), APC mouse H2Kb (SIINFEKL) tetramer (Future Biotech), eFluor™ 660 antimouse CD3 antibody (eBioscience, Cat#50-0032-82), Spark YG™ 570 anti-mouse CD8a antibody (BioLegend, Cat#100787); FITC antimouse CD8a antibody (BioLegend, Cat#100803), APC anti-mouse CD44 antibody (BioLegend, Cat#103011), PE anti-mouse IFN-γ
+antibody (BioLegend, Cat#505807), APC anti-mouse TNF-α antibody (BioLegend, Cat#506307), APC anti-mouse Granzyme B antibody
+(BioLegend, Cat#372203), PE anti-mouse Perforin antibody (BioLegend, Cat#154305); TruStain FcX anti-mouse CD16/32 (FcR blocker,
+BioLegend, Cat#101320), FITC anti-mouse CD45 antibody (BioLegend, Cat#103107), APC anti-mouse CD11c antibody (BioLegend,
+Cat#117309), BV605 anti-mouse F4/80 antibody (BioLegend, Cat#123133), AF700 anti-mouse MHC-II antibody (BioLegend,
+Cat#107622), PerCP/Cy5.5 anti-mouse CD80 antibody (BioLegend, Cat#104721), APC/Cy7 anti-mouse CD86 antibody (BioLegend,
+Cat#105029), PE anti-mouse XCR1 antibody (BioLegend, Cat#148203), APC anti-mouse CD11b antibody (BioLegend, Cat#101211), PE
+anti-mouse CD206 antibody (BioLegend, Cat#141705); PerCP/Cy5.5 anti-mouse CD3 antibody (BioLegend, Cat#100217), APC antimouse CD8a antibody (BioLegend, Cat#155005), BV605 anti-mouse CD4 antibody (BioLegend, Cat#116027), APC/Cy7 anti-mouse
+CD69 antibody (BioLegend, Cat#104525), PE anti-mouse CD25 antibody (BioLegend, Cat#102008), BV421 anti-mouse CD127 antibody
+(BioLegend, Cat#135027); FITC anti-human CD3ε antibody (Sino Biological, Cat#10977-M001-F), FITC anti-human CD8a antibody
+(BioLegend, Cat#388705), APC anti-human CD69 antibody (Sino Biological, Cat#11150-MM06-A), APC human HLA-A*02:01
+(NLVPMVATA) tetramer (FUBOSHENGWU, Cat#FBMTA20116), human TruStain FcX™ (FcR blocker, Biolegend, Cat#422302), PE antihuman CD45 antibody (Biolegend, Cat#982322), FITC anti-human CD326 antibody (Biolegend, Cat#324204), and APC anti-human PDL1 antibody (Biolegend, Cat#329708).
+Validation Validation of all antibodies can be found on the manufacturer's website, all the validation results can be founded on the websites by
+search the catalog number.
+Eukaryotic cell lines
+Policy information about cell lines and Sex and Gender in Research
+Cell line source(s) The human cancer MDA-MB-231, HCC2935, NCI-H1975, HCC827 and mouse MC38, B16 cells were purchased from ATCC. PDL1 aAPC/CHO-K1 and PD-1 NFAT-luciferase/Jurkat cells were purchased from Promega. Mouse PD-L1 knockout MC38 cells
+stably expressing human PD-L1 (hPD-L1/MC38) were constructed by GemPharmatech. Mouse PD-L1 knockout B16 cells
+stably expressing human PD-L1 (hPD-L1/B16) were constructed by Shanghai Model Organisms Center. CMV-specific TCR
+(NLV) JC5 cells were a generous gift from Professor Meng Michelle Xu at Tsinghua University.
+Authentication Cell lines were authenticated by the supplier.
+Mycoplasma contamination All cell lines were tested to be mycoplasma-negative by the standard PCR method.
+Commonly misidentified lines
+(See ICLAC register)
+No commonly misidentified lines were used.
+4nature portfolio | reporting summary April 2023
+Animals and other research organisms
+Policy information about studies involving animals; ARRIVE guidelines recommended for reporting animal research, and Sex and Gender in
+Research
+Laboratory animals C57/B6J PD-L1 humanized mice (hPD-L1/C57/B6J, female, 4-6 weeks old) were purchased from Shanghai Model Organisms Center.
+NCG mice (female, 4-6 weeks old) were purchased from GemPharmatech. OT-I mice (female, 6-8 weeks old) were purchased from
+Cyagen Biosciences Inc.
+Wild animals No wild animals were involved in this study.
+Reporting on sex For tumor experiments, female C57/B6J PD-L1 humanized mice and NCG mice were primarily used for MC38 and MDA experiments.
+Field-collected samples This study did not involve collecting samples from the field.
+Ethics oversight All the animal studies were approved by Animal Experimentation Ethics Committee in Shenzhen Bay Laboratory (AECP202201).
+Note that full information on the approval of the study protocol must also be provided in the manuscript.
+Novel plant genotypes n.a.
+Seed stocks n.a.
+Authentication n.a.
+Plants
+Flow Cytometry
+Plots
+Confirm that:
+The axis labels state the marker and fluorochrome used (e.g. CD4-FITC).
+The axis scales are clearly visible. Include numbers along axes only for bottom left plot of group (a 'group' is an analysis of identical markers).
+All plots are contour plots with outliers or pseudocolor plots.
+A numerical value for number of cells or percentage (with statistics) is provided.
+Methodology
+Sample preparation For flow cytometry analysis of the TME, tumors were isolated between day 15-18 post-injection, cut into pieces, and digested
+for 30 min at 37 °C. Digested tumors were strained through a 70 μm filter and resuspended in FACS buffer (2% FBS, 2 mM
+EDTA). FcR-block was performed with TruStain FcX anti-mouse CD16/32 for 15 min at 4 °C. For intracellular staining, first
+perform cell surface antigen staining, then fix cells in 0.5 ml/tube Fixation Buffer (BioLegend) in the dark for 20 minutes at
+room temperature followed by permeabilization.
+Instrument LSRFortessa Cell Analyzer (BD Biosciences).
+Software FACS Diva were used for data collection, data analysis was performed using the FlowJo software package.
+Cell population abundance The manuscript presents the frequency or number of cell populations measured in all experiments.
+Gating strategy Gating was based on FSC and SSC area, followed by dead cell removal using a Zombie stain.
+Tick this box to confirm that a figure exemplifying the gating strategy is provided in the Supplementary Information.

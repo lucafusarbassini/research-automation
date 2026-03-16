@@ -348,47 +348,6 @@ def generate_citation_key(author: str, year: str) -> str:
     return f"{last}{year}"
 
 
-def search_paperboat(query: str, *, run_cmd=None) -> list[dict]:
-    """Search PaperBoat (paperboatch.com) for recent cross-discipline papers.
-
-    Uses Claude Opus 4.6 (which can access websites) to visit the actual
-    PaperBoat website.  Falls back to Gemini (which also has web access).
-    NEVER hallucates -- returns only papers actually found on the site.
-
-    Args:
-        query: Research topic to search.
-        run_cmd: Optional callable for testing.
-
-    Returns:
-        List of paper dicts with title, authors, year, abstract, url.
-    """
-    from core.claude_helper import call_claude, call_gemini
-
-    prompt = (
-        f'Visit https://paperboatch.com/ and search for: "{query}"\n\n'
-        "PaperBoat is a real cross-discipline paper discovery website.\n"
-        "You MUST actually visit the website and return ONLY papers found there.\n"
-        "DO NOT invent, hallucinate, or guess papers. If you cannot access the\n"
-        "website or find no results, return an empty JSON array: []\n\n"
-        "Return a JSON array of papers found, each with fields:\n"
-        '  {"title": "...", "authors": "...", "year": "...", '
-        '"abstract": "1-2 sentences", "url": "https://..."}\n\n'
-        "Reply with JSON array only. If site unreachable, reply: []"
-    )
-
-    # Opus 4.6 can access websites directly
-    raw = call_claude(prompt, model="opus", timeout=300, run_cmd=run_cmd)
-    if raw is None:
-        # Gemini also has web access
-        raw = call_gemini(prompt, run_cmd=run_cmd)
-    if raw is None:
-        return []
-    result = _extract_json_array(raw)
-    if isinstance(result, list):
-        return [p for p in result if isinstance(p, dict) and p.get("title")]
-    return []
-
-
 def search_and_cite(
     query: str,
     bib_file: Path | None = None,

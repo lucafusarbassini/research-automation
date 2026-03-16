@@ -19,17 +19,14 @@ Step 1: Detecting system...
   Compute: local-gpu (auto-detected)
   Docker:  Available
 
-Step 2: Setting up claude-flow...
-  claude-flow is ready
-
-Step 3: Project configuration
+Step 2: Project configuration
   Notification method [none]: slack
   Slack webhook URL: https://hooks.slack.com/services/T.../B.../xxx
   Target journal or conference (or 'skip') [skip]: NeurIPS
   Do you need a web dashboard? (yes/no) [no]: no
   Do you need mobile access? (yes/no) [no]: no
 
-Step 3b: API credentials
+Step 2b: API credentials
   Press Enter to skip any credential you don't have yet.
   Anthropic API key [OPTIONAL FALLBACK for CI/headless only] (ANTHROPIC_API_KEY) []:
   GitHub token (GITHUB_PERSONAL_ACCESS_TOKEN) []: ghp_...
@@ -38,21 +35,25 @@ Step 3b: API credentials
   ...
   2 credential(s) collected
 
-Step 4: Creating project...
-Step 5: GitHub repository
-Step 6: Initializing git...
+Step 3: Creating project...
+Step 4: GitHub repository
+Step 5: Initializing git...
 
 Project created at ./learning-rate-study
 
   Project folder guide:
     ./learning-rate-study/
-    ├── reference/papers/   ← background papers (PDF, etc.)
-    ├── reference/code/     ← reference code, scripts, notebooks
-    ├── uploads/data/       ← datasets (large files auto-gitignored)
-    ├── uploads/personal/   ← your papers, CV, writing samples
-    ├── knowledge/GOAL.md   ← your research description (EDIT THIS)
-    ├── secrets/.env        ← credentials (never committed)
-    └── config/settings.yml ← project configuration
+    ├── .claude/skills/       ← research slash commands (/lit-review, /falsify, etc.)
+    ├── reference/papers/     ← background papers (PDF, etc.)
+    ├── reference/code/       ← reference code, scripts, notebooks
+    ├── uploads/data/         ← datasets (large files auto-gitignored)
+    ├── uploads/personal/     ← your papers, CV, writing samples
+    ├── knowledge/GOAL.md     ← your research description (EDIT THIS)
+    ├── knowledge/RULES.md    ← behavioral rules (auto-populated)
+    ├── lab/                  ← experimental scripts (chaotic, WIP)
+    ├── stable/               ← validated code (promoted from lab/)
+    ├── secrets/.env          ← credentials (never committed)
+    └── config/settings.yml   ← project configuration
 
 Next steps:
   1. cd ./learning-rate-study
@@ -110,35 +111,44 @@ $ ricet start
   Session started: 20260115_143022 (a1b2c3d4...)
 ```
 
-This launches Claude Code with your project context loaded. The master agent reads GOAL.md and begins working.
+This launches Claude Code with your project context loaded. Claude reads GOAL.md and your research skills (`.claude/skills/`) are available as slash commands.
 
 ## 4. Interact with the system
 
-Inside the Claude Code session, you can give natural language instructions:
+Inside the Claude Code session, you can use natural language instructions or invoke research skills directly:
 
 ```
 > Search for recent papers on learning rate schedules for transformers
 
-  [RESEARCHER] Found 12 relevant papers. Key findings stored in
+  Found 12 relevant papers. Key findings stored in
   knowledge/ENCYCLOPEDIA.md. Top references added to paper/references.bib.
 
-> Implement the experiment comparing 4 LR schedules on a 125M model
+> /reproduce lab/train.py
 
-  [CODER] Created src/train.py with configurable LR schedules.
-  Running 4 training jobs with seeds 0-2...
-  Results saved to output/results_125M.json
+  Running reproducibility check (STANDARD mode):
+  - 5 seeds x 4 schedules = 20 runs
+  - CV < 0.05 for all metrics
+  Verdict: REPRODUCIBLE
 
-> Review the training code for correctness
+> /falsify
 
-  [REVIEWER] Code review complete. 2 suggestions:
-  - Add gradient clipping (missing from cosine schedule)
-  - Log per-step loss, not just per-epoch
-  Applied fixes.
+  Falsification audit (STANDARD mode):
+  - Leakage check: PASSED
+  - Statistical rigor: 1 WARNING (multiple comparisons — apply Bonferroni)
+  - Code correctness: PASSED
+  Verdict: 4/5 attacks survived
 
-> Write the methodology section
+> /style-transfer
 
-  [WRITER] Drafted paper/sections/methodology.tex (478 words).
-  Uses your style profile from uploads/personal/my-icml-2025.pdf.
+  Analyzing style from uploads/personal/my-icml-2025.pdf...
+  Identified 8 stylistic dimensions.
+  Ready to rewrite — paste your draft section.
+
+> /paper-draft methods
+
+  Drafted paper/sections/methodology.tex (478 words).
+  Style-matched to your lab's conventions.
+  Missing citations: 2 (marked as [TBD]).
 ```
 
 ## 5. Run overnight
@@ -148,14 +158,13 @@ For longer experiments, use autonomous mode:
 ```bash
 $ ricet overnight --iterations 30
   Starting overnight mode
-  Using claude-flow swarm orchestration
   Iteration 1/30: Scaling to 350M model...
   Iteration 2/30: Running LR schedule comparison...
   ...
   Task completed!
 ```
 
-## 6. Check results
+## 6. Check results and promote
 
 ```bash
 $ ricet status
@@ -168,12 +177,17 @@ $ ricet status
   Progress:
   Completed 125M and 350M experiments. 1.3B in progress.
 
+# Promote validated analysis from lab/ to stable/
+$ ricet promote lab/analysis.py
+  Falsification checkpoint: PASSED
+  Copied to stable/analysis.py with provenance metadata.
+
 $ ricet paper check
   All figure references resolved.
   Citations: 24
 ```
 
-## 7. Verify and publish
+## 7. Verify and build
 
 ```bash
 # Fact-check a claim from the paper
@@ -184,30 +198,46 @@ $ ricet verify "Cosine annealing achieves 12% lower final loss than constant LR"
 # Build the paper
 $ ricet paper build
   Paper compiled successfully.
-
-# Publish a summary to Medium
-$ ricet publish medium
-  Post title: Learning Rate Schedules for Transformers: A Systematic Study
-  Post body: We compared four learning rate schedules...
-  Published successfully.
-  URL: https://medium.com/@you/learning-rate-schedules-...
 ```
+
+## Available research skills
+
+| Slash command | What it does |
+|---|---|
+| `/lit-review` | Search PubMed/arXiv, synthesize findings, generate BibTeX |
+| `/experiment-review` | Six-dimension experiment audit with traffic-light scoring |
+| `/falsify` | Adversarial validation (Popperian approach) |
+| `/reproduce` | Reproducibility stress-test with multiple seeds/splits |
+| `/paper-draft` | Draft paper sections with lab style conventions |
+| `/style-transfer` | Match writing style to reference papers |
+| `/add-citations` | Find, verify, and insert citations |
+| `/figure-audit` | Audit figures for publication readiness |
+| `/research-retro` | Session retrospective with knowledge extraction |
+| `/overnight` | Autonomous overnight research session |
+| `/slides` | Generate presentation decks |
 
 ## Folder structure after a session
 
 ```
 learning-rate-study/
+├── .claude/
+│   ├── CLAUDE.md              ← project instructions for Claude
+│   └── skills/                ← research slash commands
 ├── config/settings.yml
 ├── knowledge/
-│   ├── GOAL.md
-│   ├── CONSTRAINTS.md
-│   └── ENCYCLOPEDIA.md        ← accumulated insights
+│   ├── GOAL.md                ← research description
+│   ├── RULES.md               ← behavioral rules (auto-populated)
+│   ├── ENCYCLOPEDIA.md        ← accumulated insights
+│   ├── DECISION_LOG.md        ← project decisions
+│   └── CONSTRAINTS.md         ← known limitations
 ├── reference/
 │   ├── papers/                ← background PDFs
 │   └── code/                  ← reference implementations
 ├── uploads/
 │   ├── data/                  ← datasets
 │   └── personal/              ← your papers, CV
+├── lab/                       ← experimental scripts (WIP)
+├── stable/                    ← validated code (promoted)
 ├── paper/
 │   ├── main.tex               ← generated paper
 │   ├── references.bib         ← citations

@@ -218,9 +218,7 @@ ricet paper adapt-style --reference /home/fusar/claude/research-automation/templ
 
 ---
 
-## 10. Literature Search (`ricet cite` and `ricet discover`)
-
-### 10a. Citation search
+## 10. Literature Search (`ricet cite`)
 
 ```bash
 cd /tmp/ricet-test/demo-project
@@ -228,22 +226,6 @@ ricet cite "attention mechanisms in transformers" --max 3
 ```
 
 **Check:** Searches Semantic Scholar/arXiv, displays results, and appends BibTeX entries to `paper/references.bib`.
-
-### 10b. Broad discovery
-
-```bash
-ricet discover "graph neural networks for drug discovery" --max 3
-```
-
-**Check:** Broader literature scan with ranked results, abstracts, and citation counts.
-
-### 10c. Discover with auto-cite
-
-```bash
-ricet discover "large language model efficiency" --cite --max 2
-```
-
-**Check:** Results are automatically added to `paper/references.bib`.
 
 ---
 
@@ -255,14 +237,6 @@ ricet browse "https://en.wikipedia.org/wiki/Attention_(machine_learning)"
 ```
 
 **Check:** Fetches the URL and extracts readable text content.
-
-### 11a. Browse with screenshot
-
-```bash
-ricet browse "https://paperboatch.com/" --screenshot /tmp/example-screenshot.png
-```
-
-**Check:** Saves a screenshot (requires Puppeteer MCP).
 
 ---
 

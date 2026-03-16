@@ -462,15 +462,14 @@ def init(
     else:
         project_path.mkdir(parents=True)
 
-    # Ensure agent prompt files are deployed (hidden dirs may be skipped
-    # on some platforms or by future ignore filters)
-    agents_src = TEMPLATE_DIR / ".claude" / "agents"
-    agents_dst = project_path / ".claude" / "agents"
-    if agents_src.exists():
-        agents_dst.mkdir(parents=True, exist_ok=True)
-        for f in agents_src.iterdir():
+    # Deploy research skills (slash commands)
+    skills_src = TEMPLATE_DIR / ".claude" / "skills"
+    skills_dst = project_path / ".claude" / "skills"
+    if skills_src.exists():
+        skills_dst.mkdir(parents=True, exist_ok=True)
+        for f in skills_src.iterdir():
             if f.is_file():
-                shutil.copy2(f, agents_dst / f.name)
+                shutil.copy2(f, skills_dst / f.name)
 
     # Deploy behavioral rules from defaults/ into project knowledge/
     _defaults_to_deploy = ["LEGISLATION.md", "PHILOSOPHY.md"]
@@ -481,6 +480,15 @@ def init(
         dst = knowledge_dst / fname
         if src.exists() and not dst.exists():
             shutil.copy2(src, dst)
+
+    # Deploy knowledge templates (RULES, ENCYCLOPEDIA, DECISION_LOG, CONSTRAINTS)
+    knowledge_tpl_src = TEMPLATE_DIR / "knowledge"
+    if knowledge_tpl_src.exists():
+        for f in knowledge_tpl_src.iterdir():
+            if f.is_file():
+                dst = knowledge_dst / f.name
+                if not dst.exists():
+                    shutil.copy2(f, dst)
 
     # Setup workspace folders
     setup_workspace(project_path)
@@ -955,21 +963,19 @@ def _init_update(
     if sandbox_ok:
         console.print("  [green]Sandbox infrastructure updated[/green]")
 
-    # --- Refresh agent templates ---
-    console.print("\n[bold cyan]Refreshing agent templates...[/bold cyan]")
-    agents_src = TEMPLATE_DIR / ".claude" / "agents"
-    agents_dst = project_path / ".claude" / "agents"
-    if agents_src.exists():
-        agents_dst.mkdir(parents=True, exist_ok=True)
-        updated_agents = 0
-        for f in agents_src.iterdir():
+    # --- Refresh research skills ---
+    skills_src = TEMPLATE_DIR / ".claude" / "skills"
+    skills_dst = project_path / ".claude" / "skills"
+    if skills_src.exists():
+        skills_dst.mkdir(parents=True, exist_ok=True)
+        updated_skills = 0
+        for f in skills_src.iterdir():
             if f.is_file():
-                dst_file = agents_dst / f.name
-                # Only update if template is newer or file doesn't exist
+                dst_file = skills_dst / f.name
                 if not dst_file.exists() or f.stat().st_mtime > dst_file.stat().st_mtime:
                     shutil.copy2(f, dst_file)
-                    updated_agents += 1
-        console.print(f"  [green]{updated_agents} agent template(s) refreshed[/green]")
+                    updated_skills += 1
+        console.print(f"  [green]{updated_skills} skill template(s) refreshed[/green]")
 
     # --- Refresh behavioral rules from defaults/ ---
     _defaults_to_deploy = ["LEGISLATION.md", "PHILOSOPHY.md"]
@@ -3482,36 +3488,6 @@ def website(
 
 
 @app.command()
-def publish(
-    platform: str = typer.Argument(help="Platform: medium, linkedin"),
-):
-    """Draft and publish research summaries to social platforms."""
-    try:
-        from core.social_media import publish_to_platform
-    except ImportError:
-        console.print(
-            "[red]core.social_media not available. Install social media dependencies first.[/red]"
-        )
-        raise typer.Exit(1)
-
-    title = (
-        typer.prompt("Post title", default="") if platform.lower() == "medium" else ""
-    )
-    body = typer.prompt("Post body")
-    console.print(f"[bold]Publishing to {platform}...[/bold]")
-    result = publish_to_platform(platform, title=title, body=body)
-    if result.get("success"):
-        url = result.get("url", "")
-        console.print(f"[green]Published successfully.[/green]")
-        if url:
-            console.print(f"[bold]URL:[/bold] {url}")
-    else:
-        error = result.get("error", "Unknown error")
-        console.print(f"[red]Publish failed: {error}[/red]")
-        raise typer.Exit(1)
-
-
-@app.command()
 def verify(
     text: str = typer.Argument(help="Text or claim to verify"),
 ):
@@ -4273,68 +4249,6 @@ def cite(
         auto_commit(f"ricet cite: added {len(results)} references for '{query[:50]}'")
     else:
         console.print("[yellow]No results found (Claude may be unavailable).[/yellow]")
-
-
-@app.command()
-def discover(
-    query: str = typer.Argument(help="Research topic to search on PaperBoat"),
-    add_bib: bool = typer.Option(
-        False, "--cite", help="Auto-add results to references.bib"
-    ),
-    max_results: int = typer.Option(5, "--max", "-n", help="Max papers to return"),
-):
-    """Search PaperBoat (paperboatch.com) for recent cross-discipline papers."""
-    from core.paper import (
-        add_citation,
-        generate_citation_key,
-        list_citations,
-        search_paperboat,
-    )
-
-    console.print(f"[bold]Searching PaperBoat for: {query}[/bold]")
-    papers = search_paperboat(query)
-
-    if not papers:
-        console.print("[yellow]No results found (Claude may be unavailable).[/yellow]")
-        return
-
-    for i, p in enumerate(papers[:max_results], 1):
-        console.print(f"\n  [bold]{i}. {p.get('title', 'Untitled')}[/bold]")
-        console.print(f"     Authors: {p.get('authors', 'Unknown')}")
-        console.print(f"     Year: {p.get('year', '?')}")
-        console.print(f"     Abstract: {p.get('abstract', '')[:200]}")
-        if p.get("url"):
-            console.print(f"     URL: {p['url']}")
-
-    if add_bib:
-        bib_file = Path("paper/references.bib")
-        existing = list_citations(bib_file) if bib_file.exists() else []
-        added = 0
-        for p in papers[:max_results]:
-            key = generate_citation_key(
-                p.get("authors", "Unknown"),
-                p.get("year", "2024"),
-            )
-            if key in existing:
-                key = f"{key}b"
-                if key in existing:
-                    continue
-            add_citation(
-                key=key,
-                entry_type="article",
-                author=p.get("authors", ""),
-                title=p.get("title", ""),
-                year=p.get("year", ""),
-                url=p.get("url", ""),
-                bib_file=bib_file,
-            )
-            existing.append(key)
-            added += 1
-            console.print(f"  [green]+[/green] Added to bib: {key}")
-        if added:
-            auto_commit(
-                f"ricet discover: added {added} PaperBoat references for '{query[:50]}'"
-            )
 
 
 @app.command(name="sync-learnings")

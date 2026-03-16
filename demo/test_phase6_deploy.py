@@ -1,4 +1,4 @@
-"""Phase 6 demo tests: website, social media, and notifications."""
+"""Phase 6 demo tests: website and notifications."""
 
 import json
 import sys
@@ -10,15 +10,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core.notifications import NotificationConfig
-from core.social_media import (
-    PostDraft,
-    draft_linkedin_post,
-    draft_medium_post,
-    generate_thread,
-    publish_to_platform,
-    summarize_for_social,
-    validate_post,
-)
 from core.website import (
     WebsiteProject,
     add_page,
@@ -220,161 +211,6 @@ class TestSiteManagerAdapter:
         result = mgr.deploy(method="manual")
         assert result["status"] == "ready"
         assert result["method"] == "manual"
-
-
-# ---------------------------------------------------------------------------
-# social_media: draft_medium_post
-# ---------------------------------------------------------------------------
-
-
-class TestDraftMediumPost:
-    """draft_medium_post builds a Medium article dict."""
-
-    def test_basic_draft(self):
-        result = draft_medium_post(
-            title="My Research",
-            content="We present a novel approach.",
-            tags=["AI", "ML", "NLP", "Science", "Research", "Extra"],
-        )
-        assert result["title"] == "My Research"
-        assert "# My Research" in result["markdown"]
-        # Medium allows max 5 tags
-        assert len(result["tags"]) == 5
-        assert "Extra" not in result["tags"]
-        assert result["draft"].platform == "medium"
-        assert result["draft"].ready is True
-
-
-# ---------------------------------------------------------------------------
-# social_media: draft_linkedin_post
-# ---------------------------------------------------------------------------
-
-
-class TestDraftLinkedinPost:
-    """draft_linkedin_post handles content + link + truncation."""
-
-    def test_basic_linkedin_post(self):
-        result = draft_linkedin_post(
-            "Check out our new paper!", link="https://example.com"
-        )
-        assert "https://example.com" in result["text"]
-        assert result["draft"].platform == "linkedin"
-        assert result["draft"].ready is True
-
-    def test_truncation_at_3000_chars(self):
-        long_content = "A" * 3500
-        result = draft_linkedin_post(long_content)
-        assert len(result["text"]) <= 3000
-        assert result["text"].endswith("...")
-
-
-# ---------------------------------------------------------------------------
-# social_media: summarize_for_social
-# ---------------------------------------------------------------------------
-
-
-class TestSummarizeForSocial:
-    """summarize_for_social extracts sentences within platform char limits."""
-
-    def test_twitter_length(self):
-        text = (
-            "We introduce a novel method for protein folding. "
-            "Our approach achieves state-of-the-art results. "
-            "The model was trained on a large dataset."
-        )
-        summary = summarize_for_social(text, "twitter")
-        assert len(summary) <= 280
-        assert len(summary) > 0
-
-    def test_linkedin_allows_more(self):
-        text = "Short sentence. " * 50
-        summary = summarize_for_social(text, "linkedin")
-        assert len(summary) <= 3000
-
-
-# ---------------------------------------------------------------------------
-# social_media: generate_thread
-# ---------------------------------------------------------------------------
-
-
-class TestGenerateThread:
-    """generate_thread splits long text into tweet-sized chunks."""
-
-    def test_short_text_single_tweet(self):
-        tweets = generate_thread("Hello world!")
-        assert len(tweets) == 1
-        assert tweets[0] == "Hello world!"
-
-    def test_long_text_multiple_tweets(self):
-        text = " ".join(["word"] * 200)
-        tweets = generate_thread(text, max_chars=100)
-        assert len(tweets) > 1
-        for tweet in tweets:
-            assert len(tweet) <= 100
-
-
-# ---------------------------------------------------------------------------
-# social_media: validate_post
-# ---------------------------------------------------------------------------
-
-
-class TestValidatePost:
-    """validate_post returns error strings for invalid drafts."""
-
-    def test_valid_medium_post(self):
-        draft = PostDraft(platform="medium", body="Hello", title="Title", ready=True)
-        errors = validate_post(draft)
-        assert errors == []
-
-    def test_medium_missing_title(self):
-        draft = PostDraft(platform="medium", body="Hello", title="")
-        errors = validate_post(draft)
-        assert any("title" in e.lower() for e in errors)
-
-    def test_empty_body(self):
-        draft = PostDraft(platform="twitter", body="", title="")
-        errors = validate_post(draft)
-        assert any("empty" in e.lower() for e in errors)
-
-    def test_over_char_limit(self):
-        draft = PostDraft(platform="twitter", body="X" * 300)
-        errors = validate_post(draft)
-        assert any("limit" in e.lower() for e in errors)
-
-
-# ---------------------------------------------------------------------------
-# social_media: publish_to_platform dispatch
-# ---------------------------------------------------------------------------
-
-
-class TestPublishToPlatformDispatch:
-    """publish_to_platform dispatches to the correct publisher or errors."""
-
-    def test_unsupported_platform(self):
-        result = publish_to_platform("tiktok", body="test content", api_token="fake")
-        assert result["success"] is False
-        assert "Unsupported" in result["error"]
-
-    def test_empty_body_rejected(self):
-        """publish_to_platform rejects empty body."""
-        result = publish_to_platform("medium", api_token="fake")
-        assert result["success"] is False
-        assert "empty" in result["error"].lower()
-
-    def test_medium_dispatch_without_network(self):
-        """Calling publish_to_platform('medium') without a real token fails gracefully."""
-        with patch("core.social_media.publish_medium") as mock_pub:
-            mock_pub.return_value = {"success": False, "error": "no token"}
-            result = publish_to_platform(
-                "medium", title="Test", body="Content", api_token=""
-            )
-        assert result["success"] is False
-
-    def test_linkedin_dispatch_without_network(self):
-        with patch("core.social_media.publish_linkedin") as mock_pub:
-            mock_pub.return_value = {"success": False, "error": "no token"}
-            result = publish_to_platform("linkedin", body="Content", api_token="")
-        assert result["success"] is False
 
 
 # ---------------------------------------------------------------------------

@@ -576,9 +576,9 @@ ricet morning-sync --no-push          # merge locally but don't push yet
 
 ---
 
-## Cross-Repository RAG
+## Cross-Repository Code Search
 
-Link external repositories so agents can search across all your code while only writing to the current project.
+Link external repositories so Claude can search across all your code while only writing to the current project.
 
 ### Linking Repos
 
@@ -1326,14 +1326,6 @@ Configure these in `secrets/.env` (prompted during `ricet init`):
 
 ---
 
-## PaperBoat Integration
-
-For exhaustive cross-discipline paper discovery, ricet recommends [PaperBoat](https://paperboatch.com/) -- an AI-powered service that scans thousands of journals daily and delivers personalized paper matches. Useful as a background SOTA knowledge source that updates daily across all disciplines.
-
-Referenced in the paper pipeline section of the README and available as a complement to `ricet cite` and `ricet discover` for broader literature coverage.
-
----
-
 ## Slide Maker
 
 ricet includes a built-in presentation generator that creates polished PPTX slide decks with AI-generated schematics.
@@ -1446,8 +1438,7 @@ Live verification status of all ricet commands, tested against real projects.
 | # | Command | Status | What it tests |
 |---|---------|--------|---------------|
 | 12 | `ricet cite "Runge-Kutta methods..."` | :white_check_mark: | PubMed/arXiv search, BibTeX generation |
-| 13 | `ricet discover "AAV9 Gene Therapy..."` | :construction: | PaperBoat cross-discipline search |
-| 14 | `ricet browse "https://..."` | :white_check_mark: | URL text extraction |
+| 13 | `ricet browse "https://..."` | :white_check_mark: | URL text extraction |
 
 ### Phase 4: Development & Code
 

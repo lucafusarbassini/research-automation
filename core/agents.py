@@ -55,12 +55,12 @@ DEFAULT_BUDGET_SPLIT = {
 # Keywords used as last-resort fallback routing
 ROUTING_KEYWORDS = {
     AgentType.MASTER: ["orchestrate", "coordinate", "overnight", "autonomous"],
-    AgentType.RESEARCHER: ["search", "literature", "paper", "citation", "review", "pubmed", "arxiv"],
+    AgentType.RESEARCHER: ["search", "literature", "citation", "survey", "pubmed", "arxiv"],
     AgentType.CODER: ["implement", "code", "script", "function", "bug", "fix", "test", "run"],
-    AgentType.REVIEWER: ["audit", "check", "inspect", "quality", "experiment"],
+    AgentType.REVIEWER: ["review", "audit", "check", "inspect", "quality", "experiment"],
     AgentType.FALSIFIER: ["falsify", "leakage", "validate", "adversarial", "reproduce", "break"],
     AgentType.WRITER: ["write", "draft", "section", "abstract", "manuscript", "paper"],
-    AgentType.CLEANER: ["refactor", "clean", "organize", "retro", "retrospective"],
+    AgentType.CLEANER: ["refactor", "clean", "organize", "optimize", "retro", "retrospective"],
     AgentType.SLIDE_MAKER: ["slide", "presentation", "deck", "pptx", "powerpoint", "talk"],
 }
 

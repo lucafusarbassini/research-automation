@@ -40,3 +40,6 @@
 - [ ] [voice] what is the current status of my project?
 - [ ] [voice] Let's test implementing a new function
 - [ ] [voice] write an ordinary differential equation system and an integration and make a plot
+- [ ] [mobile] update the website
+- [ ] [voice] check progress
+- [ ] [mobile:proj] run experiments

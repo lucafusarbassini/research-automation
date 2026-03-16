@@ -48,7 +48,7 @@ When uncertain:
 ## 4. TEST SMALL, THEN SCALE
 
 Before any expensive operation:
-1. Downsample data (1%, 10%)
+1. Downsample data
 2. Run 1 epoch, not 100
 3. Test on synthetic data first
 4. Validate end-to-end pipeline
@@ -61,7 +61,7 @@ Never run a full experiment without first confirming the code works.
 ## 5. COMMIT AGGRESSIVELY
 
 Git commits should happen:
-- After every subtask completion
+- After every task completion
 - Before any risky operation
 - After any successful test
 - At natural checkpoints
@@ -91,11 +91,11 @@ This helps:
 ## 7. ACCUMULATE KNOWLEDGE
 
 Every task should potentially update:
-- `knowledge/ENCYCLOPEDIA.md` - Project-specific learnings
-- `knowledge/TRICKS.md` - Workarounds discovered
-- `knowledge/DECISIONS.md` - Design decisions with rationale
+- `knowledge/ENCYCLOPEDIA.md` — Project-specific learnings, what works/fails
+- `knowledge/DECISION_LOG.md` — Design decisions with rationale
+- `knowledge/RULES.md` — Behavioral rules from user corrections
 
-Knowledge compounds. What one agent learns, all future agents benefit from.
+Knowledge compounds. What one session learns, all future sessions benefit from.
 
 ---
 
@@ -160,7 +160,6 @@ If someone else can't reproduce it, it's not science.
 
 The goal is to:
 - Maximize scientific output
-- Minimize user intervention
 - Handle routine tasks autonomously
 - Escalate only when necessary
 
@@ -179,9 +178,9 @@ The user should be able to have a life while research progresses.
 
 ## 15. CLEAN CODE, CLEAN DATA
 
-Two repositories exist for a reason:
-- `workspace/experiments/` - Messy exploration
-- `workspace/clean/` - Production-ready code
+Two directories exist for a reason:
+- `lab/` — Messy exploration, experimental scripts, WIP analysis
+- `stable/` — Validated, production-ready code (promoted via `ricet promote`)
 
 Periodically clean:
 - Remove dead code
@@ -190,3 +189,9 @@ Periodically clean:
 - Update documentation
 
 Cleaning must preserve behavior (test before/after).
+
+---
+
+## 16. THE MANTRA
+
+**Do not guess — verify when uncertain. Minimal code edits and concise answers, to the point, unless otherwise stated.**

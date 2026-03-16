@@ -96,8 +96,8 @@ def promote_file(
              f"promote: {rel} → stable/ (hash: {provenance['git_hash']})"],
             cwd=str(project_root), capture_output=True, timeout=10,
         )
-    except Exception:
-        pass  # Commit is best-effort
+    except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
+        logger.warning("Auto-commit failed: %s", exc)
 
     logger.info("Promoted %s → %s", source, dest)
     return {
@@ -119,10 +119,13 @@ def _run_basic_validation(path: Path) -> dict:
         except SyntaxError as e:
             return {"passed": False, "reason": f"Syntax error: {e}"}
 
-        # Check for common issues
+        # Check for TODO/FIXME/HACK markers in comments (not docstrings)
+        import re
         source = path.read_text()
-        if "TODO" in source or "FIXME" in source or "HACK" in source:
-            return {"passed": False, "reason": "Contains TODO/FIXME/HACK markers"}
+        for i, line in enumerate(source.splitlines(), 1):
+            stripped = line.lstrip()
+            if stripped.startswith("#") and re.search(r"\b(TODO|FIXME|HACK)\b", stripped):
+                return {"passed": False, "reason": f"Line {i}: contains TODO/FIXME/HACK marker"}
 
     # File must not be empty
     if path.stat().st_size == 0:

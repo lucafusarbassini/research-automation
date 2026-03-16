@@ -30,14 +30,8 @@ FUTURE:
 Connect to my gmail and other materials
 Add capability of package making using pypi API and zenodo publishing with their API
 No-claude options eg w copilot backend
-Wire in paperbot
-Wired article writer
-Email forward reaching agent with awareness and RAG eg startup screening & forward reach per ewer
-Include useful templates for everything (let it do that) eg all journals one might want to submit to say the least
-https://github.com/ykdojo/claude-code-tips?tab=readme-ov-file#tip-12-invest-in-your-own-workflow
 Compare biomni
 and others of my interest see Hawaiian notes eg for event organization
 Meta-updatability by me as other repos created through it!
 A document with resources for possible future implementations: https://claudemarketplaces.com/
 Think deeply of how it can support my dreams
-Include more of these (and other) tools: https://github.com/ruvnet

@@ -330,9 +330,4 @@ def voice_prompt(*, duration: int = 30, run_cmd=None) -> str:
     if lang != "en":
         text = translate_to_english(text, source_lang=lang, run_cmd=run_cmd)
 
-    # Structure the prompt
-    prompts_path = Path("knowledge") / "PROMPTS.md"
-    templates = load_prompt_templates(prompts_path)
-    structured = structure_prompt(text, templates=templates)
-
-    return structured
+    return text

@@ -154,7 +154,7 @@ $EDITOR knowledge/GOAL.md
 Write at least 200 characters of real content describing your research question, methodology, expected outcomes, and constraints. `ricet start` enforces this minimum and will open your editor if the file is insufficient.
 
 !!! tip
-    The more detailed your GOAL.md, the better the agents perform. Include your research question, methodology, expected outcomes, datasets, and constraints. One full page is ideal.
+    The more detailed your GOAL.md, the better Claude performs. Include your research question, methodology, expected outcomes, datasets, and constraints. One full page is ideal.
 
 ---
 
@@ -334,7 +334,7 @@ If you work across multiple repos, link them for cross-repository search:
 ricet link ~/code/shared-library --name shared
 ricet link ~/code/data-pipeline
 
-# Agents can now search across all linked repos
+# Claude can now search across all linked repos
 ricet memory search "data preprocessing pipeline"
 
 # Re-index after external changes

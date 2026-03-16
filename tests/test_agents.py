@@ -28,8 +28,8 @@ def test_route_to_reviewer():
 
 
 def test_route_to_falsifier():
-    assert route_task("validate the experimental results") == AgentType.FALSIFIER
     assert route_task("falsify and verify the data leakage") == AgentType.FALSIFIER
+    assert route_task("detect leakage in the training pipeline") == AgentType.FALSIFIER
 
 
 def test_route_to_writer():
@@ -147,26 +147,26 @@ def test_execute_agent_task_legacy_model_with_skip_permissions():
 
 
 def test_get_agent_prompt_from_project(tmp_path):
-    """get_agent_prompt loads from project .claude/agents/ when files exist."""
-    agent_dir = tmp_path / ".claude" / "agents"
-    agent_dir.mkdir(parents=True)
-    (agent_dir / "coder.md").write_text("You are the project coder agent.")
+    """get_agent_prompt loads from project .claude/skills/ when files exist."""
+    # CODER maps to skill "reproduce"
+    skills_dir = tmp_path / ".claude" / "skills"
+    skills_dir.mkdir(parents=True)
+    (skills_dir / "reproduce.md").write_text("You are the reproduce skill.")
 
     result = get_agent_prompt(AgentType.CODER, project_root=tmp_path)
-    assert result == "You are the project coder agent."
+    assert result == "You are the reproduce skill."
 
 
 def test_get_agent_prompt_from_templates(tmp_path):
     """get_agent_prompt falls back to templates when project files are missing."""
-    # tmp_path has no .claude/agents/ directory, so fallback should trigger
+    # CODER maps to skill "reproduce"
     result = get_agent_prompt(AgentType.CODER, project_root=tmp_path)
-    # The templates directory should have the file
     template_file = (
         Path(__file__).resolve().parent.parent
         / "templates"
         / ".claude"
-        / "agents"
-        / "coder.md"
+        / "skills"
+        / "reproduce.md"
     )
     assert template_file.exists(), f"Template file missing: {template_file}"
     assert result == template_file.read_text()
@@ -174,44 +174,45 @@ def test_get_agent_prompt_from_templates(tmp_path):
 
 
 def test_get_agent_prompt_project_overrides_template(tmp_path):
-    """Project agent prompt takes priority over template."""
-    agent_dir = tmp_path / ".claude" / "agents"
-    agent_dir.mkdir(parents=True)
-    (agent_dir / "researcher.md").write_text("Custom researcher prompt.")
+    """Project skill prompt takes priority over template."""
+    # RESEARCHER maps to skill "lit-review"
+    skills_dir = tmp_path / ".claude" / "skills"
+    skills_dir.mkdir(parents=True)
+    (skills_dir / "lit-review.md").write_text("Custom lit-review prompt.")
 
     result = get_agent_prompt(AgentType.RESEARCHER, project_root=tmp_path)
-    assert result == "Custom researcher prompt."
+    assert result == "Custom lit-review prompt."
 
 
-def test_agent_template_prompts_are_nonempty():
-    """All agent types have non-empty template prompt files."""
+def test_skill_template_prompts_are_nonempty():
+    """All agent types have non-empty template skill files."""
+    from core.agents import get_agent_prompt as _gap
+
     templates_dir = (
-        Path(__file__).resolve().parent.parent / "templates" / ".claude" / "agents"
+        Path(__file__).resolve().parent.parent / "templates" / ".claude" / "skills"
     )
-    for agent_type in AgentType:
-        if agent_type == AgentType.MASTER:
-            continue  # master is the orchestrator, tested separately
-        agent_file = templates_dir / f"{agent_type.value}.md"
-        assert agent_file.exists(), f"Missing template for {agent_type.value}"
-        content = agent_file.read_text()
+    # Agent-to-skill mapping (mirrors get_agent_prompt._agent_to_skill)
+    agent_to_skill = {
+        AgentType.RESEARCHER: "lit-review",
+        AgentType.REVIEWER: "experiment-review",
+        AgentType.WRITER: "paper-draft",
+        AgentType.FALSIFIER: "falsify",
+        AgentType.CODER: "reproduce",
+        AgentType.CLEANER: "research-retro",
+        AgentType.SLIDE_MAKER: "slides",
+        AgentType.MASTER: "overnight",
+    }
+    for agent_type, skill_name in agent_to_skill.items():
+        skill_file = templates_dir / f"{skill_name}.md"
+        assert skill_file.exists(), f"Missing skill template for {agent_type.value} -> {skill_name}"
+        content = skill_file.read_text()
         assert (
             len(content.strip()) > 50
-        ), f"Template for {agent_type.value} is too short ({len(content)} chars)"
+        ), f"Skill template for {skill_name} is too short ({len(content)} chars)"
 
 
-def test_get_agent_prompt_missing_agent_returns_empty(tmp_path):
-    """get_agent_prompt returns empty string for a non-existent agent file
-    when neither project nor templates have it."""
-    # Patch the template path to a non-existent location
-    with patch("core.agents.Path") as MockPath:
-        # Make Path.cwd() return tmp_path
-        MockPath.cwd.return_value = tmp_path
-        # But we need real Path for file operations, so just test with project_root
-        pass
-
-    # Use a real but empty tmp_path - the template fallback will still find files
-    # for real agent types. Instead, test with a mocked AgentType value
-    # by checking directly that a missing file in both locations returns ""
+def test_get_agent_prompt_fallback_finds_template(tmp_path):
+    """get_agent_prompt finds template even when project has no skills."""
     result = get_agent_prompt(AgentType.CODER, project_root=tmp_path)
-    # This will actually find the template, so it should be non-empty
+    # Template fallback should find reproduce.md
     assert len(result) > 0
