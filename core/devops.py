@@ -53,8 +53,40 @@ def _docker_needs_sg() -> bool:
     return False
 
 
+def _compose_cmd() -> list[str]:
+    """Return the correct docker-compose command for this system.
+
+    Prefers ``docker compose`` (v2 plugin), falls back to ``docker-compose``
+    (standalone v1/v2 binary).
+    """
+    # Check plugin first
+    try:
+        r = subprocess.run(
+            ["docker", "compose", "version"],
+            capture_output=True, timeout=5,
+        )
+        if r.returncode == 0:
+            return ["docker", "compose"]
+    except Exception:
+        pass
+    # Fallback to standalone
+    if shutil.which("docker-compose"):
+        return ["docker-compose"]
+    # Last resort — hope for the best
+    return ["docker", "compose"]
+
+
 def run_docker(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
-    """Run a docker command, using sg docker if needed for permissions."""
+    """Run a docker command, using sg docker if needed for permissions.
+
+    Automatically translates ``["docker", "compose", ...]`` to the correct
+    compose invocation for this system (plugin vs standalone).
+    """
+    # Rewrite compose commands if needed
+    if len(cmd) >= 2 and cmd[0] == "docker" and cmd[1] == "compose":
+        compose = _compose_cmd()
+        cmd = compose + cmd[2:]
+
     if _docker_needs_sg():
         # Wrap: sg docker -c "docker ..."
         full_cmd = " ".join(cmd)
