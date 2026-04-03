@@ -281,6 +281,20 @@ def start_sandbox(
     if not build_sandbox(project_path, print_fn=print_fn):
         return False
 
+    # Remove stale containers that block compose up
+    run_docker(
+        ["docker", "rm", "-f", container_name],
+        capture_output=True, timeout=10,
+    )
+    # Also remove any renamed leftover containers (docker-compose v1 renames)
+    _ps = run_docker(
+        ["docker", "ps", "-aq", "--filter", f"name={container_name}"],
+        capture_output=True, text=True, timeout=10,
+    )
+    for _cid in (_ps.stdout or "").strip().splitlines():
+        if _cid.strip():
+            run_docker(["docker", "rm", "-f", _cid.strip()], capture_output=True, timeout=10)
+
     print_fn(f"Starting sandbox container '{container_name}'...")
     try:
         proc = run_docker(
@@ -289,10 +303,14 @@ def start_sandbox(
                 "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
                 "up", "-d",
             ],
-            timeout=120,
+            capture_output=True, text=True, timeout=120,
         )
         if proc.returncode != 0:
-            logger.error("Sandbox start failed (exit %d)", proc.returncode)
+            stderr = (proc.stderr or "").strip()
+            logger.error("Sandbox start failed (exit %d): %s", proc.returncode, stderr)
+            if stderr:
+                for line in stderr.splitlines()[-3:]:
+                    print_fn(f"  {line}")
             return False
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
         logger.error("Sandbox start error: %s", exc)
