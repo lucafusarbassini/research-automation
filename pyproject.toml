@@ -80,6 +80,12 @@ ricet = "cli.main:app"
 [tool.hatch.build.targets.wheel]
 packages = ["cli", "core"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"templates" = "templates"
+"defaults" = "defaults"
+"knowledge" = "knowledge"
+"scripts" = "scripts"
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",
