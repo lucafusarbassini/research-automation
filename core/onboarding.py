@@ -259,14 +259,34 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
             print_fn("  ffmpeg: not found (needed for audio; try: mamba install -c conda-forge ffmpeg)")
             results["ffmpeg"] = False
 
-    # 4. Docker check (don't auto-install, just report)
+    # 4. Docker + Docker Compose check (don't auto-install docker, just report)
     if shutil.which("docker"):
         print_fn("  docker: available")
         results["docker"] = True
+        # Check docker compose (plugin or standalone)
+        from core.devops import _compose_cmd
+        compose = _compose_cmd()
+        if compose == ["docker-compose"] or compose == ["docker", "compose"]:
+            # Verify it actually works
+            try:
+                _cr = subprocess.run(compose + ["version"], capture_output=True, timeout=5)
+                if _cr.returncode == 0:
+                    print_fn(f"  docker compose: available ({' '.join(compose)})")
+                    results["docker_compose"] = True
+                else:
+                    raise RuntimeError("exit non-zero")
+            except Exception:
+                print_fn("  docker compose: NOT available")
+                print_fn("    Install: sudo apt install docker-compose-plugin")
+                print_fn("         or: pip install docker-compose")
+                results["docker_compose"] = False
+        else:
+            results["docker_compose"] = True
     else:
-        print_fn("  docker: not installed (needed for overnight mode)")
+        print_fn("  docker: not installed (needed for ricet up / overnight mode)")
         print_fn("    Install: https://docs.docker.com/get-docker/")
         results["docker"] = False
+        results["docker_compose"] = False
 
     # 5a. uv - fast Python package manager (SOTA replacement for pip)
     if shutil.which("uv"):

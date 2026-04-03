@@ -266,6 +266,31 @@ def ensure_docker_ready() -> dict:
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         result["image_available"] = False
 
+    # 4. Check docker compose availability
+    compose = _compose_cmd()
+    result["compose_available"] = compose != ["docker", "compose"] or result.get("_compose_plugin_ok", False)
+    # Actually test it
+    try:
+        _test_cmd = compose + ["version"]
+        if _docker_needs_sg():
+            _test_r = subprocess.run(
+                ["sg", "docker", "-c", " ".join(_test_cmd)],
+                capture_output=True, timeout=5,
+            )
+        else:
+            _test_r = subprocess.run(_test_cmd, capture_output=True, timeout=5)
+        result["compose_available"] = _test_r.returncode == 0
+    except Exception:
+        result["compose_available"] = False
+
+    if not result["compose_available"]:
+        result["error"] = (
+            "Docker Compose is not available.\n"
+            "Install: sudo apt install docker-compose-plugin\n"
+            "     or: pip install docker-compose"
+        )
+        return result
+
     if not result["image_available"]:
         result["error"] = (
             f"Docker image '{RICET_DOCKER_IMAGE}' not found locally. "

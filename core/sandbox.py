@@ -232,10 +232,20 @@ def build_sandbox(project_path: Path, print_fn=print) -> bool:
                 "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
                 "build",
             ],
-            timeout=600,
+            capture_output=True, text=True, timeout=600,
         )
         if proc.returncode != 0:
-            logger.error("Sandbox build failed (exit %d)", proc.returncode)
+            stderr = (proc.stderr or "").strip()
+            logger.error("Sandbox build failed (exit %d): %s", proc.returncode, stderr)
+            if "unknown shorthand flag" in stderr or "is not a docker command" in stderr:
+                print_fn("Docker Compose is not available.")
+                print_fn("Install it:  sudo apt install docker-compose-plugin")
+                print_fn("         or: pip install docker-compose")
+            else:
+                print_fn(f"Sandbox build failed (exit {proc.returncode})")
+                if stderr:
+                    for line in stderr.splitlines()[-3:]:
+                        print_fn(f"  {line}")
             return False
         print_fn("Sandbox image built successfully.")
         return True
