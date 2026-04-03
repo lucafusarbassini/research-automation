@@ -53,27 +53,47 @@ def _docker_needs_sg() -> bool:
     return False
 
 
+_COMPOSE_CMD: list[str] | None = None  # cached after first check
+
+
 def _compose_cmd() -> list[str]:
     """Return the correct docker-compose command for this system.
 
     Prefers ``docker compose`` (v2 plugin), falls back to ``docker-compose``
-    (standalone v1/v2 binary).
+    (standalone v1/v2 binary). Respects sg docker if needed.
     """
-    # Check plugin first
+    global _COMPOSE_CMD
+    if _COMPOSE_CMD is not None:
+        return _COMPOSE_CMD
+
+    needs_sg = _docker_needs_sg()
+
+    # Check plugin: docker compose version
     try:
-        r = subprocess.run(
-            ["docker", "compose", "version"],
-            capture_output=True, timeout=5,
-        )
+        if needs_sg:
+            r = subprocess.run(
+                ["sg", "docker", "-c", "docker compose version"],
+                capture_output=True, timeout=5,
+            )
+        else:
+            r = subprocess.run(
+                ["docker", "compose", "version"],
+                capture_output=True, timeout=5,
+            )
         if r.returncode == 0:
-            return ["docker", "compose"]
+            _COMPOSE_CMD = ["docker", "compose"]
+            return _COMPOSE_CMD
     except Exception:
         pass
-    # Fallback to standalone
+
+    # Fallback to standalone binary
     if shutil.which("docker-compose"):
-        return ["docker-compose"]
-    # Last resort — hope for the best
-    return ["docker", "compose"]
+        _COMPOSE_CMD = ["docker-compose"]
+        return _COMPOSE_CMD
+
+    # Last resort
+    _COMPOSE_CMD = ["docker", "compose"]
+    return _COMPOSE_CMD
 
 
 def run_docker(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
