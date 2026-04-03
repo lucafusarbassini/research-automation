@@ -1658,11 +1658,23 @@ def up(
     console.print(f"[bold cyan]Creating screen session '{screen_name}'...[/bold cyan]")
 
     # Create detached screen running Claude (loop keeps screen alive on exit/crash)
-    _inner_script = (
-        f'while true; do {claude_cmd}; '
-        f'echo ""; echo "=== Claude exited. Restarting in 5s (Ctrl+C to stop) ==="; '
-        f'sleep 5; done'
-    )
+    if not no_docker:
+        # For docker: check container is running before exec, restart if needed
+        _inner_script = (
+            f'while true; do '
+            f'if ! docker inspect --format="{{{{.State.Running}}}}" {container_name} 2>/dev/null | grep -q true; then '
+            f'echo "Container not running. Restarting..."; '
+            f'docker start {container_name} 2>/dev/null || true; sleep 5; continue; fi; '
+            f'{claude_cmd}; '
+            f'echo ""; echo "=== Claude exited. Restarting in 5s (Ctrl+C to stop) ==="; '
+            f'sleep 5; done'
+        )
+    else:
+        _inner_script = (
+            f'while true; do {claude_cmd}; '
+            f'echo ""; echo "=== Claude exited. Restarting in 5s (Ctrl+C to stop) ==="; '
+            f'sleep 5; done'
+        )
     screen_cmd = [
         "screen", "-dmS", screen_name,
         "bash", "-c", _inner_script,
