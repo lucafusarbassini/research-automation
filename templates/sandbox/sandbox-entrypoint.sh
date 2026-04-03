@@ -57,7 +57,14 @@ if [ -d "${WORKSPACE}/.git" ]; then
     log "Existing workspace with git repo found — PRESERVING work (no copy)."
 elif [ -d "/project-source" ] && [ "$(ls -A /project-source 2>/dev/null)" ]; then
     log "First run: copying project files into workspace..."
-    cp -a /project-source/. "${WORKSPACE}/"
+    # Use rsync if available, otherwise cp with --exclude (exclude sandbox/ to
+    # avoid recursive copy when workspace is bind-mounted inside the project)
+    if command -v rsync &>/dev/null; then
+        rsync -a --exclude='sandbox/' /project-source/ "${WORKSPACE}/"
+    else
+        # cp -a with tar pipe to exclude sandbox/
+        (cd /project-source && tar cf - --exclude='sandbox' .) | (cd "${WORKSPACE}" && tar xf -)
+    fi
     chown -R agent:agent "${WORKSPACE}"
     log "Project files copied."
 else
