@@ -86,10 +86,23 @@ def _compose_cmd() -> list[str]:
     except Exception:
         pass
 
-    # Fallback to standalone binary
+    # Fallback to standalone binary — but only if it's v2+
+    # docker-compose v1 (<=1.29) has fatal incompatibilities with modern Docker
     if shutil.which("docker-compose"):
-        _COMPOSE_CMD = ["docker-compose"]
-        return _COMPOSE_CMD
+        try:
+            _vr = subprocess.run(
+                ["docker-compose", "version"], capture_output=True, text=True, timeout=5,
+            )
+            if _vr.returncode == 0 and "v2" in _vr.stdout.lower():
+                _COMPOSE_CMD = ["docker-compose"]
+                return _COMPOSE_CMD
+            else:
+                logger.warning(
+                    "docker-compose v1 detected — not supported. "
+                    "Install v2: sudo apt install docker-compose-plugin"
+                )
+        except Exception:
+            pass
 
     # Last resort
     _COMPOSE_CMD = ["docker", "compose"]
@@ -285,9 +298,9 @@ def ensure_docker_ready() -> dict:
 
     if not result["compose_available"]:
         result["error"] = (
-            "Docker Compose is not available.\n"
-            "Install: sudo apt install docker-compose-plugin\n"
-            "     or: pip install docker-compose"
+            "Docker Compose v2 is required but not available.\n"
+            "docker-compose v1 (standalone) is NOT supported — it crashes with modern Docker.\n"
+            "Install the v2 plugin: sudo apt install docker-compose-plugin"
         )
         return result
 

@@ -259,29 +259,76 @@ def auto_install_system_deps(*, print_fn=None) -> dict[str, bool]:
             print_fn("  ffmpeg: not found (needed for audio; try: mamba install -c conda-forge ffmpeg)")
             results["ffmpeg"] = False
 
-    # 4. Docker + Docker Compose check (don't auto-install docker, just report)
+    # 4. Docker + Docker Compose v2 check
+    #    docker-compose v1 (standalone, <=1.29) is incompatible with modern Docker Engine
+    #    and causes 'ContainerConfig' KeyError. We require the v2 plugin.
     if shutil.which("docker"):
         print_fn("  docker: available")
         results["docker"] = True
-        # Check docker compose (plugin or standalone)
-        from core.devops import _compose_cmd
-        compose = _compose_cmd()
-        if compose == ["docker-compose"] or compose == ["docker", "compose"]:
-            # Verify it actually works
-            try:
-                _cr = subprocess.run(compose + ["version"], capture_output=True, timeout=5)
-                if _cr.returncode == 0:
-                    print_fn(f"  docker compose: available ({' '.join(compose)})")
-                    results["docker_compose"] = True
-                else:
-                    raise RuntimeError("exit non-zero")
-            except Exception:
-                print_fn("  docker compose: NOT available")
+
+        # Check for docker compose v2 plugin (required)
+        _has_v2_plugin = False
+        try:
+            _cr = subprocess.run(
+                ["docker", "compose", "version"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if _cr.returncode == 0 and "v2" in _cr.stdout.lower():
+                _has_v2_plugin = True
+        except Exception:
+            pass
+
+        if not _has_v2_plugin:
+            # Try installing the plugin automatically
+            print_fn("  docker compose v2: NOT found — installing plugin...")
+            _installed = False
+            has_sudo = subprocess.run(
+                ["sudo", "-n", "true"], capture_output=True, timeout=3
+            ).returncode == 0
+            if has_sudo:
+                for _install_cmd in (
+                    ["sudo", "apt-get", "install", "-y", "docker-compose-plugin"],
+                    ["sudo", "yum", "install", "-y", "docker-compose-plugin"],
+                    ["sudo", "dnf", "install", "-y", "docker-compose-plugin"],
+                ):
+                    try:
+                        _ir = subprocess.run(_install_cmd, capture_output=True, timeout=120)
+                        if _ir.returncode == 0:
+                            _installed = True
+                            print_fn("  docker compose v2: installed")
+                            break
+                    except Exception:
+                        pass
+            if not _installed:
+                print_fn("  docker compose v2: NOT available (required for ricet)")
                 print_fn("    Install: sudo apt install docker-compose-plugin")
-                print_fn("         or: pip install docker-compose")
-                results["docker_compose"] = False
+                print_fn("    WARNING: docker-compose v1 (standalone) is NOT supported")
+            results["docker_compose"] = _installed
         else:
+            print_fn("  docker compose v2: available")
             results["docker_compose"] = True
+
+        # Tailscale operator hint
+        if shutil.which("tailscale"):
+            try:
+                _ts_serve = subprocess.run(
+                    ["tailscale", "serve", "status"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if _ts_serve.returncode != 0 and "Access denied" in (_ts_serve.stderr or ""):
+                    print_fn("  tailscale: needs operator permission for serve")
+                    print_fn("    Run once: sudo tailscale set --operator=$USER")
+                    has_sudo = subprocess.run(
+                        ["sudo", "-n", "true"], capture_output=True, timeout=3
+                    ).returncode == 0
+                    if has_sudo:
+                        subprocess.run(
+                            ["sudo", "tailscale", "set", f"--operator={__import__('os').environ.get('USER', 'user')}"],
+                            capture_output=True, timeout=5,
+                        )
+                        print_fn("  tailscale: operator set automatically")
+            except Exception:
+                pass
     else:
         print_fn("  docker: not installed (needed for ricet up / overnight mode)")
         print_fn("    Install: https://docs.docker.com/get-docker/")
