@@ -367,8 +367,9 @@ class MobileServer:
         self._routes[("GET", "/connect-info")] = self._handle_get_connect_info
         self._routes[("POST", "/project/create")] = self._handle_create_project
         self._routes[("GET", "/dashboard")] = self._handle_get_dashboard
-        self._routes[("GET", "/agents/output")] = self._handle_get_agent_outputs
         self._routes[("GET", "/dashboard/html")] = self._handle_get_dashboard_html
+        self._routes[("GET", "/screen/capture")] = self._handle_get_screen_capture
+        self._routes[("POST", "/todo")] = self._handle_post_todo
 
     @property
     def routes(self) -> dict[tuple[str, str], RouteHandler]:
@@ -465,11 +466,12 @@ class MobileServer:
 
     def _handle_post_voice(self, body: Optional[dict]) -> dict:
         text = (body or {}).get("text", "")
-        original_lang = ""
-        # Translate non-English voice input to English via Haiku
+        # Use client-provided language if available, fall back to detection
+        original_lang = (body or {}).get("source_lang", "")
         from core.voice import detect_language, translate_to_english
-        original_lang = detect_language(text)
-        if original_lang != "en":
+        if not original_lang:
+            original_lang = detect_language(text)
+        if original_lang and original_lang != "en":
             translated = translate_to_english(text, source_lang=original_lang)
             if translated and translated != text:
                 logger.info("Voice translated %s→en: %s → %s", original_lang, text[:40], translated[:40])
@@ -531,16 +533,20 @@ class MobileServer:
         if not name:
             return {"ok": False, "error": "missing_project_name"}
         task_id = uuid.uuid4().hex[:12]
+        # Inject to screen if available, fall back to TODO
+        injected = _inject_to_screen(prompt, self._screen_session) if self._screen_session else False
+        status = "injected" if injected else "queued"
         task = {
             "task_id": task_id,
             "prompt": prompt,
             "project": name,
-            "status": "queued",
+            "status": status,
         }
         self._tasks.append(task)
-        self._persist_task_to_todo(prompt, source=f"mobile:{name}")
-        logger.info("Project task queued: %s [%s] — %s", task_id, name, prompt[:80])
-        return {"ok": True, "task_id": task_id, "project": name, "status": "queued"}
+        if not injected:
+            self._persist_task_to_todo(prompt, source=f"mobile:{name}")
+        logger.info("Project task %s: %s [%s] — %s", status, task_id, name, prompt[:80])
+        return {"ok": True, "task_id": task_id, "project": name, "status": status}
 
     def _handle_get_connect_info(self, body: Optional[dict]) -> dict:
         fp = ""
@@ -610,16 +616,6 @@ class MobileServer:
         todo_path = Path("state/TODO.md")
         data["todo"] = todo_path.read_text()[:1000] if todo_path.exists() else ""
 
-        # Agent status
-        try:
-            from core.agents import get_active_agents_status, get_all_agent_outputs
-
-            data["agents"] = get_active_agents_status()
-            data["agent_outputs"] = get_all_agent_outputs(last_n=30)
-        except Exception:
-            data["agents"] = []
-            data["agent_outputs"] = {}
-
         # Resources
         try:
             from core.resources import monitor_resources
@@ -650,14 +646,43 @@ class MobileServer:
 
         return data
 
-    def _handle_get_agent_outputs(self, body: Optional[dict]) -> dict:
-        """Return verbose agent output buffers."""
+    def _handle_get_screen_capture(self, body: Optional[dict]) -> dict:
+        """Capture current screen session content via `screen -X hardcopy`."""
+        if not self._screen_session:
+            return {"ok": True, "content": ""}
+        import shutil
+        import tempfile
+        if not shutil.which("screen"):
+            return {"ok": True, "content": "screen not available"}
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
+            tmp_path = tmp.name
         try:
-            from core.agents import get_all_agent_outputs
-
-            return {"ok": True, "outputs": get_all_agent_outputs(last_n=50)}
+            result = subprocess.run(
+                ["screen", "-S", self._screen_session, "-X", "hardcopy", tmp_path],
+                capture_output=True, timeout=3,
+            )
+            if result.returncode != 0:
+                return {"ok": True, "content": "Screen session not reachable."}
+            content = Path(tmp_path).read_text(errors="replace")
+            # Strip trailing blank lines
+            lines = content.rstrip("\n").split("\n")
+            # Remove leading blank lines too
+            while lines and not lines[0].strip():
+                lines.pop(0)
+            return {"ok": True, "content": "\n".join(lines)}
         except Exception as exc:
-            return {"ok": True, "outputs": {}, "note": str(exc)}
+            return {"ok": True, "content": f"Error: {exc}"}
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
+    def _handle_post_todo(self, body: Optional[dict]) -> dict:
+        """Save a task directly to TODO.md (skip screen injection)."""
+        prompt = (body or {}).get("prompt", "") or (body or {}).get("text", "")
+        if not prompt:
+            return {"ok": False, "error": "empty_prompt"}
+        self._persist_task_to_todo(prompt, source="mobile-todo")
+        task_id = uuid.uuid4().hex[:12]
+        return {"ok": True, "task_id": task_id, "status": "saved_to_todo"}
 
     def _handle_get_dashboard_html(self, body: Optional[dict]) -> dict:
         """Serve standalone dashboard HTML page."""
@@ -845,7 +870,7 @@ def _make_handler(mobile: MobileServer) -> type:
                 self._send_content(MANIFEST_JSON, "application/json")
                 return
             if path == "/sw.js":
-                self._send_content(SERVICE_WORKER_JS, "application/javascript")
+                self._send_content(SERVICE_WORKER_JS, "application/javascript", no_cache=True)
                 return
             if path == "/icon.svg":
                 self._send_content(ICON_SVG, "image/svg+xml")
@@ -886,14 +911,17 @@ def _make_handler(mobile: MobileServer) -> type:
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
             self.end_headers()
             self.wfile.write(payload)
 
-        def _send_content(self, content: str, content_type: str) -> None:
+        def _send_content(self, content: str, content_type: str, no_cache: bool = False) -> None:
             payload = content.encode()
             self.send_response(200)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(payload)))
+            if no_cache:
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
             self.end_headers()
             self.wfile.write(payload)
 

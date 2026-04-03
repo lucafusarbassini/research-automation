@@ -51,3 +51,8 @@ site.json
 
 # Generated slide decks
 slides_output/
+
+# Sandbox
+sandbox/.env
+sandbox/patches/
+sandbox/backups/

@@ -21,6 +21,18 @@ log "Timeout: ${SANDBOX_TIMEOUT_HOURS} hours"
 log "Workspace: ${WORKSPACE}"
 
 # -------------------------------------------------------
+# 0. Remap agent UID/GID to match host user (avoids permission issues on bind mounts)
+# -------------------------------------------------------
+HOST_UID="${HOST_UID:-1000}"
+HOST_GID="${HOST_GID:-1000}"
+if [ "$HOST_UID" != "1000" ] || [ "$HOST_GID" != "1000" ]; then
+    log "Remapping agent UID:GID to ${HOST_UID}:${HOST_GID}"
+    groupmod -g "$HOST_GID" agent 2>/dev/null || true
+    usermod -u "$HOST_UID" -g "$HOST_GID" agent 2>/dev/null || true
+    chown -R agent:agent /home/agent /agent-logs 2>/dev/null || true
+fi
+
+# -------------------------------------------------------
 # 1. (Optional) Start Docker-in-Docker daemon
 # -------------------------------------------------------
 if command -v dockerd-entrypoint.sh &>/dev/null; then
@@ -60,7 +72,22 @@ if [ -d "/claude-source" ] && [ "$(ls -A /claude-source 2>/dev/null)" ]; then
     mkdir -p /home/agent/.claude
     cp -a /claude-source/. /home/agent/.claude/
     chown -R agent:agent /home/agent/.claude
-    log "Claude credentials copied."
+    # Ensure dangerous mode prompt is skipped and /workspace is trusted
+    SETTINGS_FILE="/home/agent/.claude/settings.json"
+    if [ -f "$SETTINGS_FILE" ]; then
+        $RUN_AS python3 -c "
+import json, pathlib
+p = pathlib.Path('$SETTINGS_FILE')
+d = json.loads(p.read_text())
+d['skipDangerousModePermissionPrompt'] = True
+p.write_text(json.dumps(d, indent=2))
+" 2>/dev/null || true
+    fi
+    # Pre-accept workspace trust by creating project config
+    PROJ_DIR="/home/agent/.claude/projects/-workspace"
+    mkdir -p "$PROJ_DIR"
+    chown -R agent:agent "$PROJ_DIR"
+    log "Claude credentials copied and configured."
 else
     log "WARNING: No Claude credentials mounted. Agent may not be able to authenticate."
 fi

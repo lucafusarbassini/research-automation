@@ -16,7 +16,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # Model to use for lightweight CLI calls (literature search, TODO generation, etc.)
-CLAUDE_CLI_MODEL = "claude-3-5-haiku-20241022"
+CLAUDE_CLI_MODEL = "claude-haiku-4-5-20251001"
 
 # Model aliases for callers that need a specific tier
 CLAUDE_MODEL_ALIASES: dict[str, str] = {

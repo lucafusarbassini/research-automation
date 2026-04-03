@@ -32,7 +32,7 @@ MANIFEST_JSON = """\
 }"""
 
 SERVICE_WORKER_JS = """\
-const CACHE_NAME = 'ricet-pwa-v1';
+const CACHE_NAME = 'ricet-pwa-v4';
 const SHELL_URLS = ['/', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', e => {
@@ -51,9 +51,11 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  if (url.pathname.startsWith('/project') || url.pathname === '/status'
-      || url.pathname === '/voice' || url.pathname === '/task'
-      || url.pathname === '/projects' || url.pathname === '/connect-info') {
+  if (url.pathname.startsWith('/project') || url.pathname.startsWith('/screen')
+      || url.pathname === '/status' || url.pathname === '/voice'
+      || url.pathname === '/task' || url.pathname === '/todo'
+      || url.pathname === '/projects' || url.pathname === '/connect-info'
+      || url.pathname === '/dashboard') {
     e.respondWith(fetch(e.request).catch(() =>
       new Response(JSON.stringify({ok: false, error: 'offline'}),
         {headers: {'Content-Type': 'application/json'}})
@@ -147,12 +149,12 @@ select{appearance:none;-webkit-appearance:none}
   <div id="projectList"><div class="card"><div class="meta">Loading projects...</div></div></div>
 </div>
 
-<!-- Monitor (live agent output) -->
+<!-- Monitor (live screen output) -->
 <div class="panel" id="panel-monitor">
   <div class="card">
-    <h3>Live Agent Output</h3>
-    <div id="agentOutputs" style="font-family:monospace;font-size:12px;max-height:70vh;overflow-y:auto;white-space:pre-wrap;background:#0a0a15;padding:12px;border-radius:8px;color:#4caf50">
-      Loading agent output...
+    <h3>Screen Output</h3>
+    <div id="screenOutput" style="font-family:monospace;font-size:11px;max-height:70vh;overflow-y:auto;white-space:pre-wrap;background:#0a0a15;padding:12px;border-radius:8px;color:#4caf50;line-height:1.3">
+      Loading screen output...
     </div>
   </div>
   <div class="card">
@@ -163,15 +165,15 @@ select{appearance:none;-webkit-appearance:none}
 
 <!-- Tasks -->
 <div class="panel" id="panel-tasks">
-  <div class="card" style="margin-bottom:16px">
-    <h3>New Project</h3>
-    <input id="newProjectName" placeholder="Project name..." style="margin-bottom:8px">
-    <textarea id="newProjectGoal" placeholder="Describe the project goal..."></textarea>
-    <button class="btn" id="createProject">Create Project</button>
-    <div id="createResult"></div>
-  </div>
-  <select id="projectSelect"><option value="">Select project...</option></select>
   <textarea id="taskInput" placeholder="Describe the task..."></textarea>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px;background:#1a1a2e;border-radius:8px;border:1px solid #333;cursor:pointer">
+      <input type="radio" name="taskDest" value="claude" checked> Direct to Claude
+    </label>
+    <label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px;background:#1a1a2e;border-radius:8px;border:1px solid #333;cursor:pointer">
+      <input type="radio" name="taskDest" value="todo"> Save to TODO
+    </label>
+  </div>
   <button class="btn" id="submitTask">Submit Task</button>
   <div id="taskResult"></div>
 </div>
@@ -218,8 +220,15 @@ select{appearance:none;-webkit-appearance:none}
     <div class="meta" id="voiceStatus">Tap to speak</div>
   </div>
   <div class="transcript" id="transcript"></div>
-  <button class="btn" id="sendVoice" disabled>Send as Task</button>
-  <select id="voiceProject"><option value="">Select project...</option></select>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px;background:#1a1a2e;border-radius:8px;border:1px solid #333;cursor:pointer">
+      <input type="radio" name="voiceDest" value="claude" checked> Direct to Claude
+    </label>
+    <label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px;background:#1a1a2e;border-radius:8px;border:1px solid #333;cursor:pointer">
+      <input type="radio" name="voiceDest" value="todo"> Save to TODO
+    </label>
+  </div>
+  <button class="btn" id="sendVoice" disabled>Send</button>
 </div>
 
 <!-- Settings -->
@@ -301,28 +310,22 @@ select{appearance:none;-webkit-appearance:none}
     populateSelects(data.projects);
   }
 
-  function populateSelects(projects) {
-    ['projectSelect','voiceProject'].forEach(id => {
-      const sel = document.getElementById(id);
-      sel.innerHTML = '<option value="">Select project...</option>'
-        + projects.map(p => '<option value="' + esc(p.name) + '">' + esc(p.name) + '</option>').join('');
-    });
-  }
+  function populateSelects(projects) {}
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
   // Tasks
   document.getElementById('submitTask').addEventListener('click', async () => {
-    const project = document.getElementById('projectSelect').value;
     const prompt = document.getElementById('taskInput').value.trim();
     if (!prompt) { toast('Enter a task description'); return; }
-    const path = project ? '/project/task?name=' + encodeURIComponent(project) : '/task';
+    const dest = document.querySelector('input[name="taskDest"]:checked').value;
+    const path = dest === 'todo' ? '/todo' : '/task';
     const data = await api(path, {method:'POST', body: JSON.stringify({prompt})});
     if (data.ok) {
-      toast('Task added to TODO.md (' + (data.task_id || '') + ')');
+      const msg = dest === 'todo' ? 'Saved to TODO.md' : (data.status === 'injected' ? 'Sent to Claude!' : 'Queued (no active session)');
+      toast(msg);
       document.getElementById('taskInput').value = '';
-      document.getElementById('taskResult').innerHTML =
-        '<div style="color:#4caf50;margin-top:8px">Task queued. Run <code>ricet overnight</code> or <code>ricet start</code> to execute.</div>';
+      document.getElementById('taskResult').innerHTML = '<div style="color:' + (data.status === 'injected' ? '#4caf50' : '#ff9800') + ';margin-top:8px">' + esc(msg) + '</div>';
     } else {
       toast('Error: ' + (data.error || 'unknown'));
     }
@@ -338,8 +341,8 @@ select{appearance:none;-webkit-appearance:none}
   let voiceText = '';
 
   const voiceLangSelect = document.getElementById('voiceLang');
-  const savedLang = localStorage.getItem('voiceLanguage') || '';
-  if (savedLang) voiceLangSelect.value = savedLang;
+  const savedLang = localStorage.getItem('voiceLanguage') || 'it-IT';
+  voiceLangSelect.value = savedLang;
   voiceLangSelect.addEventListener('change', () => {
     localStorage.setItem('voiceLanguage', voiceLangSelect.value);
   });
@@ -354,7 +357,17 @@ select{appearance:none;-webkit-appearance:none}
       sendVoice.disabled = !voiceText.trim();
     };
     recognition.onend = () => { micBtn.classList.remove('listening'); voiceStatus.textContent = 'Tap to speak'; };
-    recognition.onerror = () => { micBtn.classList.remove('listening'); voiceStatus.textContent = 'Error - tap to retry'; };
+    recognition.onerror = (e) => {
+      micBtn.classList.remove('listening');
+      const reason = e.error || 'unknown';
+      voiceStatus.textContent = 'Error: ' + reason;
+      transcriptEl.textContent = 'Speech error: ' + reason + '. ';
+      if (reason === 'not-allowed') transcriptEl.textContent += 'Microphone permission denied. Check browser site settings.';
+      else if (reason === 'network') transcriptEl.textContent += 'Network error — speech service unreachable.';
+      else if (reason === 'service-not-available') transcriptEl.textContent += 'Speech service not available in this browser/context.';
+      else if (reason === 'aborted') transcriptEl.textContent += 'Recognition was aborted.';
+      else if (reason === 'no-speech') transcriptEl.textContent += 'No speech detected. Try again.';
+    };
   } else {
     micBtn.style.opacity = '.3';
     voiceStatus.textContent = 'Speech not supported in this browser';
@@ -374,59 +387,47 @@ select{appearance:none;-webkit-appearance:none}
 
   sendVoice.addEventListener('click', async () => {
     if (!voiceText.trim()) return;
-    const project = document.getElementById('voiceProject').value;
-    const path = project ? '/project/task?name=' + encodeURIComponent(project) : '/voice';
-    const body = project ? {prompt: voiceText} : {text: voiceText};
+    const lang = voiceLangSelect.value;
+    const langCode = lang ? lang.split('-')[0] : '';
+    const dest = document.querySelector('input[name="voiceDest"]:checked').value;
+    const path = dest === 'todo' ? '/todo' : '/voice';
+    const body = dest === 'todo'
+      ? {prompt: voiceText}
+      : {text: voiceText, source_lang: langCode};
     const data = await api(path, {method:'POST', body: JSON.stringify(body)});
-    if (data.ok) { toast('Voice task sent'); voiceText = ''; transcriptEl.textContent = ''; sendVoice.disabled = true; }
-    else toast('Error: ' + (data.error || 'unknown'));
-  });
-
-  // Create Project
-  document.getElementById('createProject').addEventListener('click', async () => {
-    const name = document.getElementById('newProjectName').value.trim();
-    const goal = document.getElementById('newProjectGoal').value.trim();
-    if (!name || !goal) { toast('Enter project name and goal'); return; }
-    const data = await api('/project/create', {method:'POST', body: JSON.stringify({name, goal})});
-    const el = document.getElementById('createResult');
     if (data.ok) {
-      toast('Project creating: ' + name);
-      el.innerHTML = '<div style="color:#4caf50;margin-top:8px">Project "' + esc(name) + '" is being created...</div>';
-      document.getElementById('newProjectName').value = '';
-      document.getElementById('newProjectGoal').value = '';
-      setTimeout(loadDashboard, 5000);
-    } else {
-      el.innerHTML = '<div style="color:#f44336;margin-top:8px">Error: ' + esc(data.error || 'unknown') + '</div>';
-    }
+      const msg = dest === 'todo' ? 'Saved to TODO.md' : (data.injected ? 'Sent to Claude!' : 'Voice task queued');
+      toast(msg);
+      voiceText = ''; transcriptEl.textContent = ''; sendVoice.disabled = true;
+    } else toast('Error: ' + (data.error || 'unknown'));
   });
 
-  // Monitor tab - live agent output
+  // Monitor tab - live screen output
   async function loadMonitor() {
-    const data = await api('/agents/output');
-    const el = document.getElementById('agentOutputs');
-    if (data.ok && data.outputs) {
-      const keys = Object.keys(data.outputs);
-      if (keys.length === 0) {
-        el.textContent = 'No agent output yet. Start a session or overnight run.';
-      } else {
-        let html = '';
-        for (const agent of keys) {
-          html += '<div style="color:#e94560;font-weight:bold;margin-top:8px">[' + esc(agent) + ']</div>';
-          const lines = data.outputs[agent];
-          for (const line of lines) {
-            html += '<div style="color:#aaa">' + esc(line) + '</div>';
-          }
-        }
-        el.innerHTML = html;
-        el.scrollTop = el.scrollHeight;
-      }
+    const data = await api('/screen/capture');
+    const el = document.getElementById('screenOutput');
+    if (data.ok && data.content) {
+      el.textContent = data.content;
+      el.scrollTop = el.scrollHeight;
+    } else if (data.ok) {
+      el.textContent = 'No screen session active.';
     }
     // Resources
     const dash = await api('/dashboard');
-    if (dash.ok && dash.resources) {
-      const r = dash.resources;
-      document.getElementById('monitorResources').innerHTML =
-        'CPU: ' + (r.cpu_percent||0) + '% | RAM: ' + (r.ram_used_gb||0).toFixed(1) + '/' + (r.ram_total_gb||0).toFixed(1) + ' GB | Disk free: ' + (r.disk_free_gb||0).toFixed(1) + ' GB';
+    if (dash.ok) {
+      let html = '';
+      if (dash.resources) {
+        const r = dash.resources;
+        html += 'CPU: ' + (r.cpu_percent||0) + '% | RAM: ' + (r.ram_used_gb||0).toFixed(1) + '/' + (r.ram_total_gb||0).toFixed(1) + ' GB | Disk: ' + (r.disk_free_gb||0).toFixed(1) + ' GB free';
+      }
+      if (dash.claude_usage) {
+        const u = dash.claude_usage;
+        html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #333">';
+        html += 'Claude: ' + (u.percent_used||0) + '% used';
+        if (u.resets_at) html += ' | Resets: ' + u.resets_at;
+        html += '</div>';
+      }
+      document.getElementById('monitorResources').innerHTML = html || 'No data';
     }
   }
   setInterval(loadMonitor, 3000);

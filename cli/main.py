@@ -1409,6 +1409,527 @@ def start(
     auto_commit(f"ricet start: end session {session_name}")
 
 
+def _derive_project_name(project_path: Path) -> str:
+    """Derive a project name from GOAL.md header or directory name."""
+    import re
+    goal_file = project_path / "knowledge" / "GOAL.md"
+    if goal_file.exists():
+        for line in goal_file.read_text().splitlines()[:5]:
+            line = line.strip()
+            if line.startswith("#"):
+                name = re.sub(r"[^a-zA-Z0-9_-]", "-", line.lstrip("# ").strip())
+                name = re.sub(r"-+", "-", name).strip("-")[:40]
+                if name:
+                    return name.lower()
+    return project_path.name.lower()
+
+
+def _project_port(project_name: str, base_port: int = 8777) -> int:
+    """Derive a unique port from project name (8777-8877 range)."""
+    h = sum(ord(c) for c in project_name)
+    return base_port + (h % 100)
+
+
+@app.command()
+def up(
+    screen_name: str = typer.Option("", "--screen", "-s", help="Screen session name (default: project name)"),
+    port: int = typer.Option(0, "--port", "-p", help="Mobile server port (default: auto from project name)"),
+    no_docker: bool = typer.Option(
+        False,
+        "--no-docker",
+        help=(
+            "Skip Docker sandbox. Claude will run directly on the host with "
+            "--dangerously-skip-permissions. Use only if Docker is unavailable."
+        ),
+    ),
+    no_mobile: bool = typer.Option(False, "--no-mobile", help="Skip mobile server + Tailscale"),
+    no_remote: bool = typer.Option(False, "--no-remote", help="Skip /remote-control auto-injection"),
+    timeout_hours: int = typer.Option(24, "--timeout", "-t", help="Sandbox watchdog timeout (hours)"),
+):
+    """Launch a persistent Claude session with sandbox, screen, and all input channels.
+
+    Sets up:
+    1. Docker sandbox with --dangerouslySkipPermissions (safe isolation)
+    2. GNU Screen session (survives disconnects)
+    3. Mobile dashboard + Tailscale (voice + text from phone)
+    4. Claude /remote-control (QR code for Claude app on phone)
+
+    Three ways to interact with the running Claude:
+    - CLI:       screen -r <screen-name>
+    - Phone app: scan the /remote-control QR code
+    - Dashboard: open the Tailscale URL in phone browser (voice + text)
+
+    Multiple projects can run simultaneously — each gets its own screen,
+    container, and port derived from the project name.
+    """
+    import os
+    import signal
+    import sys
+    import time
+
+    project_path = Path.cwd()
+
+    # --- 0. Project identity ---
+    project_name = _derive_project_name(project_path)
+    if not screen_name:
+        screen_name = project_name
+    if port == 0:
+        port = _project_port(project_name)
+    container_name = f"ricet-{project_name}"
+
+    console.print(f"[bold]Project:[/bold] {project_name}")
+    console.print(f"[bold]Screen:[/bold]  {screen_name}  |  [bold]Port:[/bold] {port}  |  [bold]Container:[/bold] {container_name}")
+
+    # Register project in global registry
+    try:
+        from core.multi_project import register_project as _reg_proj
+        _reg_proj(project_name, project_path)
+    except Exception as exc:
+        console.print(f"[dim]Could not register project: {exc}[/dim]")
+
+    # --- 1. Docker sandbox setup ---
+    if not no_docker:
+        from core.devops import ensure_docker_ready
+        from core.sandbox import (
+            _set_env_var,
+            get_sandbox_dir,
+            is_sandbox_running,
+            sandbox_exists,
+            setup_sandbox,
+            start_sandbox,
+        )
+
+        docker_status = ensure_docker_ready()
+        _docker_usable = (
+            docker_status["docker_installed"]
+            and docker_status["daemon_running"]
+        )
+
+        # Try sg docker if needed (same logic as overnight)
+        if _docker_usable:
+            try:
+                subprocess.run(
+                    ["docker", "info"], capture_output=True, text=True, timeout=10
+                ).check_returncode()
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                try:
+                    subprocess.run(
+                        ["sg", "docker", "-c", "docker info"],
+                        capture_output=True, text=True, timeout=10,
+                    ).check_returncode()
+                    # Re-exec under docker group
+                    console.print("[dim]Re-executing under docker group...[/dim]")
+                    os.execvp("sg", ["sg", "docker", "-c", " ".join(sys.argv)])
+                except Exception:
+                    _docker_usable = False
+
+        if not _docker_usable:
+            if not docker_status["docker_installed"]:
+                console.print(
+                    "[red]Docker is not installed.[/red]\n"
+                    "Install: https://docs.docker.com/get-docker/\n"
+                    "Or use --no-docker (not recommended)."
+                )
+            elif not docker_status["daemon_running"]:
+                console.print(
+                    "[red]Docker daemon is not running.[/red]\n"
+                    "Start: [bold]sudo systemctl start docker[/bold]\n"
+                    "Or use --no-docker."
+                )
+            else:
+                console.print(
+                    "[red]Cannot access Docker.[/red]\n"
+                    "Fix: [bold]sudo usermod -aG docker $USER[/bold] then re-login.\n"
+                    "Or use --no-docker."
+                )
+            raise typer.Exit(1)
+
+        # Set up sandbox infrastructure (always refresh critical files)
+        if not sandbox_exists(project_path):
+            console.print("[bold cyan]Setting up sandbox infrastructure...[/bold cyan]")
+            if not setup_sandbox(project_path, print_fn=lambda m: console.print(f"  {m}")):
+                console.print("[red]Failed to set up sandbox.[/red]")
+                raise typer.Exit(1)
+        else:
+            # Refresh entrypoint/compose from templates (may have been updated)
+            import shutil as _shutil
+            _tmpl = Path(__file__).parent.parent / "templates" / "sandbox"
+            _sdir = get_sandbox_dir(project_path)
+            for _f in ("sandbox-entrypoint.sh", "docker-compose.sandbox.yml"):
+                _src = _tmpl / _f
+                if _src.exists():
+                    _shutil.copy2(_src, _sdir / _f)
+            # Ensure WORKSPACE_PATH is set for bind mount
+            workspace_dir = project_path / "sandbox" / "workspace"
+            workspace_dir.mkdir(parents=True, exist_ok=True)
+            _set_env_var(_sdir / ".env", "WORKSPACE_PATH", str(workspace_dir.resolve()))
+
+        # Set project-specific container name and host UID/GID in sandbox .env
+        sandbox_env = get_sandbox_dir(project_path) / ".env"
+        _set_env_var(sandbox_env, "CONTAINER_NAME", container_name)
+        _set_env_var(sandbox_env, "HOST_UID", str(os.getuid()))
+        _set_env_var(sandbox_env, "HOST_GID", str(os.getgid()))
+
+        # Start container
+        if not is_sandbox_running(project_path):
+            console.print("[bold cyan]Starting sandbox container...[/bold cyan]")
+            if not start_sandbox(
+                project_path,
+                timeout_hours=timeout_hours,
+                print_fn=lambda m: console.print(f"  {m}"),
+            ):
+                console.print("[red]Failed to start sandbox.[/red]")
+                raise typer.Exit(1)
+        else:
+            console.print("[dim]Sandbox container already running.[/dim]")
+
+        # Wait for container to be fully ready (entrypoint copies creds, etc.)
+        console.print("[dim]Waiting for container to be ready...[/dim]")
+        for _wait_i in range(15):
+            _ready = subprocess.run(
+                ["docker", "exec", container_name, "test", "-f", "/home/agent/.claude/.credentials.json"],
+                capture_output=True,
+            ).returncode == 0
+            if _ready:
+                break
+            time.sleep(1)
+
+        # Detect user-switch tool inside container (gosu on Debian, su-exec on Alpine)
+        _has_gosu = subprocess.run(
+            ["docker", "exec", container_name, "which", "gosu"],
+            capture_output=True,
+        ).returncode == 0
+        _run_as = "gosu agent" if _has_gosu else "su-exec agent"
+
+        # Verify Claude CLI works inside the container
+        console.print("[dim]Verifying Claude auth inside sandbox...[/dim]")
+        _auth_ok = False
+        _auth_check = subprocess.run(
+            ["docker", "exec", container_name, "bash", "-c",
+             f"{_run_as} claude --version"],
+            capture_output=True, text=True, timeout=15,
+        )
+        if _auth_check.returncode != 0:
+            console.print("[yellow]Claude CLI check failed inside container.[/yellow]")
+            console.print(f"  [bold]Run this to login, then ricet up again:[/bold]")
+            console.print(f"  docker exec -it {container_name} {_run_as} claude auth login")
+            console.print("")
+            console.print("[dim]Starting screen anyway — you can login from inside.[/dim]")
+        else:
+            _auth_ok = True
+            console.print(f"  [green]Claude CLI OK: {_auth_check.stdout.strip()}[/green]")
+
+        # The claude command to run inside the container
+        claude_cmd = (
+            f"docker exec -it {container_name} {_run_as} "
+            f"claude --dangerously-skip-permissions --model opus"
+        )
+    else:
+        console.print(
+            "[yellow]Running WITHOUT Docker sandbox. "
+            "Claude will have full host access.[/yellow]"
+        )
+        claude_cmd = "claude --dangerously-skip-permissions --model opus"
+
+    # --- 2. Screen session ---
+    existing = subprocess.run(
+        ["screen", "-ls"], capture_output=True, text=True
+    )
+    import re
+    if re.search(rf'\d+\.{re.escape(screen_name)}\s', existing.stdout):
+        console.print(f"[yellow]Screen session '{screen_name}' already exists.[/yellow]")
+        console.print(f"  Attach: [bold]screen -r {screen_name}[/bold]")
+        console.print(f"  Kill first: [bold]screen -S {screen_name} -X quit[/bold]")
+        # Start mobile server for existing session if needed
+        if not no_mobile:
+            console.print(f"\n[bold cyan]Starting mobile server for existing session...[/bold cyan]")
+            _start_mobile_for_up(console, screen_name, port)
+        return
+
+    console.print(f"[bold cyan]Creating screen session '{screen_name}'...[/bold cyan]")
+
+    # Create detached screen running Claude (loop keeps screen alive on exit/crash)
+    _inner_script = (
+        f'while true; do {claude_cmd}; '
+        f'echo ""; echo "=== Claude exited. Restarting in 5s (Ctrl+C to stop) ==="; '
+        f'sleep 5; done'
+    )
+    screen_cmd = [
+        "screen", "-dmS", screen_name,
+        "bash", "-c", _inner_script,
+    ]
+    result = subprocess.run(screen_cmd)
+    if result.returncode != 0:
+        console.print("[red]Failed to create screen session.[/red]")
+        raise typer.Exit(1)
+
+    # Verify screen started
+    time.sleep(2)
+    verify = subprocess.run(["screen", "-ls"], capture_output=True, text=True)
+    if screen_name not in verify.stdout:
+        console.print("[red]Screen session did not start.[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[green]Screen session '{screen_name}' started with Claude.[/green]")
+
+    # --- 3. Mobile server + Tailscale ---
+    if not no_mobile:
+        _start_mobile_for_up(console, screen_name, port)
+
+    # --- 4. Remote control ---
+    # Track whether auth was OK (set by docker path above; always True for no-docker)
+    _auth_ok = locals().get("_auth_ok", True)
+    if not no_remote and _auth_ok:
+        console.print("[dim]Waiting for Claude to initialize before injecting /remote-control (30s)...[/dim]")
+        time.sleep(30)
+        rc_result = subprocess.run(
+            ["screen", "-S", screen_name, "-X", "stuff", "/remote-control\r"],
+            capture_output=True,
+        )
+        if rc_result.returncode == 0:
+            console.print("[green]/remote-control injected — attach to screen to see QR code.[/green]")
+        else:
+            console.print("[yellow]Could not inject /remote-control. Do it manually after attaching.[/yellow]")
+    elif not _auth_ok:
+        console.print("[yellow]Skipping /remote-control injection — Claude auth not verified.[/yellow]")
+        console.print("  After logging in, type /remote-control manually in the Claude session.")
+
+    # --- 5. VS Code hint ---
+    workspace_dir = project_path / "sandbox" / "workspace"
+    if workspace_dir.exists() and not no_docker:
+        console.print(f"\n[bold]VS Code workspace:[/bold] {workspace_dir}")
+        console.print(f"  Open this folder in VS Code to see sandbox files in real time.")
+
+    # --- Summary ---
+    console.print(f"\n[bold green]ricet is up![/bold green]")
+
+    if not _auth_ok and not no_docker:
+        console.print(f"\n[bold yellow]First-time setup (once per container rebuild):[/bold yellow]")
+        console.print(f"  1. [bold]screen -r {screen_name}[/bold]")
+        console.print(f"  2. If Claude shows a login prompt, run:")
+        console.print(f"     [bold]docker exec -it {container_name} {_run_as} claude auth login[/bold]")
+        console.print(f"     Then exit the container shell and the screen session will auto-restart Claude.")
+        console.print(f"  3. Once Claude is running, type [bold]/remote-control[/bold] to get the QR code")
+        console.print(f"  4. Detach from screen: [bold]Ctrl+A[/bold] then [bold]D[/bold]")
+
+    console.print(f"\n[bold]Three ways to interact:[/bold]")
+    console.print(f"  1. CLI:        [bold]screen -r {screen_name}[/bold]")
+    console.print(f"  2. Phone app:  Attach to screen, type [bold]/remote-control[/bold], scan QR")
+    console.print(f"  3. Dashboard:  Open Tailscale URL on phone (Voice + Tasks)")
+    if not no_docker:
+        console.print(f"\n[bold]Sandbox:[/bold]")
+        console.print(f"  ricet sandbox status    # Container status")
+        console.print(f"  ricet sandbox logs      # Claude output")
+        console.print(f"  VS Code: open sandbox/workspace/")
+    console.print(f"\n[bold]To stop:[/bold]  ricet down")
+
+
+@app.command()
+def down(
+    screen_name: str = typer.Option("", "--screen", "-s", help="Screen session name (default: project name)"),
+    port: int = typer.Option(0, "--port", "-p", help="Mobile server port (default: auto)"),
+    keep_sandbox: bool = typer.Option(False, "--keep-sandbox", help="Don't stop the sandbox container"),
+):
+    """Stop a running ricet session (screen + mobile + sandbox)."""
+    import os as _os
+    import signal as _sig
+
+    project_name = _derive_project_name(Path.cwd())
+    if not screen_name:
+        screen_name = project_name
+    if port == 0:
+        port = _project_port(project_name)
+
+    # Kill mobile keepalive process
+    pid_file = Path.home() / ".ricet" / "mobile_keepalive.pid"
+    if pid_file.exists():
+        try:
+            keepalive_pid = int(pid_file.read_text().strip())
+            _os.kill(keepalive_pid, _sig.SIGTERM)
+            pid_file.unlink(missing_ok=True)
+            console.print(f"  [dim]Mobile keepalive (PID {keepalive_pid}) stopped.[/dim]")
+        except (ProcessLookupError, ValueError):
+            pid_file.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    # Stop mobile server
+    console.print("[bold]Stopping mobile server...[/bold]")
+    subprocess.run(f"fuser -k {port}/tcp", shell=True, capture_output=True)
+    console.print("  [green]Mobile server stopped.[/green]")
+
+    # Stop tailscale serve — try turning off the specific HTTPS port,
+    # then fall back to full reset if only one project is served.
+    ts_current = subprocess.run(
+        ["tailscale", "serve", "status"], capture_output=True, text=True
+    )
+    proxy_count = ts_current.stdout.count("proxy ")
+    if proxy_count <= 1:
+        # Only this project — full reset is safe
+        subprocess.run(["tailscale", "serve", "reset"], capture_output=True)
+    else:
+        # Multiple projects — try to remove just this one's path
+        subprocess.run(
+            ["tailscale", "serve", "--set-path", f"/{screen_name}", "off"],
+            capture_output=True,
+        )
+    console.print(f"  [dim]Tailscale serve for '{screen_name}' cleared.[/dim]")
+
+    # Kill screen session
+    result = subprocess.run(
+        ["screen", "-S", screen_name, "-X", "quit"],
+        capture_output=True,
+    )
+    if result.returncode == 0:
+        console.print(f"  [green]Screen session '{screen_name}' terminated.[/green]")
+    else:
+        console.print(f"  [dim]Screen session '{screen_name}' was not running.[/dim]")
+
+    # Stop sandbox
+    if not keep_sandbox:
+        from core.sandbox import is_sandbox_running, stop_sandbox
+        project_path = Path.cwd()
+        if is_sandbox_running(project_path):
+            console.print("[bold]Stopping sandbox container...[/bold]")
+            stop_sandbox(project_path, print_fn=lambda m: console.print(f"  {m}"))
+        else:
+            console.print("  [dim]Sandbox was not running.[/dim]")
+
+    console.print("[green]ricet is down.[/green]")
+
+
+def _start_mobile_for_up(console: Console, screen_name: str, port: int) -> None:
+    """Start mobile server + Tailscale serve for ricet up.
+
+    Launches `ricet mobile serve` as a detached background process so it
+    survives after the parent exits. No fork tricks needed.
+    """
+    import os as _os
+    import shutil
+    import time
+
+    # Kill stale processes on the port
+    subprocess.run(f"fuser -k {port}/tcp", shell=True, capture_output=True)
+    time.sleep(0.5)
+
+    # Launch mobile server as a detached subprocess
+    ricet_bin = shutil.which("ricet")
+    if not ricet_bin:
+        console.print("  [red]ricet not found in PATH[/red]")
+        return
+
+    log_file = Path.home() / ".ricet" / "mobile.log"
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    log_fd = open(log_file, "a")
+
+    env = dict(_os.environ)
+    env["RICET_SCREEN_SESSION"] = screen_name
+
+    mobile_proc = subprocess.Popen(
+        [ricet_bin, "mobile", "serve", "--port", str(port), "--host", "127.0.0.1", "--no-tls"],
+        stdout=log_fd,
+        stderr=log_fd,
+        start_new_session=True,
+        env=env,
+    )
+
+    # Write PID for ricet down
+    pid_file = Path.home() / ".ricet" / "mobile_keepalive.pid"
+    pid_file.write_text(str(mobile_proc.pid) + "\n")
+
+    # Wait for server to be ready
+    for _ in range(20):
+        time.sleep(0.5)
+        try:
+            import socket
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                break
+        except (ConnectionRefusedError, OSError):
+            continue
+
+    # Verify screen injection works before declaring ready
+    _screen_ok = subprocess.run(
+        ["screen", "-S", screen_name, "-X", "stuff", ""],
+        capture_output=True, timeout=3,
+    ).returncode == 0
+    if not _screen_ok:
+        console.print(f"  [yellow]Screen session '{screen_name}' not reachable for injection.[/yellow]")
+
+    console.print(f"  [green]Mobile server started (PID {mobile_proc.pid}, port {port})[/green]")
+    console.print(f"  [dim]Log: {log_file}[/dim]")
+
+    # Start tailscale serve
+    from core.mobile import get_tailscale_address
+    ts_ip = get_tailscale_address()
+
+    if ts_ip:
+        console.print("[bold cyan]Starting Tailscale serve...[/bold cyan]")
+        # Check current serve config to decide root vs path mapping
+        ts_current = subprocess.run(
+            ["tailscale", "serve", "status"], capture_output=True, text=True
+        )
+        # If root "/" is mapped to a DIFFERENT port, use --set-path for this project
+        root_mapped_to_other = (
+            "/ proxy" in ts_current.stdout
+            and f"127.0.0.1:{port}" not in ts_current.stdout
+        )
+
+        if root_mapped_to_other:
+            # Another project owns "/". Map this one to a subpath.
+            ts_serve_cmd = [
+                "tailscale", "serve", "--bg",
+                "--set-path", f"/{screen_name}",
+                f"http://127.0.0.1:{port}",
+            ]
+            path_prefix = f"/{screen_name}"
+        else:
+            # No other project, or same port — take the root
+            ts_serve_cmd = ["tailscale", "serve", "--bg", str(port)]
+            path_prefix = ""
+
+        ts_result = subprocess.run(ts_serve_cmd, capture_output=True, text=True)
+        if ts_result.returncode != 0:
+            console.print(f"  [yellow]tailscale serve failed: {ts_result.stderr.strip()}[/yellow]")
+            console.print("  [yellow]Hint: sudo tailscale set --operator=$USER[/yellow]")
+            return
+
+        # Get the serve URL
+        ts_status = subprocess.run(
+            ["tailscale", "status", "--json"],
+            capture_output=True, text=True,
+        )
+        try:
+            ts_data = json.loads(ts_status.stdout)
+            ts_hostname = ts_data.get("Self", {}).get("DNSName", "").rstrip(".")
+            public_url = f"https://{ts_hostname}{path_prefix}"
+        except Exception:
+            public_url = "https://<tailscale-hostname>"
+
+        console.print(f"  [bold green]Dashboard: {public_url}[/bold green]")
+
+        # Save URL
+        try:
+            url_file = Path.home() / ".ricet" / "tunnel_url"
+            url_file.parent.mkdir(parents=True, exist_ok=True)
+            url_file.write_text(public_url + "\n")
+        except Exception:
+            pass
+
+        # QR code
+        try:
+            from core.mobile import generate_qr_terminal
+            qr = generate_qr_terminal(public_url)
+            if qr:
+                console.print(f"\n{qr}")
+        except Exception:
+            pass
+    else:
+        console.print("  [yellow]Tailscale not available. Mobile dashboard is local only.[/yellow]")
+        console.print(f"  [dim]http://localhost:{port}[/dim]")
+
+    # No keepalive fork needed — mobile server runs as a detached subprocess
+
+
 @app.command()
 def overnight(
     task_file: Path = typer.Option(Path("state/TODO.md"), help="Task file to execute"),

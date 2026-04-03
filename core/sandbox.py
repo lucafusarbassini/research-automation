@@ -120,6 +120,12 @@ def setup_sandbox(
     if not env_file.exists() and env_example.exists():
         shutil.copy2(env_example, env_file)
 
+    # Create bind-mount workspace directory for VS Code visibility
+    workspace_dir = project_path / "sandbox" / "workspace"
+    workspace_dir.mkdir(parents=True, exist_ok=True)
+    # Set WORKSPACE_PATH in .env so compose uses bind mount
+    _set_env_var(env_file, "WORKSPACE_PATH", str(workspace_dir.resolve()))
+
     # Copy martinprompt.md to project root as well (the overnight loop reads it there)
     martinprompt_src = template_sandbox / "martinprompt.md"
     martinprompt_dst = project_path / "martinprompt.md"
@@ -148,6 +154,22 @@ def setup_sandbox(
     return True
 
 
+def _set_env_var(env_file: Path, key: str, value: str) -> None:
+    """Set or update a variable in a .env file."""
+    lines: list[str] = []
+    found = False
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            if line.strip().startswith(f"{key}="):
+                lines.append(f"{key}={value}")
+                found = True
+            else:
+                lines.append(line)
+    if not found:
+        lines.append(f"{key}={value}")
+    env_file.write_text("\n".join(lines) + "\n")
+
+
 def _update_gitignore(project_path: Path):
     """Add sandbox-related patterns to .gitignore if missing."""
     gitignore = project_path / ".gitignore"
@@ -155,6 +177,7 @@ def _update_gitignore(project_path: Path):
         "sandbox/.env",
         "sandbox/patches/",
         "sandbox/backups/",
+        "sandbox/workspace/",
     ]
 
     existing = ""
