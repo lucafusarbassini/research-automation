@@ -1569,6 +1569,15 @@ def up(
         _set_env_var(sandbox_env, "CONTAINER_NAME", container_name)
         _set_env_var(sandbox_env, "HOST_UID", str(os.getuid()))
         _set_env_var(sandbox_env, "HOST_GID", str(os.getgid()))
+        # Auto-detect system resources for container limits
+        import multiprocessing
+        _ncpu = multiprocessing.cpu_count()
+        _set_env_var(sandbox_env, "SANDBOX_CPUS", str(_ncpu))
+        try:
+            _mem_gb = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") // (1024 ** 3)
+            _set_env_var(sandbox_env, "SANDBOX_MEMORY", f"{max(_mem_gb - 2, 2)}G")
+        except Exception:
+            _set_env_var(sandbox_env, "SANDBOX_MEMORY", "8G")
 
         # Start container
         if not is_sandbox_running(project_path):

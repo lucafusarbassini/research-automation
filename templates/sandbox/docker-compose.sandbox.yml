@@ -32,11 +32,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '8'
-          memory: 16G
+          cpus: '${SANDBOX_CPUS:-4}'
+          memory: ${SANDBOX_MEMORY:-8G}
         reservations:
-          cpus: '2'
-          memory: 4G
+          cpus: '1'
+          memory: 2G
     networks:
       - sandbox-net
     restart: "no"
