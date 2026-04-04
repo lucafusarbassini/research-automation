@@ -35,52 +35,58 @@ export ANTHROPIC_API_KEY="your-key-here"
 
 ---
 
-## Method 1: uv Install (Recommended)
+## Method 1: pipx Install (Recommended)
 
-ricet uses [uv](https://github.com/astral-sh/uv) for fast, reproducible package management. uv is auto-installed during `ricet init`.
+pipx installs ricet as an isolated CLI app with its own virtual environment — no conflicts with system Python.
 
 ### Basic install
 
 ```bash
-# Install uv first (if needed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Install pipx if needed
+sudo apt install pipx   # or: pip install --user pipx
+pipx ensurepath          # adds ~/.local/bin to PATH
 
-uv pip install ricet
+# Clone and install
+git clone https://github.com/lucafusarbassini/research-automation
+cd research-automation
+pipx install ".[mobile]"
 ```
 
-This installs the core CLI with minimal dependencies: `typer`, `rich`, `pyyaml`, and `python-dotenv`.
+This installs the CLI with mobile/voice extras (QR code generation).
 
 ### With ML extras
 
 ```bash
-uv pip install "ricet[ml]"
+pipx install ".[ml,mobile]"
 ```
 
-Adds `numpy`, `pandas`, `scipy`, `scikit-learn`, `matplotlib`, and `seaborn`.
+Adds `numpy`, `pandas`, `scipy`, `matplotlib`, and `torch`.
 
-### With slides extras
+### Development install (editable)
+
+For contributing to ricet itself:
 
 ```bash
-uv pip install "ricet[slides]"
+pip install -e ".[dev,mobile]"
 ```
 
-Adds `python-pptx`, `google-genai` (for Nano Banana Pro schematics), and `Pillow`.
+### System requirements for `ricet up`
 
-### Full install
+`ricet init` auto-installs most of these, but for reference:
 
-```bash
-pip install -e ".[all]"
-```
+| Dependency | Required for | Auto-installed by `ricet init`? |
+|------------|-------------|-------------------------------|
+| Docker | Sandbox container | No (check: `docker info`) |
+| Docker Compose v2 | Container orchestration | Auto-installed if sudo available |
+| GNU Screen | Session persistence | Yes |
+| Tailscale | Mobile dashboard | Yes (if sudo available) |
+| Node.js 18+ | Claude CLI | No (prerequisite) |
 
-Adds everything in `ml`, `slides`, and `data` extras.
+!!! warning "Docker Compose v1 is NOT supported"
+    The standalone `docker-compose` (v1.x) crashes with modern Docker Engine. You need the v2 plugin: `sudo apt install docker-compose-plugin`. If Docker's apt repo is not configured, see [Docker's official instructions](https://docs.docker.com/engine/install/).
 
-### Development install
-
-```bash
-pip install -e ".[dev]"
-```
-
-Adds `pytest`, `pytest-cov`, `black`, `isort`, and `mypy`.
+!!! tip "Tailscale operator permission"
+    After installing Tailscale, run once: `sudo tailscale set --operator=$USER`. This lets `ricet up` manage Tailscale serve without sudo.
 
 ### Verify installation
 

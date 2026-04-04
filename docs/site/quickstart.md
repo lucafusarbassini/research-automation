@@ -10,14 +10,18 @@ This tutorial walks you through creating a research project, running an interact
 # Install Claude Code
 npm install -g @anthropic-ai/claude-code
 
-# Clone and install research-automation
-git clone https://github.com/lucafusarbassini/research-automation
-cd research-automation
-pip install -e .
-
 # Authenticate with Claude subscription (Pro or Team required, no API key needed)
 claude auth login
+
+# Clone and install ricet
+git clone https://github.com/lucafusarbassini/research-automation
+cd research-automation
+pipx install ".[mobile]"
+# If pipx is not installed: sudo apt install pipx && pipx ensurepath
 ```
+
+!!! note "Docker Compose v2 required"
+    `ricet up` uses Docker Compose v2 (the `docker compose` plugin). The standalone `docker-compose` v1 is **not supported**. Install the plugin: `sudo apt install docker-compose-plugin`. See the [Docker Setup tutorial](../tutorials/docker-setup.md) for details.
 
 ---
 
@@ -158,37 +162,56 @@ Write at least 200 characters of real content describing your research question,
 
 ---
 
-## Step 4: Start an Interactive Session
+## Step 4: Launch with `ricet up`
 
 ```bash
-ricet start
+ricet up
 ```
 
-This creates a tracked session and launches Claude Code. On start, the system:
+This is the primary way to run ricet. It launches a complete, persistent Claude session:
 
-1. Syncs with remote (`git pull --rebase`) for collaborative workflows.
-2. Validates that `knowledge/GOAL.md` has sufficient content.
-3. Infers and installs Python packages based on your goal description.
-4. Starts the mobile server if enabled in settings.
-5. Re-indexes linked repositories for cross-repo RAG.
-6. Suggests next research steps based on your goal and progress.
-7. Launches Claude Code with a tracked session UUID.
+1. **Docker sandbox** -- Builds and starts an isolated container with `--dangerously-skip-permissions` (safe because it's sandboxed). CPU/RAM limits auto-detected.
+2. **GNU Screen** -- Claude runs inside a screen session that survives disconnects. If Claude exits, it auto-restarts in 5 seconds.
+3. **Session persistence** -- Uses `--continue` to resume the most recent conversation on restart. No work is lost on disconnect.
+4. **Mobile dashboard** -- A phone-accessible PWA with voice (Italian auto-translated to English) and text task injection via Tailscale.
+5. **Remote Control** -- `/remote-control` QR code for the Claude mobile app.
 
-The agent system follows the **Progressive Instruction Protocol**:
+### Three ways to interact
 
-1. **Orient** -- Reads GOAL.md, CONSTRAINTS.md, and TODO.md to understand context.
-2. **Explore** -- Examines relevant code and data, builds a mental model.
-3. **Plan** -- Breaks the goal into subtasks with difficulty estimates.
-4. **Execute** -- Works through subtasks one at a time, checkpointing after each.
-5. **Validate** -- Runs falsifier checks and documents learnings.
+| Channel | How | Use case |
+|---------|-----|----------|
+| **CLI** | `screen -r <project-name>` | Full interactive session |
+| **Phone app** | Scan `/remote-control` QR code | Claude app on mobile |
+| **Dashboard** | Open Tailscale URL in phone browser | Voice commands, text tasks, monitor |
 
-Try giving it a task:
+### First-time container setup
 
+On the first `ricet up` after a container rebuild, Claude may need a one-time login:
+
+```bash
+# Attach to screen
+screen -r <project-name>
+
+# If Claude shows a login prompt:
+docker exec -it ricet-<project-name> gosu agent claude auth login
+
+# Once Claude is running, enable remote control:
+/remote-control
+
+# Detach from screen: Ctrl+A then D
 ```
-Search for recent papers on transformer efficiency and summarize the top 5 findings.
+
+### Multi-project isolation
+
+Each project gets its own screen session, Docker container, and port (derived from the project name). Multiple projects can run simultaneously on the same machine.
+
+### Stopping
+
+```bash
+ricet down
 ```
 
-The Master agent routes this to the Researcher agent, which uses paper-search MCPs to find and synthesize literature.
+Tears down: mobile server, Tailscale serve, screen session, and Docker container.
 
 ---
 
@@ -201,39 +224,45 @@ cd my-first-project
 ricet status
 ```
 
-This displays the current TODO list and progress log.
+This displays the current TODO list and progress log. Or open the mobile dashboard's Monitor tab to see live screen output.
 
 ---
 
-## Step 6: Run Overnight Mode
+## Step 6: Backup and Export
 
-For longer tasks, use overnight mode:
+The sandbox workspace is bind-mounted at `sandbox/workspace/` so VS Code can see files in real time.
 
-```bash
-ricet overnight --iterations 20
-```
-
-This runs Claude in an autonomous loop:
-
-- Reads the TODO list
-- Executes tasks one by one
-- Auto-commits after each subtask
-- Monitors resources and checkpoints progress
-- Runs the falsifier agent after every iteration
-- Stops when all tasks are done or the iteration limit is reached
-
-For Docker-sandboxed execution:
+### Periodic backup
 
 ```bash
-ricet overnight --iterations 30 --docker
+# From the project directory:
+./sandbox/auto-backup.sh 15   # Backup every 15 minutes
 ```
 
-Check results in the morning:
+This syncs experiments, state files, and logs from the container to the host every N minutes.
+
+### Extract work as a patch
 
 ```bash
-ricet status
-git log --oneline -20
+./sandbox/extract-work.sh          # Generate a .patch file
+./sandbox/extract-work.sh --apply  # Apply patch to host repo
 ```
+
+### Watchdog auto-save
+
+The container has a built-in watchdog that auto-commits work before the timeout expires (default 24h for `ricet up`).
+
+---
+
+## Step 7: Overnight Mode (Alternative)
+
+For unattended batch work, use overnight mode instead of `ricet up`:
+
+```bash
+ricet overnight --iterations 20 --docker
+```
+
+Each iteration is a fresh Claude session that reads the TODO list and works through tasks. Use this for fire-and-forget batch processing rather than interactive work.
 
 ---
 

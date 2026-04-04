@@ -40,12 +40,10 @@ npm install -g @anthropic-ai/claude-code
 # Authenticate with Claude subscription (Pro or Team required, no API key needed)
 claude auth login
 
-# Clone the repository
+# Clone and install ricet
 git clone https://github.com/lucafusarbassini/research-automation
 cd research-automation
-
-# Install the CLI
-pip install -e .
+pipx install ".[mobile]"
 
 # Create your first project (interactive wizard)
 ricet init my-project
@@ -54,14 +52,17 @@ ricet init my-project
 cd my-project
 $EDITOR knowledge/GOAL.md
 
-# Start an interactive session
-ricet start
-
-# Or run overnight
-ricet overnight --iterations 20
+# Launch a persistent Claude session
+ricet up
 ```
 
-The `ricet init` wizard auto-detects your system (GPU, conda, Docker), installs the full toolchain (uv, tectonic, biber, screen, Tailscale), walks you through notification and credential setup, deploys 8 research skills, registers the meta-learn hook, and optionally creates a GitHub repository. See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough.
+**That's the core workflow: `ricet init` then `ricet up`.**
+
+`ricet init` auto-detects your system (GPU, conda, Docker), installs the full toolchain (Docker Compose v2, screen, Tailscale, uv, tectonic), walks you through credential setup, deploys research skills, and optionally creates a GitHub repository.
+
+`ricet up` launches a Docker-sandboxed Claude session inside a GNU Screen, with three input channels: CLI (`screen -r`), Claude Remote Control (QR code), and a mobile dashboard via Tailscale (voice + text). Sessions auto-resume on disconnect via `--continue`.
+
+See the full [Quickstart Tutorial](quickstart.md) for a step-by-step walkthrough.
 
 ---
 

@@ -40,17 +40,40 @@ ricet turns a research idea into reproducible code, validated results, and a pub
 
 ```bash
 # 1. Install
-pip install ricet
+git clone https://github.com/lucafusarbassini/research-automation
+cd research-automation
+pipx install ".[mobile]"
 
 # 2. Create a new project (interactive onboarding)
 ricet init my-experiment
 
-# 3. Launch an interactive research session
+# 3. Edit your research goal
 cd my-experiment
-ricet start
+$EDITOR knowledge/GOAL.md
+
+# 4. Launch a persistent Claude session
+ricet up
 ```
 
-That's it. The onboarding wizard will ask for your research goal, compute preferences, and notification settings, then scaffold a fully configured project with knowledge files, skills, LaTeX template, and auto-learning hooks.
+**The core workflow is `ricet init` → `ricet up`.** Everything else is skills.
+
+`ricet up` launches a Docker-sandboxed Claude inside a GNU Screen with three input channels: CLI, Claude Remote Control (QR code), and a mobile dashboard via Tailscale. Sessions auto-resume on disconnect. `ricet down` tears everything down.
+
+### GitHub PAT (per-project, for automated pushes)
+
+```bash
+# Generate at https://github.com/settings/tokens (Fine-grained, repo scope only)
+# Store in the project's secrets/.env:
+echo 'GITHUB_PERSONAL_ACCESS_TOKEN=github_pat_...' >> secrets/.env
+```
+
+### Sandbox backup and export
+
+The sandbox workspace is bind-mounted at `sandbox/workspace/` (visible in VS Code). Additionally:
+
+- **Auto-backup**: `./sandbox/auto-backup.sh 15` syncs state files every 15 minutes
+- **Extract work**: `./sandbox/extract-work.sh --apply` generates a git patch and applies it to the host repo
+- **Watchdog**: auto-commits inside the container before timeout expires (default 24h)
 
 ## Features
 
