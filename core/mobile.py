@@ -263,6 +263,13 @@ class ProjectRegistry:
                 return p
         return None
 
+    def get_project_path(self, name: str) -> Optional[Path]:
+        """Return the project's root path, or None if unknown."""
+        project = self.get_project(name)
+        if not project:
+            return None
+        return Path(project.get("path", "."))
+
     def get_project_status(self, name: str) -> dict:
         """Read a project's PROGRESS.md and session info."""
         project = self.get_project(name)
@@ -430,15 +437,31 @@ class MobileServer:
 
     def _handle_post_task(self, body: Optional[dict]) -> dict:
         prompt = (body or {}).get("prompt", "")
+        # Optional project routing. If absent, keep legacy single-screen
+        # behavior and inject into self._screen_session.
+        project = (body or {}).get("project", "") or (body or {}).get("_query", {}).get("project", "")
+        target_session = (
+            _resolve_screen_session(project) if project else None
+        ) or self._screen_session
         task_id = uuid.uuid4().hex[:12]
-        injected = _inject_to_screen(prompt, self._screen_session) if self._screen_session else False
+        injected = _inject_to_screen(prompt, target_session) if target_session else False
         status = "injected" if injected else "queued"
         task = {"task_id": task_id, "prompt": prompt, "status": status}
+        if project:
+            task["project"] = project
         self._tasks.append(task)
         if not injected:
-            self._persist_task_to_todo(prompt)
+            self._persist_task_to_todo(
+                prompt,
+                source=f"mobile:{project}" if project else "mobile",
+                project=project or None,
+            )
         logger.info("Task %s: %s — %s", status, task_id, prompt[:80])
-        return {"ok": True, "task_id": task_id, "status": status}
+        out: dict = {"ok": True, "task_id": task_id, "status": status}
+        if project:
+            out["project"] = project
+            out["screen"] = target_session or ""
+        return out
 
     def _handle_get_status(self, body: Optional[dict]) -> dict:
         from core.git_info import cached_info
@@ -473,11 +496,20 @@ class MobileServer:
                     sessions.append({"name": f.stem, "status": "unknown"})
         return {"ok": True, "sessions": sessions}
 
-    def _process_voice_text(self, text: str, *, original_lang: str = "", source: str = "voice") -> dict:
+    def _process_voice_text(
+        self,
+        text: str,
+        *,
+        original_lang: str = "",
+        source: str = "voice",
+        project: str = "",
+    ) -> dict:
         """Shared pipeline: translate -> screen-inject -> persist.
 
         Used by both the text ``/voice`` endpoint and the ``/voice/audio``
-        endpoint (after whisper transcription).
+        endpoint (after whisper transcription). When *project* is supplied,
+        the injection targets the per-project screen session (falling back
+        to ``self._screen_session`` if no such screen is alive).
         """
         from core.voice import detect_language, translate_to_english
         if not original_lang:
@@ -487,13 +519,22 @@ class MobileServer:
             if translated and translated != text:
                 logger.info("Voice translated %s→en: %s → %s", original_lang, text[:40], translated[:40])
                 text = translated
+        target_session = (
+            _resolve_screen_session(project) if project else None
+        ) or self._screen_session
         task_id = uuid.uuid4().hex[:12]
-        injected = _inject_to_screen(text, self._screen_session) if self._screen_session else False
+        injected = _inject_to_screen(text, target_session) if target_session else False
         status = "injected" if injected else "queued"
         task = {"task_id": task_id, "prompt": text, "status": status, "source": source}
+        if project:
+            task["project"] = project
         self._tasks.append(task)
         if not injected:
-            self._persist_task_to_todo(text, source=source)
+            self._persist_task_to_todo(
+                text,
+                source=f"{source}:{project}" if project else source,
+                project=project or None,
+            )
         logger.info("Voice %s: %s — %s", status, task_id, text[:80])
         return {
             "ok": True,
@@ -502,15 +543,25 @@ class MobileServer:
             "injected": injected,
             "original_lang": original_lang,
             "text": text,
+            "project": project,
+            "screen": target_session or "",
         }
 
     def _handle_post_voice(self, body: Optional[dict]) -> dict:
         text = (body or {}).get("text", "")
         # Use client-provided language if available, fall back to detection
         original_lang = (body or {}).get("source_lang", "")
-        result = self._process_voice_text(text, original_lang=original_lang, source="voice")
+        project = (body or {}).get("project", "") or (body or {}).get("_query", {}).get("project", "")
+        result = self._process_voice_text(
+            text, original_lang=original_lang, source="voice", project=project,
+        )
         # Back-compat: do not include "text" echo for text endpoint
         result.pop("text", None)
+        if not project:
+            # Back-compat: callers that didn't ask for per-project routing
+            # shouldn't see the new fields in the response.
+            result.pop("project", None)
+            result.pop("screen", None)
         return result
 
     def _handle_post_voice_audio(self, body: Optional[dict]) -> dict:
@@ -578,7 +629,8 @@ class MobileServer:
                 return {"ok": False, "error": "empty_transcription", "status": 500}
 
             # Run through the same pipeline as /voice (translation + injection)
-            result = self._process_voice_text(transcription, source="voice")
+            project = (body or {}).get("project", "") or (body or {}).get("_query", {}).get("project", "")
+            result = self._process_voice_text(transcription, source="voice", project=project)
             injected = bool(result.get("injected"))
             return {
                 "ok": True,
@@ -603,19 +655,35 @@ class MobileServer:
             except Exception:
                 pass
 
-    def _persist_task_to_todo(self, prompt: str, source: str = "mobile") -> None:
+    def _persist_task_to_todo(
+        self,
+        prompt: str,
+        source: str = "mobile",
+        project: Optional[str] = None,
+    ) -> None:
         """Append a task to state/TODO.md so ricet overnight can pick it up.
 
-        Uses the active project path from the registry so it works regardless
-        of the server process's current working directory.
+        If *project* is supplied and known to the registry, the task is
+        written to *that* project's ``state/TODO.md``. Otherwise we fall back
+        to the registry's active project, then to ``Path.cwd()``.
         """
-        base = Path.cwd()
-        try:
-            active = self._registry.get_active_project()
-            if active and active.get("path"):
-                base = Path(active["path"])
-        except Exception:
-            pass
+        base: Optional[Path] = None
+        if project:
+            try:
+                proj_path = self._registry.get_project_path(project)
+                if proj_path is not None:
+                    base = proj_path
+            except Exception:
+                base = None
+        if base is None:
+            try:
+                active = self._registry.get_active_project()
+                if active and active.get("path"):
+                    base = Path(active["path"])
+            except Exception:
+                pass
+        if base is None:
+            base = Path.cwd()
         todo_path = base / "state" / "TODO.md"
         try:
             todo_path.parent.mkdir(parents=True, exist_ok=True)
@@ -634,8 +702,33 @@ class MobileServer:
         return {"ok": True, "entries": recent}
 
     def _handle_get_projects(self, body: Optional[dict]) -> dict:
-        projects = self._registry.list_projects()
+        projects = self._enriched_projects()
         return {"ok": True, "projects": projects}
+
+    def _enriched_projects(self) -> list[dict]:
+        """Return the registry's project list, annotated with per-project
+        ``screen_session`` + ``screen_alive`` fields based on ``screen -ls``.
+
+        The screen session name is resolved via :func:`_resolve_screen_session`.
+        If the literal project name has a running session, we surface that
+        exact name; otherwise we fall back to the lowercased form (the
+        ``ricet up`` default) even if it isn't alive, so hub UIs can still
+        show the *expected* session name.
+        """
+        live = set(_list_screen_sessions())
+        enriched: list[dict] = []
+        for p in self._registry.list_projects():
+            name = p.get("name", "")
+            resolved = _resolve_screen_session(name) if name else None
+            screen_name = resolved or (name.lower() if name else "")
+            enriched.append(
+                {
+                    **p,
+                    "screen_session": screen_name,
+                    "screen_alive": screen_name in live,
+                }
+            )
+        return enriched
 
     def _handle_get_project_status(self, body: Optional[dict]) -> dict:
         name = (body or {}).get("_query", {}).get("name", "")
@@ -644,13 +737,24 @@ class MobileServer:
         return self._registry.get_project_status(name)
 
     def _handle_post_project_task(self, body: Optional[dict]) -> dict:
-        name = (body or {}).get("_query", {}).get("name", "")
-        prompt = (body or {}).get("prompt", "")
+        # Accept project name from either the query string or the JSON body
+        # — more convenient for programmatic callers.
+        body = body or {}
+        name = (
+            body.get("_query", {}).get("name", "")
+            or body.get("name", "")
+            or body.get("project", "")
+        )
+        prompt = body.get("prompt", "")
         if not name:
             return {"ok": False, "error": "missing_project_name"}
         task_id = uuid.uuid4().hex[:12]
-        # Inject to screen if available, fall back to TODO
-        injected = _inject_to_screen(prompt, self._screen_session) if self._screen_session else False
+        # Resolve the per-project screen session. If no such screen is
+        # alive, fall through to writing that project's state/TODO.md.
+        target_session = _resolve_screen_session(name)
+        injected = (
+            _inject_to_screen(prompt, target_session) if target_session else False
+        )
         status = "injected" if injected else "queued"
         task = {
             "task_id": task_id,
@@ -660,9 +764,20 @@ class MobileServer:
         }
         self._tasks.append(task)
         if not injected:
-            self._persist_task_to_todo(prompt, source=f"mobile:{name}")
-        logger.info("Project task %s: %s [%s] — %s", status, task_id, name, prompt[:80])
-        return {"ok": True, "task_id": task_id, "project": name, "status": status}
+            self._persist_task_to_todo(
+                prompt, source=f"mobile:{name}", project=name,
+            )
+        logger.info(
+            "Project task %s: %s [%s screen=%s] — %s",
+            status, task_id, name, target_session or "-", prompt[:80],
+        )
+        return {
+            "ok": True,
+            "task_id": task_id,
+            "project": name,
+            "status": status,
+            "screen": target_session or "",
+        }
 
     def _handle_get_connect_info(self, body: Optional[dict]) -> dict:
         fp = ""
@@ -765,8 +880,8 @@ class MobileServer:
                     pass
         data["sessions"] = sessions
 
-        # Projects
-        data["projects"] = self._registry.list_projects()
+        # Projects (with per-project screen_session + screen_alive)
+        data["projects"] = self._enriched_projects()
 
         return data
 
@@ -800,13 +915,26 @@ class MobileServer:
             Path(tmp_path).unlink(missing_ok=True)
 
     def _handle_post_todo(self, body: Optional[dict]) -> dict:
-        """Save a task directly to TODO.md (skip screen injection)."""
+        """Save a task directly to TODO.md (skip screen injection).
+
+        When a ``project`` field is supplied (either in the JSON body or as
+        a ``?project=`` query param), the task is written to that project's
+        ``state/TODO.md`` rather than the active project's.
+        """
         prompt = (body or {}).get("prompt", "") or (body or {}).get("text", "")
         if not prompt:
             return {"ok": False, "error": "empty_prompt"}
-        self._persist_task_to_todo(prompt, source="mobile-todo")
+        project = (body or {}).get("project", "") or (body or {}).get("_query", {}).get("project", "")
+        self._persist_task_to_todo(
+            prompt,
+            source=f"mobile-todo:{project}" if project else "mobile-todo",
+            project=project or None,
+        )
         task_id = uuid.uuid4().hex[:12]
-        return {"ok": True, "task_id": task_id, "status": "saved_to_todo"}
+        out: dict = {"ok": True, "task_id": task_id, "status": "saved_to_todo"}
+        if project:
+            out["project"] = project
+        return out
 
     def _handle_post_self_update(self, body: Optional[dict]) -> dict:
         """Pull latest ricet and restart the server.
@@ -1224,6 +1352,59 @@ def _schedule_restart(delay: float = 2.0, restart_fn: Optional[Callable[[], None
     t = threading.Timer(delay, fn)
     t.daemon = True
     t.start()
+
+
+def _list_screen_sessions() -> list[str]:
+    """Return the list of currently-running GNU screen session names.
+
+    Parses ``screen -ls`` output; each running session appears as a line like
+    ``\t12345.sessionname\t(Detached)``. Returns an empty list on any error
+    (``screen`` not installed, no sessions, etc.).
+    """
+    import shutil
+    if not shutil.which("screen"):
+        return []
+    try:
+        result = subprocess.run(
+            ["screen", "-ls"], capture_output=True, text=True, timeout=3,
+        )
+    except Exception:
+        return []
+    # `screen -ls` exits with 1 when there are no sessions, but still prints
+    # useful output. Don't gate on returncode.
+    names: list[str] = []
+    for line in (result.stdout or "").splitlines():
+        line = line.strip()
+        if not line or "." not in line:
+            continue
+        # Only lines that start with "<pid>.<name>" are session entries.
+        head = line.split("\t", 1)[0].split()[0]
+        if "." not in head:
+            continue
+        pid, _, sess_name = head.partition(".")
+        if not pid.isdigit() or not sess_name:
+            continue
+        names.append(sess_name)
+    return names
+
+
+def _resolve_screen_session(project_name: str) -> Optional[str]:
+    """Resolve a project name to a running screen session name.
+
+    The convention (matching ``ricet up``'s default) is that each project's
+    screen session name equals the lowercased project name. We first try the
+    literal name, then the lower-cased form, and return ``None`` if neither
+    is alive.
+    """
+    if not project_name:
+        return None
+    live = _list_screen_sessions()
+    if project_name in live:
+        return project_name
+    lowered = project_name.lower()
+    if lowered in live:
+        return lowered
+    return None
 
 
 def _inject_to_screen(text: str, session: str) -> bool:
