@@ -4484,7 +4484,14 @@ def adopt(
         console.print(
             "  2. Edit [bold]knowledge/GOAL.md[/bold] with your research description"
         )
-        console.print("  3. ricet start")
+        console.print(
+            "  3. [bold]ricet up[/bold] — launch a persistent Claude session in"
+            " screen + sandbox + mobile API (recommended for Hub Dashboard)"
+        )
+        console.print(
+            "     [dim](alternative: 'ricet start' for a legacy one-shot"
+            " interactive session)[/dim]"
+        )
     except (RuntimeError, FileNotFoundError) as exc:
         console.print(f"[red]Error: {exc}[/red]")
         raise typer.Exit(1)
