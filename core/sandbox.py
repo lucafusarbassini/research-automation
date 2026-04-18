@@ -13,10 +13,12 @@ in the current session.
 """
 
 import logging
+import multiprocessing
 import os
 import shutil
 import subprocess
 import time
+import tomllib
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -35,10 +37,101 @@ DEFAULT_TIMEOUT_HOURS = 10
 DEFAULT_ITERATIONS = 30
 DEFAULT_ITERATION_TIMEOUT_MIN = 60
 
+# Path to user config that overrides auto-detected CPU/RAM limits.
+USER_CONFIG_DIR = Path.home() / ".ricet"
+USER_SANDBOX_TOML = USER_CONFIG_DIR / "sandbox.toml"
+
+# Hard cap on auto-detected RAM assignment (GB).
+# Picked so one ricet container can't starve the host when several users share it.
+MAX_AUTO_RAM_GB = 16
+
 
 # ---------------------------------------------------------------------------
 # Sandbox build & lifecycle
 # ---------------------------------------------------------------------------
+
+
+def _host_ram_gb() -> int:
+    """Return host physical memory in GB (0 if undetectable)."""
+    try:
+        page = os.sysconf("SC_PAGE_SIZE")
+        pages = os.sysconf("SC_PHYS_PAGES")
+        return int(page * pages // (1024 ** 3))
+    except (AttributeError, ValueError, OSError):
+        return 0
+
+
+def _ensure_user_sandbox_toml() -> Path:
+    """Create ~/.ricet/sandbox.toml with auto-detected defaults on first use.
+
+    Returns the path. Existing files are never overwritten.
+    """
+    USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    if USER_SANDBOX_TOML.exists():
+        return USER_SANDBOX_TOML
+
+    cpu_total = multiprocessing.cpu_count()
+    ram_total = _host_ram_gb() or 8
+    # Cap at max(50% of host, 16GB). The request phrasing is slightly odd, but
+    # the intent is "take half unless that exceeds 16G, in which case use 16G".
+    ram_default = min(max(ram_total // 2, 2), MAX_AUTO_RAM_GB)
+    cpu_default = max(cpu_total // 2, 1)
+
+    USER_SANDBOX_TOML.write_text(
+        "# ricet sandbox resource limits\n"
+        "# These override the auto-detected per-container caps.\n"
+        "# Uncomment and edit to change them.\n"
+        "\n"
+        "[limits]\n"
+        f"# ram_gb = {ram_default}\n"
+        f"# cpu    = {cpu_default}\n"
+    )
+    return USER_SANDBOX_TOML
+
+
+def load_sandbox_limits() -> tuple[int, int]:
+    """Return (cpu_cores, ram_gb) for the sandbox container.
+
+    Precedence:
+      1. ``[limits]`` section in ``~/.ricet/sandbox.toml`` (if both keys set).
+      2. Auto-detected: half of host CPU, ``min(host_ram / 2, 16GB)``.
+
+    The file is created lazily with commented defaults on first call.
+    """
+    cpu_total = multiprocessing.cpu_count()
+    ram_total = _host_ram_gb() or 8
+
+    ram_auto = min(max(ram_total // 2, 2), MAX_AUTO_RAM_GB)
+    cpu_auto = max(cpu_total // 2, 1)
+
+    _ensure_user_sandbox_toml()
+    try:
+        with USER_SANDBOX_TOML.open("rb") as fh:
+            cfg = tomllib.load(fh)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        logger.warning("Could not parse %s: %s", USER_SANDBOX_TOML, exc)
+        cfg = {}
+
+    limits = cfg.get("limits", {}) if isinstance(cfg, dict) else {}
+    ram_gb = int(limits.get("ram_gb", ram_auto))
+    cpu = int(limits.get("cpu", cpu_auto))
+    # Clamp to sane bounds so a typo can't hang the host.
+    ram_gb = max(1, min(ram_gb, ram_total or ram_gb))
+    cpu = max(1, min(cpu, cpu_total))
+    return cpu, ram_gb
+
+
+def project_volume_names(project_name: str) -> dict[str, str]:
+    """Return Docker volume names scoped to a project.
+
+    Used for persistent per-project state (Claude creds, pip cache) so that
+    container restarts don't re-copy credentials or re-download wheels.
+    """
+    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in project_name)
+    return {
+        "claude": f"ricet_claude_{safe}",
+        "pipcache": f"ricet_pipcache_{safe}",
+    }
 
 
 def get_sandbox_dir(project_path: Path) -> Path:
@@ -120,11 +213,20 @@ def setup_sandbox(
     if not env_file.exists() and env_example.exists():
         shutil.copy2(env_example, env_file)
 
-    # Create bind-mount workspace directory for VS Code visibility
-    workspace_dir = project_path / "sandbox" / "workspace"
-    workspace_dir.mkdir(parents=True, exist_ok=True)
-    # Set WORKSPACE_PATH in .env so compose uses bind mount
-    _set_env_var(env_file, "WORKSPACE_PATH", str(workspace_dir.resolve()))
+    # Configure the sandbox .env so the compose template bind-mounts the
+    # host project dir and uses per-project persistent volumes.
+    # The container's internal sandbox/ is an anonymous volume (see compose),
+    # so we do NOT need a host workspace directory anymore.
+    _set_env_var(env_file, "PROJECT_DIR", str(project_path.resolve()))
+    project_name = project_path.resolve().name or "default"
+    vols = project_volume_names(project_name)
+    _set_env_var(env_file, "RICET_CLAUDE_VOLUME", vols["claude"])
+    _set_env_var(env_file, "RICET_PIPCACHE_VOLUME", vols["pipcache"])
+
+    # Apply resource limits (user config in ~/.ricet/sandbox.toml or auto).
+    cpu, ram_gb = load_sandbox_limits()
+    _set_env_var(env_file, "SANDBOX_CPUS", str(cpu))
+    _set_env_var(env_file, "SANDBOX_MEMORY", f"{ram_gb}G")
 
     # Copy martinprompt.md to project root as well (the overnight loop reads it there)
     martinprompt_src = template_sandbox / "martinprompt.md"

@@ -50,42 +50,46 @@ if command -v dockerd-entrypoint.sh &>/dev/null; then
 fi
 
 # -------------------------------------------------------
-# 2. Copy project files into workspace (isolation layer)
-#    ONLY on first run — never overwrite existing work!
+# 2. Workspace is BIND-MOUNTED from the host project directory.
+#    The container inherits the project's tree directly — no copy.
+#    The `sandbox/` subdir is a separate volume so internal container
+#    state doesn't spill back into the host project tree.
+#    SECURITY: the container can write to the host project dir by design
+#    (same model as a VS Code devcontainer). It cannot touch anything
+#    OUTSIDE that directory — the host filesystem is not mounted.
 # -------------------------------------------------------
-if [ -d "${WORKSPACE}/.git" ]; then
-    log "Existing workspace with git repo found — PRESERVING work (no copy)."
-elif [ -d "/project-source" ] && [ "$(ls -A /project-source 2>/dev/null)" ]; then
-    log "First run: copying project files into workspace..."
-    # Use rsync if available, otherwise cp with --exclude (exclude sandbox/ to
-    # avoid recursive copy when workspace is bind-mounted inside the project)
-    if command -v rsync &>/dev/null; then
-        rsync -a --exclude='sandbox/' /project-source/ "${WORKSPACE}/"
-    else
-        # cp -a with tar pipe to exclude sandbox/
-        (cd /project-source && tar cf - --exclude='sandbox' .) | (cd "${WORKSPACE}" && tar xf -)
-    fi
-    chown -R agent:agent "${WORKSPACE}"
-    log "Project files copied."
+if [ -d "${WORKSPACE}" ]; then
+    chown -R "${HOST_UID}:${HOST_GID}" "${WORKSPACE}/sandbox" 2>/dev/null || true
+    log "Workspace bind-mount ready at ${WORKSPACE}"
 else
-    log "No project source mounted at /project-source. Workspace is empty."
+    log "ERROR: Workspace ${WORKSPACE} is not mounted."
 fi
 
 # -------------------------------------------------------
-# 3. Copy Claude credentials with proper permissions
+# 3. Seed the persistent Claude credentials volume on first run.
+#    The volume at /home/agent/.claude persists across container restarts,
+#    so we only copy from /claude-source when it looks uninitialised.
 # -------------------------------------------------------
 if [ -d "/claude-source" ] && [ "$(ls -A /claude-source 2>/dev/null)" ]; then
-    log "Copying Claude credentials to agent home..."
-    mkdir -p /home/agent/.claude
-    cp -a /claude-source/. /home/agent/.claude/
-    chown -R agent:agent /home/agent/.claude
+    if [ ! -f "/home/agent/.claude/.credentials.json" ]; then
+        log "Seeding Claude credentials volume from host ~/.claude..."
+        mkdir -p /home/agent/.claude
+        cp -a /claude-source/. /home/agent/.claude/ 2>/dev/null || true
+        chown -R agent:agent /home/agent/.claude
+        log "Claude credentials seeded."
+    else
+        log "Claude credentials already present in persistent volume — skipping copy."
+    fi
     # Ensure dangerous mode prompt is skipped and /workspace is trusted
     SETTINGS_FILE="/home/agent/.claude/settings.json"
     if [ -f "$SETTINGS_FILE" ]; then
         $RUN_AS python3 -c "
 import json, pathlib
 p = pathlib.Path('$SETTINGS_FILE')
-d = json.loads(p.read_text())
+try:
+    d = json.loads(p.read_text())
+except Exception:
+    d = {}
 d['skipDangerousModePermissionPrompt'] = True
 p.write_text(json.dumps(d, indent=2))
 " 2>/dev/null || true
@@ -94,28 +98,27 @@ p.write_text(json.dumps(d, indent=2))
     PROJ_DIR="/home/agent/.claude/projects/-workspace"
     mkdir -p "$PROJ_DIR"
     chown -R agent:agent "$PROJ_DIR"
-    log "Claude credentials copied and configured."
 else
-    log "WARNING: No Claude credentials mounted. Agent may not be able to authenticate."
+    log "WARNING: No Claude credentials mounted at /claude-source. Agent may not be able to authenticate."
 fi
 
 # -------------------------------------------------------
-# 4. Configure git and initialize workspace repo
+# 4. Configure git (workspace is a live bind of the host repo, so we do NOT
+#    re-init or commit — we just set identity for any commits the agent makes).
 # -------------------------------------------------------
 $RUN_AS git config --global user.email "ricet-sandbox@overnight"
 $RUN_AS git config --global user.name "ricet Sandbox Agent"
+$RUN_AS git config --global --add safe.directory "${WORKSPACE}" 2>/dev/null || true
 
-if [ ! -d "${WORKSPACE}/.git" ]; then
-    $RUN_AS git -C "${WORKSPACE}" init
-    $RUN_AS git -C "${WORKSPACE}" add -A
-    $RUN_AS git -C "${WORKSPACE}" commit -m "ricet sandbox: baseline snapshot" 2>/dev/null || true
-    log "Git repo initialized in workspace with baseline snapshot."
+if [ -d "${WORKSPACE}/.git" ]; then
+    log "Existing git repo in workspace (bind-mounted from host)."
 else
-    log "Existing git repo found in workspace."
+    log "No .git in workspace — agent can 'git init' if needed."
 fi
 
 # -------------------------------------------------------
 # 5. Install Python dependencies (if requirements.txt exists)
+#    Pip cache is bind-mounted so this is free on subsequent starts.
 # -------------------------------------------------------
 if [ -f "${WORKSPACE}/requirements.txt" ]; then
     log "Installing Python dependencies..."
