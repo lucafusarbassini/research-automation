@@ -402,14 +402,15 @@ class MobileServer:
         If authentication is configured, the ``Authorization`` header must
         contain a valid ``Bearer <token>``.
         """
-        # Auth check (skip for PWA asset routes and localhost/tunnel access)
-        is_local = client_ip in ("127.0.0.1", "::1", "localhost", "")
-        if self._auth is not None and not is_local and path not in (
-            "/",
-            "/manifest.json",
-            "/sw.js",
-            "/icon.svg",
-        ):
+        # Auth check. PWA asset routes are public (they're just static files
+        # served by the PWA shell), but EVERY real API path requires a valid
+        # Bearer token — including localhost, because otherwise any local
+        # process (docker container, a Python app on the same host, an SSRF
+        # in any sibling service) could push arbitrary prompts into our
+        # Claude sessions with no auth at all. This was security audit
+        # finding P0-3.
+        PUBLIC_PATHS = ("/", "/manifest.json", "/sw.js", "/icon.svg")
+        if self._auth is not None and path not in PUBLIC_PATHS:
             token = _extract_bearer(headers)
             if not self._auth.validate(token or "", client_ip=client_ip):
                 return format_for_mobile({"ok": False, "error": "unauthorized"})
