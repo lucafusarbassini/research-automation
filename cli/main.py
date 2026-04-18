@@ -1430,6 +1430,37 @@ def _project_port(project_name: str, base_port: int = 8777) -> int:
     return base_port + (h % 100)
 
 
+def _find_running_ricet_mobile_port() -> Optional[int]:
+    """Return the port of any already-running `ricet mobile serve` process
+    on this host, or None if none is found.
+
+    We pgrep for the command line, extract --port from the matches, and
+    probe each to confirm it's actually answering (guards against zombie
+    lines still in ``ps``). Used by `_start_mobile_for_up` to avoid
+    starting a second mobile server on a different port when one is
+    already owning the machine-wide state.
+    """
+    import re as _re
+    try:
+        r = subprocess.run(
+            ["pgrep", "-af", "ricet mobile serve"],
+            capture_output=True, text=True, timeout=3,
+        )
+    except Exception:
+        return None
+    for line in (r.stdout or "").splitlines():
+        m = _re.search(r"--port\s+(\d+)", line)
+        if not m:
+            continue
+        try:
+            found_port = int(m.group(1))
+        except ValueError:
+            continue
+        if _probe_ricet_mobile(found_port):
+            return found_port
+    return None
+
+
 def _probe_ricet_mobile(port: int, timeout: float = 1.0) -> bool:
     """Return ``True`` if an existing ricet mobile server is answering on *port*.
 
@@ -1934,6 +1965,25 @@ def _start_mobile_for_up(console: Console, screen_name: str, port: int) -> None:
         console.print(
             "  [dim]Subsequent `ricet up` calls route to the correct "
             "per-project screen via the name/project parameter.[/dim]"
+        )
+        return
+
+    # Also scan the ENTIRE machine for any running ricet mobile server —
+    # different project names hash to different default ports, so the first
+    # `ricet up --port 8811` on machine A starts the server on 8811, but the
+    # second `ricet up <proj-with-hash=780>` would otherwise start a NEW
+    # server on 8780 and the hub wouldn't see that project. Instead: find
+    # the existing ricet mobile server (by pgrep), verify it's alive, and
+    # refuse to start a second one.
+    existing_port = _find_running_ricet_mobile_port()
+    if existing_port is not None and existing_port != port:
+        console.print(
+            f"  [green]Mobile server already running on :{existing_port} — "
+            f"reusing instead of starting a second one on :{port}.[/green]"
+        )
+        console.print(
+            "  [dim]This project's screen session is routable from the hub "
+            f"via the existing server on :{existing_port}.[/dim]"
         )
         return
 
