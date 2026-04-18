@@ -886,26 +886,64 @@ class MobileServer:
         return data
 
     def _handle_get_screen_capture(self, body: Optional[dict]) -> dict:
-        """Capture current screen session content via `screen -X hardcopy`."""
+        """Capture current screen-session content.
+
+        Preference order:
+          1. Read the session's live log file at ``~/.ricet/logs/<name>.log``
+             (written by ``screen -L -Logfile`` since the log-aware ``ricet up``).
+             This preserves ANSI color codes, which ``screen -X hardcopy`` strips.
+          2. Fall back to ``screen -X hardcopy -h`` for older sessions that
+             weren't launched with logging enabled (plain text, no colors).
+
+        Returns the LAST ~200 KB of the log so the browser isn't asked to
+        render megabytes on every 2-second poll.
+        """
         if not self._screen_session:
             return {"ok": True, "content": ""}
         import shutil
         import tempfile
         if not shutil.which("screen"):
             return {"ok": True, "content": "screen not available"}
+
+        # Project query-param lets the hub request a specific project's log
+        # once multiple screen sessions exist on the same machine.
+        project = (body or {}).get("_query", {}).get("project", "")
+        target_session = _resolve_screen_session(project) if project else self._screen_session
+        if not target_session:
+            return {"ok": True, "content": ""}
+
+        # 1. Try the log file first (ANSI-preserved)
+        log_path = Path.home() / ".ricet" / "logs" / f"{target_session}.log"
+        if log_path.is_file():
+            try:
+                size = log_path.stat().st_size
+                max_bytes = 200_000
+                with log_path.open("rb") as f:
+                    if size > max_bytes:
+                        f.seek(size - max_bytes)
+                        # Align to the next newline so we don't start mid-ANSI-sequence
+                        f.readline()
+                    raw = f.read()
+                return {
+                    "ok": True,
+                    "content": raw.decode("utf-8", errors="replace"),
+                }
+            except Exception as exc:
+                logger.warning("Failed reading screen log %s: %s", log_path, exc)
+                # Fall through to hardcopy
+
+        # 2. Fallback: hardcopy (no ANSI)
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
             tmp_path = tmp.name
         try:
             result = subprocess.run(
-                ["screen", "-S", self._screen_session, "-X", "hardcopy", "-h", tmp_path],
+                ["screen", "-S", target_session, "-X", "hardcopy", "-h", tmp_path],
                 capture_output=True, timeout=3,
             )
             if result.returncode != 0:
                 return {"ok": True, "content": "Screen session not reachable."}
             content = Path(tmp_path).read_text(errors="replace")
-            # Strip trailing blank lines
             lines = content.rstrip("\n").split("\n")
-            # Remove leading blank lines too
             while lines and not lines[0].strip():
                 lines.pop(0)
             return {"ok": True, "content": "\n".join(lines)}
