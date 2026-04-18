@@ -1782,6 +1782,20 @@ def up(
         console.print("[red]Screen session did not start.[/red]")
         raise typer.Exit(1)
 
+    # Pin screen window geometry to match what the Hub Dashboard's xterm.js
+    # ScreenMonitor renders (180x40). Without this, Claude's TUI emits
+    # cursor-forward codes up to column 168+ for a geometry it inferred from
+    # the spawning shell (often wider), and the dashboard's fixed-width
+    # terminal shows chaotic line breaks as those overshoot or clip.
+    subprocess.run(
+        ["screen", "-S", screen_name, "-X", "width", "-w", "180"],
+        capture_output=True, timeout=3,
+    )
+    subprocess.run(
+        ["screen", "-S", screen_name, "-X", "height", "-w", "40"],
+        capture_output=True, timeout=3,
+    )
+
     console.print(f"[green]Screen session '{screen_name}' started with Claude.[/green]")
 
     # --- 3. Mobile server + Tailscale ---
