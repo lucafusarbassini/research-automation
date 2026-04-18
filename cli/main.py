@@ -1848,8 +1848,13 @@ def _start_mobile_for_up(console: Console, screen_name: str, port: int) -> None:
     env = dict(_os.environ)
     env["RICET_SCREEN_SESSION"] = screen_name
 
+    # Bind to 0.0.0.0 by default so the Hub Dashboard (or any Tailscale peer)
+    # can reach this machine's mobile API. Auth is enforced by a Bearer token
+    # and the Tailscale network is private, so this is safe. Override with
+    # RICET_MOBILE_HOST=127.0.0.1 if you explicitly want localhost-only.
+    mobile_host = _os.environ.get("RICET_MOBILE_HOST", "0.0.0.0")
     mobile_proc = subprocess.Popen(
-        [ricet_bin, "mobile", "serve", "--port", str(port), "--host", "127.0.0.1", "--no-tls"],
+        [ricet_bin, "mobile", "serve", "--port", str(port), "--host", mobile_host, "--no-tls"],
         stdout=log_fd,
         stderr=log_fd,
         start_new_session=True,
