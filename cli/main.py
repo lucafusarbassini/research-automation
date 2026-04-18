@@ -5966,5 +5966,209 @@ def self_update_cmd(
         console.print("  Restart any running `ricet mobile serve` processes to pick up the new code.")
 
 
+# ---------------------------------------------------------------------------
+# `ricet systemd` -- install/uninstall user-level unit files so `ricet up`
+# and the mobile server come back automatically after a reboot.
+# ---------------------------------------------------------------------------
+
+systemd_app = typer.Typer(
+    help="Install user-level systemd units so ricet survives reboots."
+)
+app.add_typer(systemd_app, name="systemd")
+
+
+def _systemd_paths() -> tuple[Path, Path]:
+    """Return (unit dir under ~/.config, template source dir in the repo)."""
+    unit_dir = Path.home() / ".config" / "systemd" / "user"
+    # templates/systemd lives next to cli/ in the installed package.
+    template_dir = Path(__file__).resolve().parent.parent / "templates" / "systemd"
+    return unit_dir, template_dir
+
+
+def _load_project_names() -> list[str]:
+    """Read project names from ~/.ricet/projects.json. Empty list if missing."""
+    registry = Path.home() / ".ricet" / "projects.json"
+    if not registry.exists():
+        return []
+    try:
+        data = json.loads(registry.read_text())
+    except json.JSONDecodeError:
+        return []
+    # Registry is either {"projects": [...]} or the legacy bare list.
+    projects = data.get("projects", []) if isinstance(data, dict) else data
+    names: list[str] = []
+    for proj in projects:
+        name = proj.get("name") if isinstance(proj, dict) else None
+        if name:
+            names.append(str(name))
+    return names
+
+
+def _run_systemctl(args: list[str]) -> tuple[int, str]:
+    """Run `systemctl --user` with the given args. Returns (rc, combined output)."""
+    try:
+        result = subprocess.run(
+            ["systemctl", "--user", *args],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return 127, "systemctl not found on PATH"
+    output = (result.stdout or "") + (result.stderr or "")
+    return result.returncode, output.strip()
+
+
+@systemd_app.command("install")
+def systemd_install(
+    mobile_port: int = typer.Option(
+        8858, "--mobile-port", help="Port for the per-machine mobile server unit"
+    ),
+    no_enable: bool = typer.Option(
+        False, "--no-enable", help="Copy unit files but do not enable/start them"
+    ),
+):
+    """Install systemd --user units for ricet-mobile and each adopted project.
+
+    Copies templates/systemd/*.service into ~/.config/systemd/user/, then
+    `systemctl --user enable`s ricet-mobile.service and one
+    ricet-up@<project>.service per entry in ~/.ricet/projects.json.
+    """
+    unit_dir, template_dir = _systemd_paths()
+
+    if not template_dir.is_dir():
+        console.print(f"[red]Templates missing:[/red] {template_dir}")
+        raise typer.Exit(1)
+
+    unit_dir.mkdir(parents=True, exist_ok=True)
+
+    sources = {
+        "ricet-mobile.service": template_dir / "ricet-mobile.service",
+        "ricet-up@.service": template_dir / "ricet-up@.service",
+    }
+    for dest_name, src in sources.items():
+        if not src.exists():
+            console.print(f"[red]Missing template:[/red] {src}")
+            raise typer.Exit(1)
+        dest = unit_dir / dest_name
+        shutil.copyfile(src, dest)
+        console.print(f"  [green]installed[/green] {dest}")
+
+    # Customise the mobile port if requested (simple in-place edit).
+    if mobile_port != 8858:
+        mobile_unit = unit_dir / "ricet-mobile.service"
+        text = mobile_unit.read_text()
+        text = text.replace(
+            "Environment=RICET_MOBILE_PORT=8858",
+            f"Environment=RICET_MOBILE_PORT={mobile_port}",
+        )
+        mobile_unit.write_text(text)
+        console.print(
+            f"  [dim]mobile port set to {mobile_port}[/dim]"
+        )
+
+    # Reload so systemd notices the new files.
+    rc, out = _run_systemctl(["daemon-reload"])
+    if rc != 0:
+        console.print(f"[yellow]daemon-reload warning:[/yellow] {out}")
+
+    if no_enable:
+        console.print("[yellow]--no-enable set; skipping enable/start.[/yellow]")
+        return
+
+    enabled: list[str] = []
+
+    # ricet-mobile (one per machine).
+    rc, out = _run_systemctl(["enable", "--now", "ricet-mobile.service"])
+    if rc == 0:
+        enabled.append("ricet-mobile.service")
+    else:
+        console.print(f"[red]failed to enable ricet-mobile:[/red] {out}")
+
+    # One ricet-up@<project>.service per registered project.
+    project_names = _load_project_names()
+    if not project_names:
+        console.print(
+            "[yellow]No projects found in ~/.ricet/projects.json; "
+            "run `ricet adopt` or `ricet init` first.[/yellow]"
+        )
+    for name in project_names:
+        unit = f"ricet-up@{name}.service"
+        rc, out = _run_systemctl(["enable", unit])
+        if rc == 0:
+            enabled.append(unit)
+        else:
+            console.print(f"[red]failed to enable {unit}:[/red] {out}")
+
+    console.print("\n[bold]Enabled:[/bold]")
+    for unit in enabled:
+        console.print(f"  [green]*[/green] {unit}")
+
+    console.print(
+        "\n[bold yellow]Heads up:[/bold yellow] user units only run while you "
+        "are logged in unless linger is enabled. To let them start on boot "
+        "before you log in, run:"
+    )
+    console.print("  [cyan]sudo loginctl enable-linger $USER[/cyan]")
+    console.print(
+        "\nVerify with:\n"
+        "  [cyan]systemctl --user status ricet-mobile[/cyan]\n"
+        "  [cyan]systemctl --user status 'ricet-up@*'[/cyan]"
+    )
+
+
+@systemd_app.command("uninstall")
+def systemd_uninstall(
+    keep_files: bool = typer.Option(
+        False, "--keep-files", help="Disable units but leave the .service files in place"
+    ),
+):
+    """Disable and remove ricet's systemd --user units."""
+    unit_dir, _ = _systemd_paths()
+
+    if not unit_dir.is_dir():
+        console.print(f"[yellow]Nothing to do; {unit_dir} does not exist.[/yellow]")
+        return
+
+    targets: list[str] = ["ricet-mobile.service"]
+    for name in _load_project_names():
+        targets.append(f"ricet-up@{name}.service")
+
+    # Also sweep any ricet-up@*.service files that aren't in the registry
+    # (e.g., if the user removed a project) so uninstall is complete.
+    for unit_file in unit_dir.glob("ricet-up@*.service"):
+        if unit_file.name not in targets:
+            targets.append(unit_file.name)
+
+    for unit in targets:
+        rc, out = _run_systemctl(["disable", "--now", unit])
+        if rc == 0:
+            console.print(f"  [green]disabled[/green] {unit}")
+        else:
+            # Not fatal -- unit may never have been enabled.
+            console.print(f"  [dim]skip {unit}: {out}[/dim]")
+
+    if not keep_files:
+        for name in ("ricet-mobile.service", "ricet-up@.service"):
+            path = unit_dir / name
+            if path.exists():
+                path.unlink()
+                console.print(f"  [green]removed[/green] {path}")
+        for unit_file in unit_dir.glob("ricet-up@*.service"):
+            # Clean up per-instance files too (systemctl disable usually does
+            # this, but be defensive).
+            unit_file.unlink()
+
+    rc, out = _run_systemctl(["daemon-reload"])
+    if rc != 0:
+        console.print(f"[yellow]daemon-reload warning:[/yellow] {out}")
+
+    console.print("[green]systemd units uninstalled.[/green]")
+    console.print(
+        "[dim]Linger (if previously enabled) is unaffected. "
+        "Disable with: sudo loginctl disable-linger $USER[/dim]"
+    )
+
+
 if __name__ == "__main__":
     app()
