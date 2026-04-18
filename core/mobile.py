@@ -440,11 +440,17 @@ class MobileServer:
         return {"ok": True, "task_id": task_id, "status": status}
 
     def _handle_get_status(self, body: Optional[dict]) -> dict:
+        from core.git_info import cached_info
+        info = cached_info()
         return {
             "ok": True,
             "status": "running",
             "tasks_queued": sum(1 for t in self._tasks if t["status"] == "queued"),
             "tasks_total": len(self._tasks),
+            "version": info.get("version"),
+            "git_sha": info.get("git_sha"),
+            "git_branch": info.get("git_branch"),
+            "git_dirty": info.get("git_dirty"),
         }
 
     def _handle_get_sessions(self, body: Optional[dict]) -> dict:
@@ -707,7 +713,15 @@ class MobileServer:
 
     def _handle_get_dashboard(self, body: Optional[dict]) -> dict:
         """Return comprehensive dashboard data as JSON."""
-        data: dict = {"ok": True}
+        from core.git_info import cached_info
+        info = cached_info()
+        data: dict = {
+            "ok": True,
+            "version": info.get("version"),
+            "git_sha": info.get("git_sha"),
+            "git_branch": info.get("git_branch"),
+            "git_dirty": info.get("git_dirty"),
+        }
 
         # Goal
         goal_path = Path("knowledge/GOAL.md")
