@@ -1430,7 +1430,8 @@ def _project_port(project_name: str, base_port: int = 8777) -> int:
     return base_port + (h % 100)
 
 
-def _find_running_ricet_mobile_port() -> Optional[int]:
+def _find_running_ricet_mobile_port():
+    # type: () -> 'int | None'
     """Return the port of any already-running `ricet mobile serve` process
     on this host, or None if none is found.
 
