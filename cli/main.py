@@ -1430,6 +1430,41 @@ def _project_port(project_name: str, base_port: int = 8777) -> int:
     return base_port + (h % 100)
 
 
+def _probe_ricet_mobile(port: int, timeout: float = 1.0) -> bool:
+    """Return ``True`` if an existing ricet mobile server is answering on *port*.
+
+    We probe ``GET /status`` and consider it a match only if the JSON payload
+    has the ricet-specific shape (``status == "running"`` + the ``version`` /
+    ``tasks_queued`` keys). This avoids mis-identifying an unrelated service
+    squatting the port as a ricet mobile server.
+    """
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    for scheme in ("http", "https"):
+        url = f"{scheme}://127.0.0.1:{port}/status"
+        try:
+            req = urllib.request.Request(url, method="GET")
+            # Self-signed TLS is expected when scheme=https; disable verify.
+            if scheme == "https":
+                import ssl as _ssl
+                ctx = _ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = _ssl.CERT_NONE
+                resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
+            else:
+                resp = urllib.request.urlopen(req, timeout=timeout)
+            with resp:
+                body = resp.read(4096)
+            data = _json.loads(body.decode("utf-8", errors="replace"))
+            if data.get("ok") and data.get("status") == "running" and "tasks_queued" in data:
+                return True
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError):
+            continue
+    return False
+
+
 @app.command()
 def up(
     screen_name: str = typer.Option("", "--screen", "-s", help="Screen session name (default: project name)"),
@@ -1865,12 +1900,29 @@ def _start_mobile_for_up(console: Console, screen_name: str, port: int) -> None:
 
     Launches `ricet mobile serve` as a detached background process so it
     survives after the parent exits. No fork tricks needed.
+
+    If an existing ricet mobile server is already listening on *port* (as
+    confirmed by a ``/status`` probe), we skip starting a new one — the
+    first ``ricet up`` on a machine owns the mobile server, and subsequent
+    ``ricet up`` calls just register their screen session with it.
     """
     import os as _os
     import shutil
     import time
 
-    # Kill stale processes on the port
+    # If a ricet mobile server is already up on this port, reuse it.
+    if _probe_ricet_mobile(port):
+        console.print(
+            f"  [green]Mobile server already running on :{port} — reusing.[/green]"
+        )
+        console.print(
+            "  [dim]Subsequent `ricet up` calls route to the correct "
+            "per-project screen via the name/project parameter.[/dim]"
+        )
+        return
+
+    # Kill stale processes on the port (not a ricet mobile server — e.g.
+    # a crashed leftover, or something else squatting).
     subprocess.run(f"fuser -k {port}/tcp", shell=True, capture_output=True)
     time.sleep(0.5)
 
