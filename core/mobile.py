@@ -1229,24 +1229,46 @@ def _schedule_restart(delay: float = 2.0, restart_fn: Optional[Callable[[], None
 def _inject_to_screen(text: str, session: str) -> bool:
     """Inject text into a running GNU screen session as if typed at the prompt.
 
-    Uses ``screen -S <session> -X stuff "<text>\\r"``.
-    Returns True if the screen command succeeded (session exists and is reachable).
-    Safe to call even when no screen session is running — just returns False.
+    Sends the text via ``screen -X stuff <text>``, waits briefly so the TUI
+    registers the characters as typed input, then sends Enter as a SEPARATE
+    stuff command. Claude Code's TUI (v2.1.x with xterm-256color) does not
+    reliably submit when the text and the trailing carriage return arrive
+    as one stuff burst — it buffers them as if pasted and leaves the prompt
+    un-submitted (text visible in the input box but never actually sent).
+    Splitting Enter into its own discrete keystroke reliably submits.
+
+    Returns True if both stuff commands succeeded. Safe to call even when
+    no screen session is running — just returns False.
     """
     if not session:
         return False
     import shutil
     import subprocess
+    import time
     if not shutil.which("screen"):
         return False
-    result = subprocess.run(
-        ["screen", "-S", session, "-X", "stuff", f"{text}\r"],
+    # 1. Type the text (no trailing newline — Enter is fired separately)
+    r1 = subprocess.run(
+        ["screen", "-S", session, "-X", "stuff", text],
         capture_output=True,
         timeout=3,
     )
-    if result.returncode == 0:
-        logger.info("Injected %d chars into screen session '%s'", len(text), session)
-    return result.returncode == 0
+    if r1.returncode != 0:
+        return False
+    # 2. Let the TUI register what it just received as typed input
+    time.sleep(0.3)
+    # 3. Fire Enter as its own keystroke — this is what actually submits
+    r2 = subprocess.run(
+        ["screen", "-S", session, "-X", "stuff", "\r"],
+        capture_output=True,
+        timeout=3,
+    )
+    if r2.returncode == 0:
+        logger.info(
+            "Injected %d chars + Enter into screen session '%s'",
+            len(text), session,
+        )
+    return r2.returncode == 0
 
 
 def _parse_multipart_audio(
