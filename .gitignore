@@ -56,3 +56,8 @@ slides_output/
 sandbox/.env
 sandbox/patches/
 sandbox/backups/
+sandbox/workspace/
+
+# Runtime state (claude-flow daemon)
+.claude-flow/daemon-state.json
+.claude-flow/daemon.pid

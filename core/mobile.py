@@ -303,17 +303,18 @@ class ProjectRegistry:
 # ---------------------------------------------------------------------------
 
 _MOBILE_MAX_STR = 280  # comfortable for phone screens
+_NO_TRUNCATE_KEYS = frozenset({"content", "_html", "todo", "goal"})
 
 
 def format_for_mobile(data: dict) -> dict:
     """Format a response dict for compact mobile display.
 
-    * Long string values are truncated to 280 characters.
+    * Long string values are truncated to 280 characters (except content/html/todo/goal).
     * A ``_ts`` key with the current ISO-8601 timestamp is injected.
     """
     out: dict[str, Any] = {}
     for key, value in data.items():
-        if isinstance(value, str) and len(value) > _MOBILE_MAX_STR:
+        if isinstance(value, str) and len(value) > _MOBILE_MAX_STR and key not in _NO_TRUNCATE_KEYS:
             out[key] = value[: _MOBILE_MAX_STR - 3] + "..."
         else:
             out[key] = value
@@ -658,7 +659,7 @@ class MobileServer:
             tmp_path = tmp.name
         try:
             result = subprocess.run(
-                ["screen", "-S", self._screen_session, "-X", "hardcopy", tmp_path],
+                ["screen", "-S", self._screen_session, "-X", "hardcopy", "-h", tmp_path],
                 capture_output=True, timeout=3,
             )
             if result.returncode != 0:
