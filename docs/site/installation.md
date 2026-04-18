@@ -194,6 +194,21 @@ research-automation/
 
 ---
 
+## Optional: Reboot Survival (systemd)
+
+Running ricet on a lab machine that reboots? Install user-level systemd
+units so `ricet up` comes back automatically for every adopted project:
+
+```bash
+ricet systemd install
+sudo loginctl enable-linger $USER   # so units start before login
+```
+
+See the dedicated [systemd guide](systemd.md) for verification, custom
+ports, and uninstall.
+
+---
+
 ## Optional: claude-flow Integration
 
 ricet optionally integrates with [claude-flow v3](https://github.com/ruvnet/claude-flow) for enhanced orchestration, HNSW vector memory, and 3-tier model routing. When claude-flow is not installed, every module gracefully falls back to its built-in implementation.
