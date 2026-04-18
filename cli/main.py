@@ -1470,7 +1470,12 @@ def up(
     project_path = Path.cwd()
 
     # --- 0. Project identity ---
-    project_name = _derive_project_name(project_path)
+    # Name resolution: explicit --screen wins; otherwise the directory
+    # basename (lowercased). GOAL.md-header derivation used to run here
+    # but produced surprising slugs like "project-goal" whenever the
+    # auto-prefilled GOAL.md still had a generic heading, and those names
+    # leaked into the registry.
+    project_name = (screen_name or project_path.name).lower()
     if not screen_name:
         screen_name = project_name
     if port == 0:
@@ -1790,7 +1795,8 @@ def down(
     import os as _os
     import signal as _sig
 
-    project_name = _derive_project_name(Path.cwd())
+    # Match `ricet up`: explicit --screen wins, else dir basename.
+    project_name = (screen_name or Path.cwd().name).lower()
     if not screen_name:
         screen_name = project_name
     if port == 0:
