@@ -1628,18 +1628,21 @@ def up(
             _auth_ok = True
             console.print(f"  [green]Claude CLI OK: {_auth_check.stdout.strip()}[/green]")
 
-        # The claude command to run inside the container
-        # Use --continue to resume the most recent session on restart
+        # The claude command to run inside the container.
+        # NOTE: do NOT use --continue here. On a freshly adopted project there
+        # is no prior Claude session to continue, so Claude exits immediately
+        # and the outer screen loop respawns it forever. Let Claude start a
+        # fresh session; session continuity is handled by claude-flow memory.
         claude_cmd = (
             f"docker exec -it {container_name} {_run_as} "
-            f"claude --dangerously-skip-permissions --model opus --continue"
+            f"claude --dangerously-skip-permissions --model opus"
         )
     else:
         console.print(
             "[yellow]Running WITHOUT Docker sandbox. "
             "Claude will have full host access.[/yellow]"
         )
-        claude_cmd = "claude --dangerously-skip-permissions --model opus --continue"
+        claude_cmd = "claude --dangerously-skip-permissions --model opus"
 
     # --- 2. Screen session ---
     existing = subprocess.run(
