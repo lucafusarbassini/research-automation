@@ -361,6 +361,7 @@ class MobileServer:
         self._routes[("GET", "/status")] = self._handle_get_status
         self._routes[("GET", "/sessions")] = self._handle_get_sessions
         self._routes[("POST", "/voice")] = self._handle_post_voice
+        self._routes[("POST", "/voice/audio")] = self._handle_post_voice_audio
         self._routes[("GET", "/progress")] = self._handle_get_progress
         self._routes[("GET", "/projects")] = self._handle_get_projects
         self._routes[("GET", "/project/status")] = self._handle_get_project_status
@@ -465,10 +466,12 @@ class MobileServer:
                     sessions.append({"name": f.stem, "status": "unknown"})
         return {"ok": True, "sessions": sessions}
 
-    def _handle_post_voice(self, body: Optional[dict]) -> dict:
-        text = (body or {}).get("text", "")
-        # Use client-provided language if available, fall back to detection
-        original_lang = (body or {}).get("source_lang", "")
+    def _process_voice_text(self, text: str, *, original_lang: str = "", source: str = "voice") -> dict:
+        """Shared pipeline: translate -> screen-inject -> persist.
+
+        Used by both the text ``/voice`` endpoint and the ``/voice/audio``
+        endpoint (after whisper transcription).
+        """
         from core.voice import detect_language, translate_to_english
         if not original_lang:
             original_lang = detect_language(text)
@@ -480,13 +483,118 @@ class MobileServer:
         task_id = uuid.uuid4().hex[:12]
         injected = _inject_to_screen(text, self._screen_session) if self._screen_session else False
         status = "injected" if injected else "queued"
-        task = {"task_id": task_id, "prompt": text, "status": status, "source": "voice"}
+        task = {"task_id": task_id, "prompt": text, "status": status, "source": source}
         self._tasks.append(task)
         if not injected:
-            self._persist_task_to_todo(text, source="voice")
+            self._persist_task_to_todo(text, source=source)
         logger.info("Voice %s: %s — %s", status, task_id, text[:80])
-        return {"ok": True, "task_id": task_id, "source": "voice", "injected": injected,
-                "original_lang": original_lang}
+        return {
+            "ok": True,
+            "task_id": task_id,
+            "source": source,
+            "injected": injected,
+            "original_lang": original_lang,
+            "text": text,
+        }
+
+    def _handle_post_voice(self, body: Optional[dict]) -> dict:
+        text = (body or {}).get("text", "")
+        # Use client-provided language if available, fall back to detection
+        original_lang = (body or {}).get("source_lang", "")
+        result = self._process_voice_text(text, original_lang=original_lang, source="voice")
+        # Back-compat: do not include "text" echo for text endpoint
+        result.pop("text", None)
+        return result
+
+    def _handle_post_voice_audio(self, body: Optional[dict]) -> dict:
+        """Handle an uploaded audio file → whisper transcription → voice pipeline.
+
+        The HTTP layer parses the multipart body and stashes the saved tempfile
+        path in ``body["_audio_path"]`` (plus optional ``body["_audio_suffix"]``).
+        A 400 is returned if no file was attached. A 500 with an actionable
+        message is returned if whisper is not installed.
+        """
+        import shutil as _shutil
+        import subprocess as _subprocess
+
+        audio_path_str = (body or {}).get("_audio_path")
+        if not audio_path_str:
+            return {"ok": False, "error": "missing_audio_file", "status": 400}
+        audio_path = Path(audio_path_str)
+        if not audio_path.exists() or audio_path.stat().st_size == 0:
+            try:
+                audio_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+            return {"ok": False, "error": "empty_audio_file", "status": 400}
+
+        # Whisper must be on PATH. Keep the import lazy / optional.
+        if not _shutil.which("whisper"):
+            try:
+                audio_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+            return {
+                "ok": False,
+                "error": "whisper not found, install with: pip install openai-whisper",
+                "status": 500,
+            }
+
+        txt_file = audio_path.with_suffix(".txt")
+        try:
+            proc = _subprocess.run(
+                [
+                    "whisper",
+                    "--model", "small",
+                    "--language", "en",
+                    "--output_format", "txt",
+                    "--output_dir", str(audio_path.parent),
+                    str(audio_path),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+            if proc.returncode != 0 or not txt_file.exists():
+                logger.warning(
+                    "whisper failed (rc=%s): %s",
+                    proc.returncode, (proc.stderr or "")[:400],
+                )
+                return {
+                    "ok": False,
+                    "error": "transcription_failed",
+                    "detail": (proc.stderr or "").strip()[:400],
+                    "status": 500,
+                }
+            transcription = txt_file.read_text(errors="replace").strip()
+            if not transcription:
+                return {"ok": False, "error": "empty_transcription", "status": 500}
+
+            # Run through the same pipeline as /voice (translation + injection)
+            result = self._process_voice_text(transcription, source="voice")
+            injected = bool(result.get("injected"))
+            return {
+                "ok": True,
+                "transcription": transcription,
+                "intent": "voice",
+                "injected": injected,
+                "task_id": result.get("task_id"),
+                "original_lang": result.get("original_lang", ""),
+            }
+        except _subprocess.TimeoutExpired:
+            return {"ok": False, "error": "whisper_timeout", "status": 500}
+        except Exception as exc:  # pragma: no cover — defensive
+            logger.error("voice/audio handler error: %s", exc)
+            return {"ok": False, "error": f"server_error: {exc}", "status": 500}
+        finally:
+            try:
+                audio_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+            try:
+                txt_file.unlink(missing_ok=True)
+            except Exception:
+                pass
 
     def _persist_task_to_todo(self, prompt: str, source: str = "mobile") -> None:
         """Append a task to state/TODO.md so ricet overnight can pick it up.
@@ -890,18 +998,55 @@ def _make_handler(mobile: MobileServer) -> type:
 
         def do_POST(self) -> None:
             length = int(self.headers.get("Content-Length", 0))
-            raw = self.rfile.read(length) if length else b"{}"
-            body = json.loads(raw)
+            ctype = self.headers.get("Content-Type", "") or ""
             headers = {k: v for k, v in self.headers.items()}
             client_ip = self.client_address[0]
+
+            # Parsed path without query string for routing decisions
+            parsed = urlparse(self.path)
+            route_path = parsed.path
+
+            body: dict = {}
+            if ctype.lower().startswith("multipart/form-data"):
+                # Save uploaded file to a tempfile; stash the path in body.
+                try:
+                    audio_path, suffix = _parse_multipart_audio(
+                        self.rfile, ctype, length
+                    )
+                except ValueError as exc:
+                    self._send_json({"ok": False, "error": str(exc)}, status=400)
+                    return
+                except Exception as exc:  # pragma: no cover — defensive
+                    logger.error("multipart parse error: %s", exc)
+                    self._send_json(
+                        {"ok": False, "error": f"multipart_parse_failed: {exc}"},
+                        status=400,
+                    )
+                    return
+                if audio_path is None:
+                    self._send_json(
+                        {"ok": False, "error": "missing_audio_file"}, status=400
+                    )
+                    return
+                body["_audio_path"] = str(audio_path)
+                body["_audio_suffix"] = suffix
+            else:
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw) if raw else {}
+                except json.JSONDecodeError:
+                    body = {}
+
             resp = mobile.dispatch(
                 "POST", self.path, body, headers=headers, client_ip=client_ip
             )
-            self._send_json(resp)
+            # Handlers may hint at a non-200 status via a "status" field.
+            status = int(resp.pop("status", 200)) if isinstance(resp.get("status"), int) else 200
+            self._send_json(resp, status=status)
 
-        def _send_json(self, data: dict) -> None:
+        def _send_json(self, data: dict, status: int = 200) -> None:
             payload = json.dumps(data).encode()
-            self.send_response(200)
+            self.send_response(status)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(payload)))
             self.end_headers()
@@ -1017,6 +1162,64 @@ def _inject_to_screen(text: str, session: str) -> bool:
     if result.returncode == 0:
         logger.info("Injected %d chars into screen session '%s'", len(text), session)
     return result.returncode == 0
+
+
+def _parse_multipart_audio(
+    stream: Any, content_type: str, content_length: int,
+) -> Tuple[Optional[Path], str]:
+    """Parse a ``multipart/form-data`` body and extract the first file field named ``audio``.
+
+    Uses ``email.parser`` from the stdlib so there are no extra deps. The uploaded
+    file is written to a ``NamedTemporaryFile`` and its path is returned along
+    with the detected suffix (``.webm`` / ``.wav`` / ``""``).
+
+    Returns ``(None, "")`` if no file field called ``audio`` was present.
+    Raises ``ValueError`` if the body is malformed (e.g. no boundary).
+    """
+    import email
+    import re as _re
+    import tempfile as _tempfile
+
+    from email.policy import default as _default_policy
+
+    ct = content_type or ""
+    m = _re.search(r"boundary=([^;]+)", ct, _re.IGNORECASE)
+    if not m:
+        raise ValueError("missing_multipart_boundary")
+    # Read the full body — enforce the declared length so we don't hang.
+    if content_length <= 0:
+        raise ValueError("empty_multipart_body")
+    raw = stream.read(content_length)
+
+    # Feed the body to ``email.message_from_bytes`` with a synthetic header so
+    # the parser recognises the boundary and yields properly-decoded parts.
+    header = f"Content-Type: {ct}\r\nMIME-Version: 1.0\r\n\r\n".encode()
+    msg = email.message_from_bytes(header + raw, policy=_default_policy)
+    if not msg.is_multipart():
+        raise ValueError("not_multipart")
+
+    for part in msg.iter_parts():
+        # Content-Disposition: form-data; name="audio"; filename="clip.webm"
+        cd = part.get("Content-Disposition", "") or ""
+        name_m = _re.search(r'name="([^"]+)"', cd)
+        if not name_m or name_m.group(1) != "audio":
+            continue
+        filename_m = _re.search(r'filename="([^"]+)"', cd)
+        filename = filename_m.group(1) if filename_m else "audio.bin"
+        suffix = Path(filename).suffix.lower() or ".webm"
+        payload = part.get_payload(decode=True)
+        if payload is None:
+            continue
+        tmp = _tempfile.NamedTemporaryFile(
+            prefix="ricet-voice-", suffix=suffix, delete=False,
+        )
+        try:
+            tmp.write(payload)
+        finally:
+            tmp.close()
+        return Path(tmp.name), suffix
+
+    return None, ""
 
 
 def _extract_bearer(headers: Optional[dict]) -> Optional[str]:
