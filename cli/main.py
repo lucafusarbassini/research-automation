@@ -1677,11 +1677,18 @@ def up(
             f'echo ""; echo "=== Claude exited. Restarting in 5s (Ctrl+C to stop) ==="; '
             f'sleep 5; done'
         )
+    # -U forces UTF-8 in the screen session so Claude Code's box-drawing and
+    # unicode characters render correctly (otherwise they show as � / mojibake).
     screen_cmd = [
-        "screen", "-dmS", screen_name,
+        "screen", "-U", "-dmS", screen_name,
         "bash", "-c", _inner_script,
     ]
-    result = subprocess.run(screen_cmd)
+    # Ensure the screen session inherits a UTF-8 locale even if the login shell
+    # doesn't have one set.
+    screen_env = dict(os.environ)
+    screen_env.setdefault("LANG", "en_US.UTF-8")
+    screen_env.setdefault("LC_ALL", "en_US.UTF-8")
+    result = subprocess.run(screen_cmd, env=screen_env)
     if result.returncode != 0:
         console.print("[red]Failed to create screen session.[/red]")
         raise typer.Exit(1)
