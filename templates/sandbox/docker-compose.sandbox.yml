@@ -39,6 +39,13 @@ services:
       - HOST_UID=${HOST_UID:-1000}
       - HOST_GID=${HOST_GID:-1000}
       - PIP_CACHE_DIR=/home/agent/.cache/pip
+      # Force UTF-8 locale inside the container so Claude Code's box-drawing
+      # and unicode characters render correctly. Without this the container
+      # defaults to POSIX/C locale, and the output from Claude lands in
+      # screen as mojibake (replacement characters).
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - TERM=xterm-256color
     volumes:
       # Project source bind-mounted read-write into /workspace.
       # The :Z suffix is a no-op on non-SELinux hosts and relabels the bind
