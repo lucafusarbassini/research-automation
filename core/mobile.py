@@ -372,6 +372,7 @@ class MobileServer:
         self._routes[("GET", "/dashboard/html")] = self._handle_get_dashboard_html
         self._routes[("GET", "/screen/capture")] = self._handle_get_screen_capture
         self._routes[("POST", "/todo")] = self._handle_post_todo
+        self._routes[("POST", "/self-update")] = self._handle_post_self_update
 
     @property
     def routes(self) -> dict[tuple[str, str], RouteHandler]:
@@ -807,6 +808,43 @@ class MobileServer:
         task_id = uuid.uuid4().hex[:12]
         return {"ok": True, "task_id": task_id, "status": "saved_to_todo"}
 
+    def _handle_post_self_update(self, body: Optional[dict]) -> dict:
+        """Pull latest ricet and restart the server.
+
+        Security: protected by Bearer token auth (enforced in
+        :meth:`dispatch`). Additionally, :func:`core.updater.self_update`
+        verifies that ``git remote get-url origin`` matches
+        ``github.com/lucafusarbassini/research-automation`` before pulling,
+        to prevent tampered-remote attacks.
+
+        The HTTP response is returned BEFORE the restart happens: a
+        ``threading.Timer`` is scheduled with a 2-second delay to call the
+        restart function, giving the response enough time to flush.
+        """
+        from core.updater import self_update
+        result = self_update()
+        if not result.get("ok"):
+            return {
+                "ok": False,
+                "status": "failed",
+                "error": result.get("error", "unknown"),
+                "detail": result.get("detail", ""),
+                "old_sha": result.get("old_sha", ""),
+                "new_sha": result.get("new_sha", ""),
+                "restarting": False,
+            }
+        restarting = result.get("status") == "updated"
+        if restarting:
+            # Schedule the restart AFTER the HTTP response flushes.
+            _schedule_restart(delay=2.0)
+        return {
+            "ok": True,
+            "status": result.get("status", "up_to_date"),
+            "old_sha": result.get("old_sha", ""),
+            "new_sha": result.get("new_sha", ""),
+            "restarting": restarting,
+        }
+
     def _handle_get_dashboard_html(self, body: Optional[dict]) -> dict:
         """Serve standalone dashboard HTML page."""
         from core.mobile_pwa import DASHBOARD_HTML
@@ -1153,6 +1191,39 @@ def is_server_running() -> bool:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def _default_restart() -> None:
+    """Process-exit restart hook.
+
+    We prefer SIGHUP (systemd/PM2 treat it as a restart signal) and fall
+    back to exiting with code 0 so the supervisor restarts us.
+    """
+    import signal
+
+    logger.info("ricet self-update: restarting process")
+    try:
+        # Stop serving new requests first (best effort)
+        try:
+            stop_server()
+        except Exception:
+            pass
+        os.kill(os.getpid(), signal.SIGHUP)
+    except Exception:
+        os._exit(0)
+
+
+def _schedule_restart(delay: float = 2.0, restart_fn: Optional[Callable[[], None]] = None) -> None:
+    """Schedule a restart *delay* seconds from now via ``threading.Timer``.
+
+    The server is stdlib ``http.server``-based (no asyncio loop), so we use
+    a Timer thread instead of ``asyncio.call_later``. Calling this before
+    sending the HTTP response ensures the client sees the response first.
+    """
+    fn = restart_fn or _default_restart
+    t = threading.Timer(delay, fn)
+    t.daemon = True
+    t.start()
 
 
 def _inject_to_screen(text: str, session: str) -> bool:

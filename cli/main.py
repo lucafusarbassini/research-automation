@@ -1559,25 +1559,23 @@ def up(
                 _src = _tmpl / _f
                 if _src.exists():
                     _shutil.copy2(_src, _sdir / _f)
-            # Ensure WORKSPACE_PATH is set for bind mount
-            workspace_dir = project_path / "sandbox" / "workspace"
-            workspace_dir.mkdir(parents=True, exist_ok=True)
-            _set_env_var(_sdir / ".env", "WORKSPACE_PATH", str(workspace_dir.resolve()))
 
-        # Set project-specific container name and host UID/GID in sandbox .env
+        # Set project-specific container name, host UID/GID, and project dir
+        # so the compose template bind-mounts the host project into /workspace.
+        from core.sandbox import load_sandbox_limits, project_volume_names
         sandbox_env = get_sandbox_dir(project_path) / ".env"
         _set_env_var(sandbox_env, "CONTAINER_NAME", container_name)
         _set_env_var(sandbox_env, "HOST_UID", str(os.getuid()))
         _set_env_var(sandbox_env, "HOST_GID", str(os.getgid()))
-        # Auto-detect system resources for container limits
-        import multiprocessing
-        _ncpu = multiprocessing.cpu_count()
-        _set_env_var(sandbox_env, "SANDBOX_CPUS", str(_ncpu))
-        try:
-            _mem_gb = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") // (1024 ** 3)
-            _set_env_var(sandbox_env, "SANDBOX_MEMORY", f"{max(_mem_gb - 2, 2)}G")
-        except Exception:
-            _set_env_var(sandbox_env, "SANDBOX_MEMORY", "8G")
+        _set_env_var(sandbox_env, "PROJECT_DIR", str(project_path.resolve()))
+        _vols = project_volume_names(project_name)
+        _set_env_var(sandbox_env, "RICET_CLAUDE_VOLUME", _vols["claude"])
+        _set_env_var(sandbox_env, "RICET_PIPCACHE_VOLUME", _vols["pipcache"])
+        # Resource limits come from ~/.ricet/sandbox.toml (auto-created on
+        # first run) or are auto-detected as half of host CPU/RAM capped at 16G.
+        _cpu, _ram_gb = load_sandbox_limits()
+        _set_env_var(sandbox_env, "SANDBOX_CPUS", str(_cpu))
+        _set_env_var(sandbox_env, "SANDBOX_MEMORY", f"{_ram_gb}G")
 
         # Start container
         if not is_sandbox_running(project_path):
@@ -1745,7 +1743,7 @@ def up(
         console.print(f"\n[bold]Sandbox:[/bold]")
         console.print(f"  ricet sandbox status    # Container status")
         console.print(f"  ricet sandbox logs      # Claude output")
-        console.print(f"  VS Code: open sandbox/workspace/")
+        console.print(f"  VS Code: open this project directory (bind-mounted live at /workspace in the container)")
     console.print(f"\n[bold]To stop:[/bold]  ricet down")
 
 
@@ -2603,6 +2601,167 @@ def sandbox_destroy_cmd():
     )
     if not ok:
         raise typer.Exit(1)
+
+
+# ---------------------------------------------------------------------------
+# sandbox-doctor: quick diagnostic table for the Docker sandbox prereqs.
+# ---------------------------------------------------------------------------
+
+
+def _sd_check(label: str, fn) -> dict:
+    """Run a check function and shape the result for the doctor table.
+
+    The check function must return ``(ok: bool, fix: str)``. Exceptions are
+    caught and reported as failures.
+    """
+    try:
+        ok, fix = fn()
+    except Exception as exc:  # defensive: never let doctor itself crash
+        return {"label": label, "ok": False, "fix": f"check errored: {exc}"}
+    return {"label": label, "ok": bool(ok), "fix": fix if not ok else ""}
+
+
+@app.command("sandbox-doctor")
+def sandbox_doctor_cmd(
+    port: int = typer.Option(
+        0,
+        "--port",
+        "-p",
+        help="Port to probe on Tailscale interface (default: project port)",
+    ),
+):
+    """Diagnose Docker/Claude/Tailscale prerequisites for the ricet sandbox.
+
+    Prints a pass/fail table; each failing row gives a one-line fix.
+    Run this first on any lab machine before `ricet up`.
+    """
+    import grp
+    import os as _os
+    import socket
+    from rich.table import Table
+
+    project_path = Path.cwd().resolve()
+    project_name = _derive_project_name(project_path)
+    probe_port = port or _project_port(project_name)
+
+    # -- checks -----------------------------------------------------------
+    def check_docker_installed():
+        if shutil.which("docker") is None:
+            return False, "install docker: https://docs.docker.com/engine/install/"
+        try:
+            r = subprocess.run(
+                ["docker", "--version"], capture_output=True, text=True, timeout=5,
+            )
+            return r.returncode == 0, "docker --version failed; reinstall docker"
+        except Exception:
+            return False, "docker binary broken; reinstall docker"
+
+    def check_docker_group():
+        # True if the user can run `docker ps` without `sudo`/`sg`.
+        try:
+            gids = _os.getgroups()
+            docker_gid = grp.getgrnam("docker").gr_gid
+            if docker_gid in gids:
+                return True, ""
+        except (KeyError, OSError):
+            pass
+        return (
+            False,
+            "sudo usermod -aG docker $USER && newgrp docker  (then re-login)",
+        )
+
+    def check_daemon():
+        try:
+            r = subprocess.run(
+                ["docker", "ps"], capture_output=True, text=True, timeout=5,
+            )
+            return r.returncode == 0, "sudo systemctl start docker"
+        except Exception:
+            return False, "sudo systemctl start docker"
+
+    def check_compose_v2():
+        try:
+            r = subprocess.run(
+                ["docker", "compose", "version"],
+                capture_output=True, text=True, timeout=5,
+            )
+            return (r.returncode == 0), "sudo apt install docker-compose-plugin"
+        except Exception:
+            return False, "sudo apt install docker-compose-plugin"
+
+    def check_image():
+        try:
+            r = subprocess.run(
+                ["docker", "image", "inspect", "ricet-sandbox:latest"],
+                capture_output=True, text=True, timeout=10,
+            )
+            return (r.returncode == 0), "cd <project> && ricet sandbox setup && ricet sandbox start"
+        except Exception:
+            return False, "ricet sandbox setup && ricet sandbox start"
+
+    def check_claude_creds():
+        cred = Path.home() / ".claude" / ".credentials.json"
+        return cred.exists(), "claude auth login  (run on host, once)"
+
+    def check_tailscale():
+        if shutil.which("tailscale") is None:
+            return False, "install tailscale: curl -fsSL https://tailscale.com/install.sh | sh"
+        try:
+            r = subprocess.run(
+                ["tailscale", "ip", "--4"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if r.returncode != 0 or not r.stdout.strip():
+                return False, "sudo tailscale up"
+            return True, ""
+        except Exception:
+            return False, "sudo tailscale up"
+
+    def check_port_reachable():
+        # Probe both localhost and 0.0.0.0 binding: a listener on 0.0.0.0
+        # accepts from the tailnet; a listener on 127.0.0.1 does not.
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(2)
+                rc = s.connect_ex(("0.0.0.0", probe_port))
+            if rc == 0:
+                return True, ""
+            return (
+                False,
+                f"no ricet listener on 0.0.0.0:{probe_port}; run 'ricet up' in this project first",
+            )
+        except Exception as exc:
+            return False, f"socket probe failed: {exc}"
+
+    checks = [
+        _sd_check("docker installed",           check_docker_installed),
+        _sd_check("user in 'docker' group",     check_docker_group),
+        _sd_check("docker daemon reachable",    check_daemon),
+        _sd_check("docker compose v2 plugin",   check_compose_v2),
+        _sd_check("ricet-sandbox image local",  check_image),
+        _sd_check("~/.claude/.credentials.json", check_claude_creds),
+        _sd_check("tailscale up",               check_tailscale),
+        _sd_check(f"ricet port :{probe_port} on 0.0.0.0", check_port_reachable),
+    ]
+
+    # -- render -----------------------------------------------------------
+    table = Table(show_header=True, header_style="bold", title="ricet sandbox doctor")
+    table.add_column("Check", style="cyan", no_wrap=True)
+    table.add_column("Status", no_wrap=True)
+    table.add_column("Fix (if failing)")
+    for c in checks:
+        status = "[green]PASS[/green]" if c["ok"] else "[red]FAIL[/red]"
+        table.add_row(c["label"], status, c["fix"])
+    console.print(table)
+
+    failed = [c for c in checks if not c["ok"]]
+    if failed:
+        console.print(
+            f"\n[red]{len(failed)} check(s) failed.[/red] "
+            f"Fix the 'Fix' column entries, then re-run [bold]ricet sandbox-doctor[/bold]."
+        )
+        raise typer.Exit(1)
+    console.print("\n[green]All checks passed. You're good to 'ricet up'.[/green]")
 
 
 # ---------------------------------------------------------------------------
@@ -5710,6 +5869,50 @@ def gstack_cmd(
     else:
         console.print(f"[red]Unknown action: {action}[/red]. Use: install, update, status")
         raise typer.Exit(1)
+
+
+@app.command(name="self-update")
+def self_update_cmd(
+    no_reinstall: bool = typer.Option(
+        False, "--no-reinstall",
+        help="Skip `pipx install -e . --force` after pulling",
+    ),
+    no_verify_remote: bool = typer.Option(
+        False, "--no-verify-remote",
+        help="Skip the origin-URL safety check (use only for forks/mirrors)",
+    ),
+):
+    """Pull the latest ricet code from GitHub and reinstall in place.
+
+    Mirrors the POST /self-update HTTP endpoint: pulls `origin/<branch>`,
+    runs `pipx install -e <repo> --force` if new commits arrived, and
+    prints old/new SHAs. Use the HTTP endpoint for remote-triggered
+    updates from the hub dashboard.
+    """
+    from core.updater import self_update
+
+    result = self_update(
+        reinstall=not no_reinstall,
+        verify_remote=not no_verify_remote,
+    )
+    if not result.get("ok"):
+        console.print(f"[red]self-update failed:[/red] {result.get('error')}")
+        if result.get("detail"):
+            console.print(f"  [dim]{result['detail']}[/dim]")
+        raise typer.Exit(1)
+
+    status = result.get("status", "up_to_date")
+    old_sha = result.get("old_sha", "")
+    new_sha = result.get("new_sha", "")
+    branch = result.get("branch", "")
+
+    if status == "up_to_date":
+        console.print(f"[green]Already up to date[/green] ({branch} @ {old_sha})")
+    else:
+        console.print(
+            f"[green]Updated[/green] ({branch}): {old_sha} -> {new_sha}"
+        )
+        console.print("  Restart any running `ricet mobile serve` processes to pick up the new code.")
 
 
 if __name__ == "__main__":
