@@ -122,15 +122,23 @@ def load_sandbox_limits() -> tuple[int, int]:
 
 
 def project_volume_names(project_name: str) -> dict[str, str]:
-    """Return Docker volume names scoped to a project.
+    """Return Docker volume names for a project.
 
-    Used for persistent per-project state (Claude creds, pip cache) so that
-    container restarts don't re-copy credentials or re-download wheels.
+    Claude credentials volume is MACHINE-WIDE (not per-project): once the
+    user runs `claude auth login` inside any project's sandbox, every other
+    project on the same machine inherits the login. Previously each project
+    had its own `ricet_claude_<name>` volume, forcing a re-auth per project.
+
+    Pip cache is also machine-wide for the same reason — avoids re-downloading
+    wheels every time a new project's sandbox starts, and saves disk space.
+
+    The `project_name` arg is retained for API compatibility but no longer
+    used to scope these volumes.
     """
-    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in project_name)
+    del project_name  # intentionally unused — see docstring
     return {
-        "claude": f"ricet_claude_{safe}",
-        "pipcache": f"ricet_pipcache_{safe}",
+        "claude": "ricet_claude",
+        "pipcache": "ricet_pipcache",
     }
 
 
