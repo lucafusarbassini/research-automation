@@ -1,0 +1,37 @@
+[Unit]
+Description=ricet up for project %i (screen + sandbox + mobile)
+Documentation=https://lucafusarbassini.github.io/research-automation/
+After=network-online.target docker.service ricet-mobile.service
+Wants=network-online.target
+
+[Service]
+# `ricet up` spawns GNU screen (detached) and the Docker sandbox then exits.
+# Oneshot + RemainAfterExit keeps the unit in "active" state so systemd
+# considers the project "up" for dependencies and `systemctl status`.
+Type=oneshot
+RemainAfterExit=yes
+
+# Ensure `ricet`, `screen`, `docker`, etc. resolve without a login shell.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+
+# %i is the template instance name, e.g. `research-automation` in
+# `ricet-up@research-automation.service`. Expect the project checkout at
+# ~/projects/<name>. Symlink if your layout differs:
+#     ln -s ~/code/research-automation ~/projects/research-automation
+WorkingDirectory=%h/projects/%i
+
+ExecStart=/bin/sh -c 'exec ricet up --screen %i'
+
+# ricet up itself is idempotent; `down` cleans up screen + container.
+ExecStop=/bin/sh -c 'ricet down --screen %i || true'
+
+Restart=on-failure
+RestartSec=30s
+
+# Screen sessions live in a private /tmp only if PrivateTmp=yes, so leave
+# that OFF for this unit -- we want `screen -r %i` to work from a login shell.
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target
