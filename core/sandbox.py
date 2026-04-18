@@ -430,6 +430,17 @@ def start_sandbox(
         if _cid.strip():
             run_docker(["docker", "rm", "-f", _cid.strip()], capture_output=True, timeout=10)
 
+    # Ensure the shared machine-wide volumes exist. They're marked
+    # `external: true` in docker-compose.sandbox.yml so compose won't
+    # auto-create them; we do it here (idempotent — `docker volume create`
+    # is a no-op if the volume already exists).
+    for _vol in (env.get("RICET_CLAUDE_VOLUME"), env.get("RICET_PIPCACHE_VOLUME")):
+        if _vol:
+            run_docker(
+                ["docker", "volume", "create", _vol],
+                capture_output=True, timeout=10,
+            )
+
     print_fn(f"Starting sandbox container '{container_name}'...")
     try:
         proc = run_docker(

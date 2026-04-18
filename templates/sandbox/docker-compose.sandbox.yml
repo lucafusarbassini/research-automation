@@ -69,9 +69,12 @@ services:
         limits:
           cpus: '${SANDBOX_CPUS:-4}'
           memory: ${SANDBOX_MEMORY:-8G}
+        # Keep reservations LOW so users can set ram_gb down to 1 GiB in
+        # ~/.ricet/sandbox.toml without hitting "limit < reservation" errors.
+        # 512 MiB is enough for Claude Code + the Python entrypoint to boot.
         reservations:
-          cpus: '1'
-          memory: 2G
+          cpus: '0.5'
+          memory: 512M
     networks:
       - sandbox-net
     restart: "no"
@@ -91,8 +94,16 @@ volumes:
   # host project bind mount so it doesn't pollute the host tree.
   sandbox-internal:
   sandbox-logs:
-  # Per-project persistent volumes (names injected by ricet at compose time).
+  # Machine-wide shared volumes — same physical volume reused across every
+  # ricet project on this host (so Claude creds + pip cache are shared).
+  # Marked `external: true` so compose doesn't try to adopt them under
+  # the CURRENT project's management — otherwise subsequent `ricet up`
+  # calls on other projects get "volume already exists but was created
+  # for project X" errors. ricet ensures these volumes exist (or creates
+  # them itself) before spinning the container up.
   ricet-claude:
     name: ${RICET_CLAUDE_VOLUME:-ricet_claude_default}
+    external: true
   ricet-pipcache:
     name: ${RICET_PIPCACHE_VOLUME:-ricet_pipcache_default}
+    external: true
