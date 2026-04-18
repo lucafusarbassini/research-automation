@@ -103,6 +103,39 @@ else
 fi
 
 # -------------------------------------------------------
+# 3b. Persist ~/.claude.json across container restarts.
+#     Claude Code v2 writes its top-level config to $HOME/.claude.json
+#     (a FILE at home root), which is OUTSIDE the /home/agent/.claude
+#     volume. Without intervention it's recreated every container start,
+#     forcing login + producing the "configuration file not found" warning.
+#     Symlink it to a volume-backed path so it persists.
+# -------------------------------------------------------
+PERSIST_JSON="/home/agent/.claude/claude-config.json"  # lives in the shared volume
+HOME_JSON="/home/agent/.claude.json"
+
+# 1. If the symlink target is missing but a backup exists, seed it
+if [ ! -f "$PERSIST_JSON" ]; then
+    LATEST_BACKUP=$(ls -t /home/agent/.claude/backups/.claude.json.backup.* 2>/dev/null | head -1)
+    if [ -n "$LATEST_BACKUP" ] && [ -f "$LATEST_BACKUP" ]; then
+        cp "$LATEST_BACKUP" "$PERSIST_JSON"
+        log "Seeded $PERSIST_JSON from backup $LATEST_BACKUP"
+    elif [ -f "$HOME_JSON" ] && [ ! -L "$HOME_JSON" ]; then
+        # First run with a real file already in place — relocate it
+        mv "$HOME_JSON" "$PERSIST_JSON"
+        log "Relocated existing $HOME_JSON into volume as $PERSIST_JSON"
+    fi
+fi
+
+# 2. Replace $HOME/.claude.json with a symlink to the persistent file
+rm -f "$HOME_JSON"
+ln -s "$PERSIST_JSON" "$HOME_JSON"
+chown -h agent:agent "$HOME_JSON"
+# Touch target so Claude doesn't short-circuit on "file missing" check
+[ -f "$PERSIST_JSON" ] || $RUN_AS sh -c ": > '$PERSIST_JSON'"
+chown agent:agent "$PERSIST_JSON" 2>/dev/null || true
+log "Linked $HOME_JSON → $PERSIST_JSON (persists across restarts)"
+
+# -------------------------------------------------------
 # 4. Configure git (workspace is a live bind of the host repo, so we do NOT
 #    re-init or commit — we just set identity for any commits the agent makes).
 # -------------------------------------------------------

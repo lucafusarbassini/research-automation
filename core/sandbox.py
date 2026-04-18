@@ -142,6 +142,35 @@ def project_volume_names(project_name: str) -> dict[str, str]:
     }
 
 
+def _compose_project_name(project_path: Path) -> str:
+    """Return a compose project name scoped to THIS ricet project.
+
+    Docker Compose defaults its project name to the compose-file's parent
+    directory. Every ricet project has its compose file at
+    ``<project>/sandbox/docker-compose.sandbox.yml`` — so the default
+    project name is always ``sandbox``. That meant running ``compose up``
+    on project B would see project A's sandbox container (under the
+    shared project name) and evict it, killing A's Claude session.
+
+    Scope the compose project name to the ricet project dir so each has
+    its own isolated compose state.
+    """
+    safe = "".join(
+        c if c.isalnum() or c in "-_" else "_"
+        for c in (project_path.resolve().name or "ricet")
+    ).lower()
+    return f"ricet-{safe}"
+
+
+def _compose_base_cmd(project_path: Path, sandbox_dir: Path) -> list[str]:
+    """Common prefix for every ``docker compose`` invocation in this module."""
+    return [
+        "docker", "compose",
+        "-p", _compose_project_name(project_path),
+        "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
+    ]
+
+
 def get_sandbox_dir(project_path: Path) -> Path:
     """Return the sandbox/ directory inside the project."""
     return project_path / "sandbox"
@@ -337,11 +366,7 @@ def build_sandbox(project_path: Path, print_fn=print) -> bool:
     print_fn("Building sandbox image...")
     try:
         proc = run_docker(
-            [
-                "docker", "compose",
-                "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
-                "build",
-            ],
+            _compose_base_cmd(project_path, sandbox_dir) + ["build"],
             capture_output=True, text=True, timeout=600,
         )
         if proc.returncode != 0:
@@ -408,11 +433,7 @@ def start_sandbox(
     print_fn(f"Starting sandbox container '{container_name}'...")
     try:
         proc = run_docker(
-            [
-                "docker", "compose",
-                "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
-                "up", "-d",
-            ],
+            _compose_base_cmd(project_path, sandbox_dir) + ["up", "-d"],
             capture_output=True, text=True, timeout=120,
         )
         if proc.returncode != 0:
@@ -444,11 +465,7 @@ def stop_sandbox(project_path: Path, print_fn=print) -> bool:
     print_fn("Stopping sandbox...")
     try:
         proc = run_docker(
-            [
-                "docker", "compose",
-                "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
-                "down",
-            ],
+            _compose_base_cmd(project_path, sandbox_dir) + ["down"],
             timeout=60,
         )
         if proc.returncode == 0:
@@ -841,11 +858,7 @@ def destroy_sandbox(project_path: Path, print_fn=print) -> bool:
     print_fn("Destroying sandbox (removing volumes)...")
     try:
         proc = run_docker(
-            [
-                "docker", "compose",
-                "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
-                "down", "-v",
-            ],
+            _compose_base_cmd(project_path, sandbox_dir) + ["down", "-v"],
             timeout=60,
         )
         if proc.returncode == 0:
