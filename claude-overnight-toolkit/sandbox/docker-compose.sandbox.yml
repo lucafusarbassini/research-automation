@@ -19,6 +19,10 @@ services:
     environment:
       - SANDBOX_TIMEOUT_HOURS=${SANDBOX_TIMEOUT_HOURS:-10}
       - CONTAINER_NAME=${CONTAINER_NAME:-my-sandbox}
+      # Fleet account-switch: the daemon's /account/switch route runs `ricet up`
+      # with this set, so the sandbox's claude authenticates with the chosen
+      # account. Empty by default → falls back to the copied ~/.claude creds.
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
     volumes:
       # Project source (read-only, copied to workspace on start)
       - ../:/project-source:ro

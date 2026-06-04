@@ -380,6 +380,7 @@ class MobileServer:
         self._routes[("GET", "/screen/capture")] = self._handle_get_screen_capture
         self._routes[("POST", "/todo")] = self._handle_post_todo
         self._routes[("POST", "/self-update")] = self._handle_post_self_update
+        self._routes[("POST", "/account/switch")] = self._handle_post_account_switch
 
     @property
     def routes(self) -> dict[tuple[str, str], RouteHandler]:
@@ -1011,6 +1012,84 @@ class MobileServer:
             "new_sha": result.get("new_sha", ""),
             "restarting": restarting,
         }
+
+    def _handle_post_account_switch(self, body: Optional[dict]) -> dict:
+        """Switch the Claude account this machine's sessions authenticate with.
+
+        Control-plane route so the hub can swap accounts fleet-wide over the
+        already-authenticated Tailscale channel — no SSH, no re-cabling.
+        Security: Bearer-token gated in :meth:`dispatch` (owner-only).
+
+        Body: {"token": "sk-ant-oat01-...", "label": "b", "bounce": true}
+          - token  : the target account's long-lived OAuth token (required).
+          - label  : free-form account id recorded for status (default "").
+          - bounce : if true (default), restart live project sessions so the
+                     sandbox re-launches with the new token in env. If false,
+                     only writes the env (next ``ricet up`` picks it up).
+
+        Mechanism: writes ~/.ricet/claude-active.env (sourced by launchers) and
+        re-runs ``ricet up`` for each LIVE session with CLAUDE_CODE_OAUTH_TOKEN
+        in the subprocess env, which docker-compose passes into the sandbox
+        (``CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}``). The previous
+        env is saved to claude-active.env.prev for one-call rollback.
+        """
+        body = body or {}
+        token = (body.get("token") or "").strip()
+        label = (body.get("label") or "").strip()
+        bounce = body.get("bounce", True)
+        if not token.startswith("sk-ant-oat01-"):
+            return {"ok": False, "error": "invalid_token",
+                    "detail": "expected a sk-ant-oat01- OAuth token"}
+
+        ricet_dir = os.path.join(os.path.expanduser("~"), ".ricet")
+        os.makedirs(ricet_dir, exist_ok=True)
+        active = os.path.join(ricet_dir, "claude-active.env")
+        # save previous for rollback
+        if os.path.exists(active):
+            try:
+                with open(active) as f:
+                    prev = f.read()
+                with open(active + ".prev", "w") as f:
+                    f.write(prev)
+            except OSError:
+                pass
+        # write the new active-account env (chmod 600)
+        fd = os.open(active, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(f"export CLAUDE_CODE_OAUTH_TOKEN={token}\n")
+        with open(os.path.join(ricet_dir, "claude-active-account"), "w") as f:
+            f.write(label or "switched")
+
+        bounced: list[dict] = []
+        if bounce:
+            env = {**os.environ, "CLAUDE_CODE_OAUTH_TOKEN": token}
+            for p in self._enriched_projects():
+                if not p.get("screen_alive"):
+                    continue
+                screen = p.get("screen_session") or p.get("name", "").lower()
+                cwd = p.get("path") or os.path.expanduser("~")
+                rc = {"screen": screen, "down": None, "up": None}
+                try:
+                    subprocess.run(["ricet", "down", "--screen", screen],
+                                   cwd=cwd, env=env, capture_output=True,
+                                   timeout=120)
+                    rc["down"] = "ok"
+                except Exception as e:  # noqa: BLE001
+                    rc["down"] = f"err: {e}"
+                try:
+                    r = subprocess.run(["ricet", "up", "--screen", screen],
+                                       cwd=cwd, env=env, capture_output=True,
+                                       timeout=600)
+                    rc["up"] = "ok" if r.returncode == 0 else \
+                        f"rc={r.returncode}: {r.stderr.decode(errors='replace')[:120]}"
+                except Exception as e:  # noqa: BLE001
+                    rc["up"] = f"err: {e}"
+                bounced.append(rc)
+
+        return {"ok": True, "account": label or "switched",
+                "bounced": bounced, "sessions_bounced": len(bounced),
+                "note": "rollback: POST /account/switch with the other token, "
+                        "or restore ~/.ricet/claude-active.env.prev"}
 
     def _handle_get_dashboard_html(self, body: Optional[dict]) -> dict:
         """Serve standalone dashboard HTML page."""
