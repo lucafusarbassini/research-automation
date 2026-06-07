@@ -1572,6 +1572,21 @@ def up(
     _resume_suffix = f" --resume {_shlex.quote(resume)}" if resume else ""
     if resume:
         console.print(f"[bold]Resume:[/bold] claude --resume {resume} (re-wiring to existing session)")
+        if not no_docker:
+            # The sandbox uses a machine-wide `ricet_claude` Docker volume for
+            # Claude's config — it does NOT see the host ~/.claude. A session you
+            # started by running `claude` directly on the host (not via ricet)
+            # lives in the host config and will NOT be found inside the sandbox,
+            # so `claude --resume <id>` exits immediately and the screen keep-alive
+            # loop respawns it forever (crash loop). Resume a HOST chat with
+            # --no-docker; only use the sandbox path for sessions created inside it.
+            console.print(
+                "[yellow]⚠ --resume inside the Docker sandbox: the session id must "
+                "exist in the sandbox's `ricet_claude` volume. If this chat was "
+                "started with plain `claude` on the host, it WON'T be found here and "
+                "will crash-loop — re-run with [bold]--no-docker[/bold] from the "
+                "directory where the session lives.[/yellow]"
+            )
 
     # Register project in global registry
     try:
