@@ -1512,6 +1512,19 @@ def up(
     no_mobile: bool = typer.Option(False, "--no-mobile", help="Skip mobile server + Tailscale"),
     no_remote: bool = typer.Option(False, "--no-remote", help="Skip /remote-control auto-injection"),
     timeout_hours: int = typer.Option(24, "--timeout", "-t", help="Sandbox watchdog timeout (hours)"),
+    resume: str = typer.Option(
+        "",
+        "--resume",
+        "-r",
+        help=(
+            "Resume an EXISTING Claude session id in this screen "
+            "(claude --resume <id>) instead of starting fresh. Use to re-wire a "
+            "project label to an already-active chat. The id must exist for the "
+            "user inside the project's sandbox (run `claude --resume` with no id "
+            "to list, or check ~/.claude). A wrong id exits immediately and the "
+            "screen keep-alive loop will respawn it."
+        ),
+    ),
 ):
     """Launch a persistent Claude session with sandbox, screen, and all input channels.
 
@@ -1551,6 +1564,14 @@ def up(
 
     console.print(f"[bold]Project:[/bold] {project_name}")
     console.print(f"[bold]Screen:[/bold]  {screen_name}  |  [bold]Port:[/bold] {port}  |  [bold]Container:[/bold] {container_name}")
+
+    # --resume <id>: re-wire this screen to an already-active Claude conversation
+    # instead of starting fresh. Appended to claude_cmd below for both the docker
+    # and no-docker paths. shlex-quoted so a stray id can't inject shell.
+    import shlex as _shlex
+    _resume_suffix = f" --resume {_shlex.quote(resume)}" if resume else ""
+    if resume:
+        console.print(f"[bold]Resume:[/bold] claude --resume {resume} (re-wiring to existing session)")
 
     # Register project in global registry
     try:
@@ -1703,16 +1724,19 @@ def up(
         # is no prior Claude session to continue, so Claude exits immediately
         # and the outer screen loop respawns it forever. Let Claude start a
         # fresh session; session continuity is handled by claude-flow memory.
+        # DISABLE_AUTOUPDATER: the interactive TUI otherwise auto-updates on
+        # every launch, fails ("Failed to install Anthropic marketplace"), and
+        # exits — the outer screen loop then respawns it forever (crash loop).
         claude_cmd = (
-            f"docker exec -it {container_name} {_run_as} "
-            f"claude --dangerously-skip-permissions --model opus"
+            f"docker exec -it -e DISABLE_AUTOUPDATER=1 {container_name} {_run_as} "
+            f"claude --dangerously-skip-permissions --model opus{_resume_suffix}"
         )
     else:
         console.print(
             "[yellow]Running WITHOUT Docker sandbox. "
             "Claude will have full host access.[/yellow]"
         )
-        claude_cmd = "claude --dangerously-skip-permissions --model opus"
+        claude_cmd = f"claude --dangerously-skip-permissions --model opus{_resume_suffix}"
 
     # --- 2. Screen session ---
     existing = subprocess.run(
