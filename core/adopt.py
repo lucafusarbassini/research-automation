@@ -56,10 +56,18 @@ def adopt_repo(
     )
 
     if project_name is None:
-        # Derive from last path component
-        project_name = source.rstrip("/").split("/")[-1]
-        if project_name.endswith(".git"):
-            project_name = project_name[:-4]
+        # Derive from last path component — but for `ricet adopt .` the naive
+        # split yields "." (or ".."), which then propagates as a literal
+        # project name into projects.json. Resolve relative/self paths to
+        # the real directory name instead.
+        if not is_url and source.rstrip("/") in (".", ".."):
+            project_name = Path(source).resolve().name or "project"
+        else:
+            project_name = source.rstrip("/").split("/")[-1]
+            if project_name.endswith(".git"):
+                project_name = project_name[:-4]
+            if project_name in (".", "..", ""):
+                project_name = Path(source).resolve().name or "project"
 
     if is_url:
         base = Path(target_path) if target_path else Path.cwd()
@@ -245,28 +253,63 @@ def _overlay_structure(project_dir: Path) -> None:
 
 
 def _prefill_goal_from_readme(project_dir: Path) -> None:
-    """If a README exists, extract content into GOAL.md."""
-    readme_candidates = ["README.md", "README.rst", "README.txt", "README"]
-    readme_text = ""
-    for name in readme_candidates:
+    """Write a minimal GOAL.md stub if one doesn't exist.
+
+    Historically this function dumped the first 4 KB of README.md into
+    GOAL.md verbatim. For real research repos that produces nonsense —
+    HTML badges, project logos, build-status shields, nested <p align>
+    tags, all treated as the project's goal. It also caused the dashboard
+    to render that junk under "goal" and polluted name-derivation logic.
+
+    Replace with a small, opinionated stub. The user is expected to fill
+    it in with 2-4 sentences of what they're actually trying to find out.
+    """
+    goal_file = project_dir / "knowledge" / "GOAL.md"
+    if goal_file.exists() and len(goal_file.read_text().strip()) >= 50:
+        return
+    # Try to pull a one-line project tagline from the first README heading,
+    # ignoring badges / HTML / inline links.
+    tagline = ""
+    import re as _re
+
+    for name in ("README.md", "README.rst", "README.txt", "README"):
         rp = project_dir / name
-        if rp.exists():
-            readme_text = rp.read_text(errors="replace")[:4000]
+        if not rp.exists():
+            continue
+        for raw_line in rp.read_text(errors="replace").splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            # Skip HTML, badges, blockquotes, shields, images
+            if line.startswith("<") or line.startswith("!") or line.startswith(">"):
+                continue
+            if line.startswith("#"):
+                # A heading — but skip if it's just the project name
+                candidate = _re.sub(r"^#+\s*", "", line).strip()
+                if candidate and len(candidate) < 120 and " " in candidate:
+                    tagline = candidate
+                    break
+            else:
+                # First real prose line — OK as tagline
+                candidate = _re.sub(r"`([^`]+)`", r"\1", line)
+                candidate = _re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", candidate)
+                if 20 <= len(candidate) <= 160:
+                    tagline = candidate
+                    break
+        if tagline:
             break
 
-    if not readme_text:
-        return
-
-    goal_file = project_dir / "knowledge" / "GOAL.md"
-    if goal_file.exists():
-        current = goal_file.read_text()
-        # Only pre-fill if still has placeholder
-        if "Describe the research goal" in current or len(current.strip()) < 50:
-            goal_file.write_text(
-                "# Project Goal\n\n"
-                "<!-- Extracted from README -- edit to describe your research goal. -->\n\n"
-                f"{readme_text}\n"
-            )
+    preamble = f"> {tagline}\n\n" if tagline else ""
+    goal_file.parent.mkdir(parents=True, exist_ok=True)
+    goal_file.write_text(
+        "# Goal\n\n"
+        f"{preamble}"
+        "<!-- Describe your research goal in 2-4 sentences:\n"
+        "     - What are you trying to find out?\n"
+        "     - Why does it matter?\n"
+        "     - What's your overall approach?\n"
+        "-->\n"
+    )
 
 
 def _register_project(name: str, path: Path) -> None:

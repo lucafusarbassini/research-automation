@@ -263,6 +263,13 @@ class ProjectRegistry:
                 return p
         return None
 
+    def get_project_path(self, name: str) -> Optional[Path]:
+        """Return the project's root path, or None if unknown."""
+        project = self.get_project(name)
+        if not project:
+            return None
+        return Path(project.get("path", "."))
+
     def get_project_status(self, name: str) -> dict:
         """Read a project's PROGRESS.md and session info."""
         project = self.get_project(name)
@@ -361,6 +368,7 @@ class MobileServer:
         self._routes[("GET", "/status")] = self._handle_get_status
         self._routes[("GET", "/sessions")] = self._handle_get_sessions
         self._routes[("POST", "/voice")] = self._handle_post_voice
+        self._routes[("POST", "/voice/audio")] = self._handle_post_voice_audio
         self._routes[("GET", "/progress")] = self._handle_get_progress
         self._routes[("GET", "/projects")] = self._handle_get_projects
         self._routes[("GET", "/project/status")] = self._handle_get_project_status
@@ -371,6 +379,8 @@ class MobileServer:
         self._routes[("GET", "/dashboard/html")] = self._handle_get_dashboard_html
         self._routes[("GET", "/screen/capture")] = self._handle_get_screen_capture
         self._routes[("POST", "/todo")] = self._handle_post_todo
+        self._routes[("POST", "/self-update")] = self._handle_post_self_update
+        self._routes[("POST", "/account/switch")] = self._handle_post_account_switch
 
     @property
     def routes(self) -> dict[tuple[str, str], RouteHandler]:
@@ -393,14 +403,15 @@ class MobileServer:
         If authentication is configured, the ``Authorization`` header must
         contain a valid ``Bearer <token>``.
         """
-        # Auth check (skip for PWA asset routes and localhost/tunnel access)
-        is_local = client_ip in ("127.0.0.1", "::1", "localhost", "")
-        if self._auth is not None and not is_local and path not in (
-            "/",
-            "/manifest.json",
-            "/sw.js",
-            "/icon.svg",
-        ):
+        # Auth check. PWA asset routes are public (they're just static files
+        # served by the PWA shell), but EVERY real API path requires a valid
+        # Bearer token — including localhost, because otherwise any local
+        # process (docker container, a Python app on the same host, an SSRF
+        # in any sibling service) could push arbitrary prompts into our
+        # Claude sessions with no auth at all. This was security audit
+        # finding P0-3.
+        PUBLIC_PATHS = ("/", "/manifest.json", "/sw.js", "/icon.svg")
+        if self._auth is not None and path not in PUBLIC_PATHS:
             token = _extract_bearer(headers)
             if not self._auth.validate(token or "", client_ip=client_ip):
                 return format_for_mobile({"ok": False, "error": "unauthorized"})
@@ -428,22 +439,44 @@ class MobileServer:
 
     def _handle_post_task(self, body: Optional[dict]) -> dict:
         prompt = (body or {}).get("prompt", "")
+        # Optional project routing. If absent, keep legacy single-screen
+        # behavior and inject into self._screen_session.
+        project = (body or {}).get("project", "") or (body or {}).get("_query", {}).get("project", "")
+        target_session = (
+            _resolve_screen_session(project) if project else None
+        ) or self._screen_session
         task_id = uuid.uuid4().hex[:12]
-        injected = _inject_to_screen(prompt, self._screen_session) if self._screen_session else False
+        injected = _inject_to_screen(prompt, target_session) if target_session else False
         status = "injected" if injected else "queued"
         task = {"task_id": task_id, "prompt": prompt, "status": status}
+        if project:
+            task["project"] = project
         self._tasks.append(task)
         if not injected:
-            self._persist_task_to_todo(prompt)
+            self._persist_task_to_todo(
+                prompt,
+                source=f"mobile:{project}" if project else "mobile",
+                project=project or None,
+            )
         logger.info("Task %s: %s — %s", status, task_id, prompt[:80])
-        return {"ok": True, "task_id": task_id, "status": status}
+        out: dict = {"ok": True, "task_id": task_id, "status": status}
+        if project:
+            out["project"] = project
+            out["screen"] = target_session or ""
+        return out
 
     def _handle_get_status(self, body: Optional[dict]) -> dict:
+        from core.git_info import cached_info
+        info = cached_info()
         return {
             "ok": True,
             "status": "running",
             "tasks_queued": sum(1 for t in self._tasks if t["status"] == "queued"),
             "tasks_total": len(self._tasks),
+            "version": info.get("version"),
+            "git_sha": info.get("git_sha"),
+            "git_branch": info.get("git_branch"),
+            "git_dirty": info.get("git_dirty"),
         }
 
     def _handle_get_sessions(self, body: Optional[dict]) -> dict:
@@ -465,10 +498,21 @@ class MobileServer:
                     sessions.append({"name": f.stem, "status": "unknown"})
         return {"ok": True, "sessions": sessions}
 
-    def _handle_post_voice(self, body: Optional[dict]) -> dict:
-        text = (body or {}).get("text", "")
-        # Use client-provided language if available, fall back to detection
-        original_lang = (body or {}).get("source_lang", "")
+    def _process_voice_text(
+        self,
+        text: str,
+        *,
+        original_lang: str = "",
+        source: str = "voice",
+        project: str = "",
+    ) -> dict:
+        """Shared pipeline: translate -> screen-inject -> persist.
+
+        Used by both the text ``/voice`` endpoint and the ``/voice/audio``
+        endpoint (after whisper transcription). When *project* is supplied,
+        the injection targets the per-project screen session (falling back
+        to ``self._screen_session`` if no such screen is alive).
+        """
         from core.voice import detect_language, translate_to_english
         if not original_lang:
             original_lang = detect_language(text)
@@ -477,30 +521,171 @@ class MobileServer:
             if translated and translated != text:
                 logger.info("Voice translated %s→en: %s → %s", original_lang, text[:40], translated[:40])
                 text = translated
+        target_session = (
+            _resolve_screen_session(project) if project else None
+        ) or self._screen_session
         task_id = uuid.uuid4().hex[:12]
-        injected = _inject_to_screen(text, self._screen_session) if self._screen_session else False
+        injected = _inject_to_screen(text, target_session) if target_session else False
         status = "injected" if injected else "queued"
-        task = {"task_id": task_id, "prompt": text, "status": status, "source": "voice"}
+        task = {"task_id": task_id, "prompt": text, "status": status, "source": source}
+        if project:
+            task["project"] = project
         self._tasks.append(task)
         if not injected:
-            self._persist_task_to_todo(text, source="voice")
+            self._persist_task_to_todo(
+                text,
+                source=f"{source}:{project}" if project else source,
+                project=project or None,
+            )
         logger.info("Voice %s: %s — %s", status, task_id, text[:80])
-        return {"ok": True, "task_id": task_id, "source": "voice", "injected": injected,
-                "original_lang": original_lang}
+        return {
+            "ok": True,
+            "task_id": task_id,
+            "source": source,
+            "injected": injected,
+            "original_lang": original_lang,
+            "text": text,
+            "project": project,
+            "screen": target_session or "",
+        }
 
-    def _persist_task_to_todo(self, prompt: str, source: str = "mobile") -> None:
+    def _handle_post_voice(self, body: Optional[dict]) -> dict:
+        text = (body or {}).get("text", "")
+        # Use client-provided language if available, fall back to detection
+        original_lang = (body or {}).get("source_lang", "")
+        project = (body or {}).get("project", "") or (body or {}).get("_query", {}).get("project", "")
+        result = self._process_voice_text(
+            text, original_lang=original_lang, source="voice", project=project,
+        )
+        # Back-compat: do not include "text" echo for text endpoint
+        result.pop("text", None)
+        if not project:
+            # Back-compat: callers that didn't ask for per-project routing
+            # shouldn't see the new fields in the response.
+            result.pop("project", None)
+            result.pop("screen", None)
+        return result
+
+    def _handle_post_voice_audio(self, body: Optional[dict]) -> dict:
+        """Handle an uploaded audio file → whisper transcription → voice pipeline.
+
+        The HTTP layer parses the multipart body and stashes the saved tempfile
+        path in ``body["_audio_path"]`` (plus optional ``body["_audio_suffix"]``).
+        A 400 is returned if no file was attached. A 500 with an actionable
+        message is returned if whisper is not installed.
+        """
+        import shutil as _shutil
+        import subprocess as _subprocess
+
+        audio_path_str = (body or {}).get("_audio_path")
+        if not audio_path_str:
+            return {"ok": False, "error": "missing_audio_file", "status": 400}
+        audio_path = Path(audio_path_str)
+        if not audio_path.exists() or audio_path.stat().st_size == 0:
+            try:
+                audio_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+            return {"ok": False, "error": "empty_audio_file", "status": 400}
+
+        # Whisper must be on PATH. Keep the import lazy / optional.
+        if not _shutil.which("whisper"):
+            try:
+                audio_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+            return {
+                "ok": False,
+                "error": "whisper not found, install with: pip install openai-whisper",
+                "status": 500,
+            }
+
+        txt_file = audio_path.with_suffix(".txt")
+        try:
+            proc = _subprocess.run(
+                [
+                    "whisper",
+                    "--model", "small",
+                    "--language", "en",
+                    "--output_format", "txt",
+                    "--output_dir", str(audio_path.parent),
+                    str(audio_path),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+            if proc.returncode != 0 or not txt_file.exists():
+                logger.warning(
+                    "whisper failed (rc=%s): %s",
+                    proc.returncode, (proc.stderr or "")[:400],
+                )
+                return {
+                    "ok": False,
+                    "error": "transcription_failed",
+                    "detail": (proc.stderr or "").strip()[:400],
+                    "status": 500,
+                }
+            transcription = txt_file.read_text(errors="replace").strip()
+            if not transcription:
+                return {"ok": False, "error": "empty_transcription", "status": 500}
+
+            # Run through the same pipeline as /voice (translation + injection)
+            project = (body or {}).get("project", "") or (body or {}).get("_query", {}).get("project", "")
+            result = self._process_voice_text(transcription, source="voice", project=project)
+            injected = bool(result.get("injected"))
+            return {
+                "ok": True,
+                "transcription": transcription,
+                "intent": "voice",
+                "injected": injected,
+                "task_id": result.get("task_id"),
+                "original_lang": result.get("original_lang", ""),
+            }
+        except _subprocess.TimeoutExpired:
+            return {"ok": False, "error": "whisper_timeout", "status": 500}
+        except Exception as exc:  # pragma: no cover — defensive
+            logger.error("voice/audio handler error: %s", exc)
+            return {"ok": False, "error": f"server_error: {exc}", "status": 500}
+        finally:
+            try:
+                audio_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+            try:
+                txt_file.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+    def _persist_task_to_todo(
+        self,
+        prompt: str,
+        source: str = "mobile",
+        project: Optional[str] = None,
+    ) -> None:
         """Append a task to state/TODO.md so ricet overnight can pick it up.
 
-        Uses the active project path from the registry so it works regardless
-        of the server process's current working directory.
+        If *project* is supplied and known to the registry, the task is
+        written to *that* project's ``state/TODO.md``. Otherwise we fall back
+        to the registry's active project, then to ``Path.cwd()``.
         """
-        base = Path.cwd()
-        try:
-            active = self._registry.get_active_project()
-            if active and active.get("path"):
-                base = Path(active["path"])
-        except Exception:
-            pass
+        base: Optional[Path] = None
+        if project:
+            try:
+                proj_path = self._registry.get_project_path(project)
+                if proj_path is not None:
+                    base = proj_path
+            except Exception:
+                base = None
+        if base is None:
+            try:
+                active = self._registry.get_active_project()
+                if active and active.get("path"):
+                    base = Path(active["path"])
+            except Exception:
+                pass
+        if base is None:
+            base = Path.cwd()
         todo_path = base / "state" / "TODO.md"
         try:
             todo_path.parent.mkdir(parents=True, exist_ok=True)
@@ -519,8 +704,33 @@ class MobileServer:
         return {"ok": True, "entries": recent}
 
     def _handle_get_projects(self, body: Optional[dict]) -> dict:
-        projects = self._registry.list_projects()
+        projects = self._enriched_projects()
         return {"ok": True, "projects": projects}
+
+    def _enriched_projects(self) -> list[dict]:
+        """Return the registry's project list, annotated with per-project
+        ``screen_session`` + ``screen_alive`` fields based on ``screen -ls``.
+
+        The screen session name is resolved via :func:`_resolve_screen_session`.
+        If the literal project name has a running session, we surface that
+        exact name; otherwise we fall back to the lowercased form (the
+        ``ricet up`` default) even if it isn't alive, so hub UIs can still
+        show the *expected* session name.
+        """
+        live = set(_list_screen_sessions())
+        enriched: list[dict] = []
+        for p in self._registry.list_projects():
+            name = p.get("name", "")
+            resolved = _resolve_screen_session(name) if name else None
+            screen_name = resolved or (name.lower() if name else "")
+            enriched.append(
+                {
+                    **p,
+                    "screen_session": screen_name,
+                    "screen_alive": screen_name in live,
+                }
+            )
+        return enriched
 
     def _handle_get_project_status(self, body: Optional[dict]) -> dict:
         name = (body or {}).get("_query", {}).get("name", "")
@@ -529,13 +739,24 @@ class MobileServer:
         return self._registry.get_project_status(name)
 
     def _handle_post_project_task(self, body: Optional[dict]) -> dict:
-        name = (body or {}).get("_query", {}).get("name", "")
-        prompt = (body or {}).get("prompt", "")
+        # Accept project name from either the query string or the JSON body
+        # — more convenient for programmatic callers.
+        body = body or {}
+        name = (
+            body.get("_query", {}).get("name", "")
+            or body.get("name", "")
+            or body.get("project", "")
+        )
+        prompt = body.get("prompt", "")
         if not name:
             return {"ok": False, "error": "missing_project_name"}
         task_id = uuid.uuid4().hex[:12]
-        # Inject to screen if available, fall back to TODO
-        injected = _inject_to_screen(prompt, self._screen_session) if self._screen_session else False
+        # Resolve the per-project screen session. If no such screen is
+        # alive, fall through to writing that project's state/TODO.md.
+        target_session = _resolve_screen_session(name)
+        injected = (
+            _inject_to_screen(prompt, target_session) if target_session else False
+        )
         status = "injected" if injected else "queued"
         task = {
             "task_id": task_id,
@@ -545,9 +766,20 @@ class MobileServer:
         }
         self._tasks.append(task)
         if not injected:
-            self._persist_task_to_todo(prompt, source=f"mobile:{name}")
-        logger.info("Project task %s: %s [%s] — %s", status, task_id, name, prompt[:80])
-        return {"ok": True, "task_id": task_id, "project": name, "status": status}
+            self._persist_task_to_todo(
+                prompt, source=f"mobile:{name}", project=name,
+            )
+        logger.info(
+            "Project task %s: %s [%s screen=%s] — %s",
+            status, task_id, name, target_session or "-", prompt[:80],
+        )
+        return {
+            "ok": True,
+            "task_id": task_id,
+            "project": name,
+            "status": status,
+            "screen": target_session or "",
+        }
 
     def _handle_get_connect_info(self, body: Optional[dict]) -> dict:
         fp = ""
@@ -599,7 +831,15 @@ class MobileServer:
 
     def _handle_get_dashboard(self, body: Optional[dict]) -> dict:
         """Return comprehensive dashboard data as JSON."""
-        data: dict = {"ok": True}
+        from core.git_info import cached_info
+        info = cached_info()
+        data: dict = {
+            "ok": True,
+            "version": info.get("version"),
+            "git_sha": info.get("git_sha"),
+            "git_branch": info.get("git_branch"),
+            "git_dirty": info.get("git_dirty"),
+        }
 
         # Goal
         goal_path = Path("knowledge/GOAL.md")
@@ -642,32 +882,70 @@ class MobileServer:
                     pass
         data["sessions"] = sessions
 
-        # Projects
-        data["projects"] = self._registry.list_projects()
+        # Projects (with per-project screen_session + screen_alive)
+        data["projects"] = self._enriched_projects()
 
         return data
 
     def _handle_get_screen_capture(self, body: Optional[dict]) -> dict:
-        """Capture current screen session content via `screen -X hardcopy`."""
+        """Capture current screen-session content.
+
+        Preference order:
+          1. Read the session's live log file at ``~/.ricet/logs/<name>.log``
+             (written by ``screen -L -Logfile`` since the log-aware ``ricet up``).
+             This preserves ANSI color codes, which ``screen -X hardcopy`` strips.
+          2. Fall back to ``screen -X hardcopy -h`` for older sessions that
+             weren't launched with logging enabled (plain text, no colors).
+
+        Returns the LAST ~200 KB of the log so the browser isn't asked to
+        render megabytes on every 2-second poll.
+        """
         if not self._screen_session:
             return {"ok": True, "content": ""}
         import shutil
         import tempfile
         if not shutil.which("screen"):
             return {"ok": True, "content": "screen not available"}
+
+        # Project query-param lets the hub request a specific project's log
+        # once multiple screen sessions exist on the same machine.
+        project = (body or {}).get("_query", {}).get("project", "")
+        target_session = _resolve_screen_session(project) if project else self._screen_session
+        if not target_session:
+            return {"ok": True, "content": ""}
+
+        # 1. Try the log file first (ANSI-preserved)
+        log_path = Path.home() / ".ricet" / "logs" / f"{target_session}.log"
+        if log_path.is_file():
+            try:
+                size = log_path.stat().st_size
+                max_bytes = 200_000
+                with log_path.open("rb") as f:
+                    if size > max_bytes:
+                        f.seek(size - max_bytes)
+                        # Align to the next newline so we don't start mid-ANSI-sequence
+                        f.readline()
+                    raw = f.read()
+                return {
+                    "ok": True,
+                    "content": raw.decode("utf-8", errors="replace"),
+                }
+            except Exception as exc:
+                logger.warning("Failed reading screen log %s: %s", log_path, exc)
+                # Fall through to hardcopy
+
+        # 2. Fallback: hardcopy (no ANSI)
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
             tmp_path = tmp.name
         try:
             result = subprocess.run(
-                ["screen", "-S", self._screen_session, "-X", "hardcopy", "-h", tmp_path],
+                ["screen", "-S", target_session, "-X", "hardcopy", "-h", tmp_path],
                 capture_output=True, timeout=3,
             )
             if result.returncode != 0:
                 return {"ok": True, "content": "Screen session not reachable."}
             content = Path(tmp_path).read_text(errors="replace")
-            # Strip trailing blank lines
             lines = content.rstrip("\n").split("\n")
-            # Remove leading blank lines too
             while lines and not lines[0].strip():
                 lines.pop(0)
             return {"ok": True, "content": "\n".join(lines)}
@@ -677,13 +955,141 @@ class MobileServer:
             Path(tmp_path).unlink(missing_ok=True)
 
     def _handle_post_todo(self, body: Optional[dict]) -> dict:
-        """Save a task directly to TODO.md (skip screen injection)."""
+        """Save a task directly to TODO.md (skip screen injection).
+
+        When a ``project`` field is supplied (either in the JSON body or as
+        a ``?project=`` query param), the task is written to that project's
+        ``state/TODO.md`` rather than the active project's.
+        """
         prompt = (body or {}).get("prompt", "") or (body or {}).get("text", "")
         if not prompt:
             return {"ok": False, "error": "empty_prompt"}
-        self._persist_task_to_todo(prompt, source="mobile-todo")
+        project = (body or {}).get("project", "") or (body or {}).get("_query", {}).get("project", "")
+        self._persist_task_to_todo(
+            prompt,
+            source=f"mobile-todo:{project}" if project else "mobile-todo",
+            project=project or None,
+        )
         task_id = uuid.uuid4().hex[:12]
-        return {"ok": True, "task_id": task_id, "status": "saved_to_todo"}
+        out: dict = {"ok": True, "task_id": task_id, "status": "saved_to_todo"}
+        if project:
+            out["project"] = project
+        return out
+
+    def _handle_post_self_update(self, body: Optional[dict]) -> dict:
+        """Pull latest ricet and restart the server.
+
+        Security: protected by Bearer token auth (enforced in
+        :meth:`dispatch`). Additionally, :func:`core.updater.self_update`
+        verifies that ``git remote get-url origin`` matches
+        ``github.com/lucafusarbassini/research-automation`` before pulling,
+        to prevent tampered-remote attacks.
+
+        The HTTP response is returned BEFORE the restart happens: a
+        ``threading.Timer`` is scheduled with a 2-second delay to call the
+        restart function, giving the response enough time to flush.
+        """
+        from core.updater import self_update
+        result = self_update()
+        if not result.get("ok"):
+            return {
+                "ok": False,
+                "status": "failed",
+                "error": result.get("error", "unknown"),
+                "detail": result.get("detail", ""),
+                "old_sha": result.get("old_sha", ""),
+                "new_sha": result.get("new_sha", ""),
+                "restarting": False,
+            }
+        restarting = result.get("status") == "updated"
+        if restarting:
+            # Schedule the restart AFTER the HTTP response flushes.
+            _schedule_restart(delay=2.0)
+        return {
+            "ok": True,
+            "status": result.get("status", "up_to_date"),
+            "old_sha": result.get("old_sha", ""),
+            "new_sha": result.get("new_sha", ""),
+            "restarting": restarting,
+        }
+
+    def _handle_post_account_switch(self, body: Optional[dict]) -> dict:
+        """Switch the Claude account this machine's sessions authenticate with.
+
+        Control-plane route so the hub can swap accounts fleet-wide over the
+        already-authenticated Tailscale channel — no SSH, no re-cabling.
+        Security: Bearer-token gated in :meth:`dispatch` (owner-only).
+
+        Body: {"token": "sk-ant-oat01-...", "label": "b", "bounce": true}
+          - token  : the target account's long-lived OAuth token (required).
+          - label  : free-form account id recorded for status (default "").
+          - bounce : if true (default), restart live project sessions so the
+                     sandbox re-launches with the new token in env. If false,
+                     only writes the env (next ``ricet up`` picks it up).
+
+        Mechanism: writes ~/.ricet/claude-active.env (sourced by launchers) and
+        re-runs ``ricet up`` for each LIVE session with CLAUDE_CODE_OAUTH_TOKEN
+        in the subprocess env, which docker-compose passes into the sandbox
+        (``CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}``). The previous
+        env is saved to claude-active.env.prev for one-call rollback.
+        """
+        body = body or {}
+        token = (body.get("token") or "").strip()
+        label = (body.get("label") or "").strip()
+        bounce = body.get("bounce", True)
+        if not token.startswith("sk-ant-oat01-"):
+            return {"ok": False, "error": "invalid_token",
+                    "detail": "expected a sk-ant-oat01- OAuth token"}
+
+        ricet_dir = os.path.join(os.path.expanduser("~"), ".ricet")
+        os.makedirs(ricet_dir, exist_ok=True)
+        active = os.path.join(ricet_dir, "claude-active.env")
+        # save previous for rollback
+        if os.path.exists(active):
+            try:
+                with open(active) as f:
+                    prev = f.read()
+                with open(active + ".prev", "w") as f:
+                    f.write(prev)
+            except OSError:
+                pass
+        # write the new active-account env (chmod 600)
+        fd = os.open(active, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(f"export CLAUDE_CODE_OAUTH_TOKEN={token}\n")
+        with open(os.path.join(ricet_dir, "claude-active-account"), "w") as f:
+            f.write(label or "switched")
+
+        bounced: list[dict] = []
+        if bounce:
+            env = {**os.environ, "CLAUDE_CODE_OAUTH_TOKEN": token}
+            for p in self._enriched_projects():
+                if not p.get("screen_alive"):
+                    continue
+                screen = p.get("screen_session") or p.get("name", "").lower()
+                cwd = p.get("path") or os.path.expanduser("~")
+                rc = {"screen": screen, "down": None, "up": None}
+                try:
+                    subprocess.run(["ricet", "down", "--screen", screen],
+                                   cwd=cwd, env=env, capture_output=True,
+                                   timeout=120)
+                    rc["down"] = "ok"
+                except Exception as e:  # noqa: BLE001
+                    rc["down"] = f"err: {e}"
+                try:
+                    r = subprocess.run(["ricet", "up", "--screen", screen],
+                                       cwd=cwd, env=env, capture_output=True,
+                                       timeout=600)
+                    rc["up"] = "ok" if r.returncode == 0 else \
+                        f"rc={r.returncode}: {r.stderr.decode(errors='replace')[:120]}"
+                except Exception as e:  # noqa: BLE001
+                    rc["up"] = f"err: {e}"
+                bounced.append(rc)
+
+        return {"ok": True, "account": label or "switched",
+                "bounced": bounced, "sessions_bounced": len(bounced),
+                "note": "rollback: POST /account/switch with the other token, "
+                        "or restore ~/.ricet/claude-active.env.prev"}
 
     def _handle_get_dashboard_html(self, body: Optional[dict]) -> dict:
         """Serve standalone dashboard HTML page."""
@@ -890,18 +1296,55 @@ def _make_handler(mobile: MobileServer) -> type:
 
         def do_POST(self) -> None:
             length = int(self.headers.get("Content-Length", 0))
-            raw = self.rfile.read(length) if length else b"{}"
-            body = json.loads(raw)
+            ctype = self.headers.get("Content-Type", "") or ""
             headers = {k: v for k, v in self.headers.items()}
             client_ip = self.client_address[0]
+
+            # Parsed path without query string for routing decisions
+            parsed = urlparse(self.path)
+            route_path = parsed.path
+
+            body: dict = {}
+            if ctype.lower().startswith("multipart/form-data"):
+                # Save uploaded file to a tempfile; stash the path in body.
+                try:
+                    audio_path, suffix = _parse_multipart_audio(
+                        self.rfile, ctype, length
+                    )
+                except ValueError as exc:
+                    self._send_json({"ok": False, "error": str(exc)}, status=400)
+                    return
+                except Exception as exc:  # pragma: no cover — defensive
+                    logger.error("multipart parse error: %s", exc)
+                    self._send_json(
+                        {"ok": False, "error": f"multipart_parse_failed: {exc}"},
+                        status=400,
+                    )
+                    return
+                if audio_path is None:
+                    self._send_json(
+                        {"ok": False, "error": "missing_audio_file"}, status=400
+                    )
+                    return
+                body["_audio_path"] = str(audio_path)
+                body["_audio_suffix"] = suffix
+            else:
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw) if raw else {}
+                except json.JSONDecodeError:
+                    body = {}
+
             resp = mobile.dispatch(
                 "POST", self.path, body, headers=headers, client_ip=client_ip
             )
-            self._send_json(resp)
+            # Handlers may hint at a non-200 status via a "status" field.
+            status = int(resp.pop("status", 200)) if isinstance(resp.get("status"), int) else 200
+            self._send_json(resp, status=status)
 
-        def _send_json(self, data: dict) -> None:
+        def _send_json(self, data: dict, status: int = 200) -> None:
             payload = json.dumps(data).encode()
-            self.send_response(200)
+            self.send_response(status)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(payload)))
             self.end_headers()
@@ -996,27 +1439,193 @@ def is_server_running() -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _default_restart() -> None:
+    """Process-exit restart hook.
+
+    We prefer SIGHUP (systemd/PM2 treat it as a restart signal) and fall
+    back to exiting with code 0 so the supervisor restarts us.
+    """
+    import signal
+
+    logger.info("ricet self-update: restarting process")
+    try:
+        # Stop serving new requests first (best effort)
+        try:
+            stop_server()
+        except Exception:
+            pass
+        os.kill(os.getpid(), signal.SIGHUP)
+    except Exception:
+        os._exit(0)
+
+
+def _schedule_restart(delay: float = 2.0, restart_fn: Optional[Callable[[], None]] = None) -> None:
+    """Schedule a restart *delay* seconds from now via ``threading.Timer``.
+
+    The server is stdlib ``http.server``-based (no asyncio loop), so we use
+    a Timer thread instead of ``asyncio.call_later``. Calling this before
+    sending the HTTP response ensures the client sees the response first.
+    """
+    fn = restart_fn or _default_restart
+    t = threading.Timer(delay, fn)
+    t.daemon = True
+    t.start()
+
+
+def _list_screen_sessions() -> list[str]:
+    """Return the list of currently-running GNU screen session names.
+
+    Parses ``screen -ls`` output; each running session appears as a line like
+    ``\t12345.sessionname\t(Detached)``. Returns an empty list on any error
+    (``screen`` not installed, no sessions, etc.).
+    """
+    import shutil
+    if not shutil.which("screen"):
+        return []
+    try:
+        result = subprocess.run(
+            ["screen", "-ls"], capture_output=True, text=True, timeout=3,
+        )
+    except Exception:
+        return []
+    # `screen -ls` exits with 1 when there are no sessions, but still prints
+    # useful output. Don't gate on returncode.
+    names: list[str] = []
+    for line in (result.stdout or "").splitlines():
+        line = line.strip()
+        if not line or "." not in line:
+            continue
+        # Only lines that start with "<pid>.<name>" are session entries.
+        head = line.split("\t", 1)[0].split()[0]
+        if "." not in head:
+            continue
+        pid, _, sess_name = head.partition(".")
+        if not pid.isdigit() or not sess_name:
+            continue
+        names.append(sess_name)
+    return names
+
+
+def _resolve_screen_session(project_name: str) -> Optional[str]:
+    """Resolve a project name to a running screen session name.
+
+    The convention (matching ``ricet up``'s default) is that each project's
+    screen session name equals the lowercased project name. We first try the
+    literal name, then the lower-cased form, and return ``None`` if neither
+    is alive.
+    """
+    if not project_name:
+        return None
+    live = _list_screen_sessions()
+    if project_name in live:
+        return project_name
+    lowered = project_name.lower()
+    if lowered in live:
+        return lowered
+    return None
+
+
 def _inject_to_screen(text: str, session: str) -> bool:
     """Inject text into a running GNU screen session as if typed at the prompt.
 
-    Uses ``screen -S <session> -X stuff "<text>\\r"``.
-    Returns True if the screen command succeeded (session exists and is reachable).
-    Safe to call even when no screen session is running — just returns False.
+    Sends the text via ``screen -X stuff <text>``, waits briefly so the TUI
+    registers the characters as typed input, then sends Enter as a SEPARATE
+    stuff command. Claude Code's TUI (v2.1.x with xterm-256color) does not
+    reliably submit when the text and the trailing carriage return arrive
+    as one stuff burst — it buffers them as if pasted and leaves the prompt
+    un-submitted (text visible in the input box but never actually sent).
+    Splitting Enter into its own discrete keystroke reliably submits.
+
+    Returns True if both stuff commands succeeded. Safe to call even when
+    no screen session is running — just returns False.
     """
     if not session:
         return False
     import shutil
     import subprocess
+    import time
     if not shutil.which("screen"):
         return False
-    result = subprocess.run(
-        ["screen", "-S", session, "-X", "stuff", f"{text}\r"],
+    # 1. Type the text (no trailing newline — Enter is fired separately)
+    r1 = subprocess.run(
+        ["screen", "-S", session, "-X", "stuff", text],
         capture_output=True,
         timeout=3,
     )
-    if result.returncode == 0:
-        logger.info("Injected %d chars into screen session '%s'", len(text), session)
-    return result.returncode == 0
+    if r1.returncode != 0:
+        return False
+    # 2. Let the TUI register what it just received as typed input
+    time.sleep(0.3)
+    # 3. Fire Enter as its own keystroke — this is what actually submits
+    r2 = subprocess.run(
+        ["screen", "-S", session, "-X", "stuff", "\r"],
+        capture_output=True,
+        timeout=3,
+    )
+    if r2.returncode == 0:
+        logger.info(
+            "Injected %d chars + Enter into screen session '%s'",
+            len(text), session,
+        )
+    return r2.returncode == 0
+
+
+def _parse_multipart_audio(
+    stream: Any, content_type: str, content_length: int,
+) -> Tuple[Optional[Path], str]:
+    """Parse a ``multipart/form-data`` body and extract the first file field named ``audio``.
+
+    Uses ``email.parser`` from the stdlib so there are no extra deps. The uploaded
+    file is written to a ``NamedTemporaryFile`` and its path is returned along
+    with the detected suffix (``.webm`` / ``.wav`` / ``""``).
+
+    Returns ``(None, "")`` if no file field called ``audio`` was present.
+    Raises ``ValueError`` if the body is malformed (e.g. no boundary).
+    """
+    import email
+    import re as _re
+    import tempfile as _tempfile
+
+    from email.policy import default as _default_policy
+
+    ct = content_type or ""
+    m = _re.search(r"boundary=([^;]+)", ct, _re.IGNORECASE)
+    if not m:
+        raise ValueError("missing_multipart_boundary")
+    # Read the full body — enforce the declared length so we don't hang.
+    if content_length <= 0:
+        raise ValueError("empty_multipart_body")
+    raw = stream.read(content_length)
+
+    # Feed the body to ``email.message_from_bytes`` with a synthetic header so
+    # the parser recognises the boundary and yields properly-decoded parts.
+    header = f"Content-Type: {ct}\r\nMIME-Version: 1.0\r\n\r\n".encode()
+    msg = email.message_from_bytes(header + raw, policy=_default_policy)
+    if not msg.is_multipart():
+        raise ValueError("not_multipart")
+
+    for part in msg.iter_parts():
+        # Content-Disposition: form-data; name="audio"; filename="clip.webm"
+        cd = part.get("Content-Disposition", "") or ""
+        name_m = _re.search(r'name="([^"]+)"', cd)
+        if not name_m or name_m.group(1) != "audio":
+            continue
+        filename_m = _re.search(r'filename="([^"]+)"', cd)
+        filename = filename_m.group(1) if filename_m else "audio.bin"
+        suffix = Path(filename).suffix.lower() or ".webm"
+        payload = part.get_payload(decode=True)
+        if payload is None:
+            continue
+        tmp = _tempfile.NamedTemporaryFile(
+            prefix="ricet-voice-", suffix=suffix, delete=False,
+        )
+        try:
+            tmp.write(payload)
+        finally:
+            tmp.close()
+        return Path(tmp.name), suffix
+
+    return None, ""
 
 
 def _extract_bearer(headers: Optional[dict]) -> Optional[str]:

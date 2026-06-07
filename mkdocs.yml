@@ -48,6 +48,7 @@ nav:
   - Quickstart: quickstart.md
   - Features: features.md
   - Mobile Access: mobile.md
+  - Reboot Survival (systemd): systemd.md
   - API Reference: api.md
   - Architecture: architecture.md
   - FAQ: faq.md

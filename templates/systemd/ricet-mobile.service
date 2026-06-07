@@ -1,0 +1,33 @@
+[Unit]
+Description=ricet mobile companion server (per-user, per-machine)
+Documentation=https://lucafusarbassini.github.io/research-automation/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# --serve blocks the foreground process (signal.pause), so Type=simple is right.
+Type=simple
+
+# Make sure `ricet` resolves (pipx user install) without a login shell.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+
+# Port is configurable at install time; 8858 is the convention for the
+# single per-machine mobile server (ricet up uses per-project ports in
+# the 8777+ range, so 8858 stays out of the way).
+Environment=RICET_MOBILE_PORT=8858
+
+# No WorkingDirectory requirement -- the mobile server is machine-wide.
+WorkingDirectory=%h
+
+ExecStart=/bin/sh -c 'exec ricet mobile serve --port "$RICET_MOBILE_PORT" --no-tls'
+
+Restart=on-failure
+RestartSec=10s
+
+# Sane hardening for a user-level HTTP server.
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,86 @@
+# =============================================================================
+# ricet .dockerignore
+# =============================================================================
+# Excluded from any `docker build` context, including the sandbox build.
+# Keeps the build context small and avoids leaking large/irrelevant files
+# into image layers.
+# =============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Node / JS
+node_modules/
+.npm/
+.pnpm-store/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Secrets (never bake these into images)
+.env
+.env.*
+!.env.example
+secrets/
+*_token.txt
+
+# ricet runtime state & caches
+state/cache/
+state/sessions/
+state/snapshots/
+state/.notification_throttle.json
+.claude-flow/daemon-state.json
+.claude-flow/daemon.pid
+
+# The sandbox/ directory itself — it's constructed per-project by ricet
+# and would recurse into the build context if included.
+sandbox/
+
+# LaTeX build artefacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.log
+*.out
+*.run.xml
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Bulky outputs — agents regenerate these
+outputs/
+slides_output/
+_build/
+site/
+site.json
+dist/
+build/
+
+# Data directories commonly used in research projects (project-specific)
+data/raw/
+data/interim/

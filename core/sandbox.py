@@ -13,10 +13,12 @@ in the current session.
 """
 
 import logging
+import multiprocessing
 import os
 import shutil
 import subprocess
 import time
+import tomllib
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -35,10 +37,138 @@ DEFAULT_TIMEOUT_HOURS = 10
 DEFAULT_ITERATIONS = 30
 DEFAULT_ITERATION_TIMEOUT_MIN = 60
 
+# Path to user config that overrides auto-detected CPU/RAM limits.
+USER_CONFIG_DIR = Path.home() / ".ricet"
+USER_SANDBOX_TOML = USER_CONFIG_DIR / "sandbox.toml"
+
+# Hard cap on auto-detected RAM assignment (GB).
+# Picked so one ricet container can't starve the host when several users share it.
+MAX_AUTO_RAM_GB = 16
+
 
 # ---------------------------------------------------------------------------
 # Sandbox build & lifecycle
 # ---------------------------------------------------------------------------
+
+
+def _host_ram_gb() -> int:
+    """Return host physical memory in GB (0 if undetectable)."""
+    try:
+        page = os.sysconf("SC_PAGE_SIZE")
+        pages = os.sysconf("SC_PHYS_PAGES")
+        return int(page * pages // (1024 ** 3))
+    except (AttributeError, ValueError, OSError):
+        return 0
+
+
+def _ensure_user_sandbox_toml() -> Path:
+    """Create ~/.ricet/sandbox.toml with auto-detected defaults on first use.
+
+    Returns the path. Existing files are never overwritten.
+    """
+    USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    if USER_SANDBOX_TOML.exists():
+        return USER_SANDBOX_TOML
+
+    cpu_total = multiprocessing.cpu_count()
+    ram_total = _host_ram_gb() or 8
+    # Cap at max(50% of host, 16GB). The request phrasing is slightly odd, but
+    # the intent is "take half unless that exceeds 16G, in which case use 16G".
+    ram_default = min(max(ram_total // 2, 2), MAX_AUTO_RAM_GB)
+    cpu_default = max(cpu_total // 2, 1)
+
+    USER_SANDBOX_TOML.write_text(
+        "# ricet sandbox resource limits\n"
+        "# These override the auto-detected per-container caps.\n"
+        "# Uncomment and edit to change them.\n"
+        "\n"
+        "[limits]\n"
+        f"# ram_gb = {ram_default}\n"
+        f"# cpu    = {cpu_default}\n"
+    )
+    return USER_SANDBOX_TOML
+
+
+def load_sandbox_limits() -> tuple[int, int]:
+    """Return (cpu_cores, ram_gb) for the sandbox container.
+
+    Precedence:
+      1. ``[limits]`` section in ``~/.ricet/sandbox.toml`` (if both keys set).
+      2. Auto-detected: half of host CPU, ``min(host_ram / 2, 16GB)``.
+
+    The file is created lazily with commented defaults on first call.
+    """
+    cpu_total = multiprocessing.cpu_count()
+    ram_total = _host_ram_gb() or 8
+
+    ram_auto = min(max(ram_total // 2, 2), MAX_AUTO_RAM_GB)
+    cpu_auto = max(cpu_total // 2, 1)
+
+    _ensure_user_sandbox_toml()
+    try:
+        with USER_SANDBOX_TOML.open("rb") as fh:
+            cfg = tomllib.load(fh)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        logger.warning("Could not parse %s: %s", USER_SANDBOX_TOML, exc)
+        cfg = {}
+
+    limits = cfg.get("limits", {}) if isinstance(cfg, dict) else {}
+    ram_gb = int(limits.get("ram_gb", ram_auto))
+    cpu = int(limits.get("cpu", cpu_auto))
+    # Clamp to sane bounds so a typo can't hang the host.
+    ram_gb = max(1, min(ram_gb, ram_total or ram_gb))
+    cpu = max(1, min(cpu, cpu_total))
+    return cpu, ram_gb
+
+
+def project_volume_names(project_name: str) -> dict[str, str]:
+    """Return Docker volume names for a project.
+
+    Claude credentials volume is MACHINE-WIDE (not per-project): once the
+    user runs `claude auth login` inside any project's sandbox, every other
+    project on the same machine inherits the login. Previously each project
+    had its own `ricet_claude_<name>` volume, forcing a re-auth per project.
+
+    Pip cache is also machine-wide for the same reason — avoids re-downloading
+    wheels every time a new project's sandbox starts, and saves disk space.
+
+    The `project_name` arg is retained for API compatibility but no longer
+    used to scope these volumes.
+    """
+    del project_name  # intentionally unused — see docstring
+    return {
+        "claude": "ricet_claude",
+        "pipcache": "ricet_pipcache",
+    }
+
+
+def _compose_project_name(project_path: Path) -> str:
+    """Return a compose project name scoped to THIS ricet project.
+
+    Docker Compose defaults its project name to the compose-file's parent
+    directory. Every ricet project has its compose file at
+    ``<project>/sandbox/docker-compose.sandbox.yml`` — so the default
+    project name is always ``sandbox``. That meant running ``compose up``
+    on project B would see project A's sandbox container (under the
+    shared project name) and evict it, killing A's Claude session.
+
+    Scope the compose project name to the ricet project dir so each has
+    its own isolated compose state.
+    """
+    safe = "".join(
+        c if c.isalnum() or c in "-_" else "_"
+        for c in (project_path.resolve().name or "ricet")
+    ).lower()
+    return f"ricet-{safe}"
+
+
+def _compose_base_cmd(project_path: Path, sandbox_dir: Path) -> list[str]:
+    """Common prefix for every ``docker compose`` invocation in this module."""
+    return [
+        "docker", "compose",
+        "-p", _compose_project_name(project_path),
+        "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
+    ]
 
 
 def get_sandbox_dir(project_path: Path) -> Path:
@@ -120,11 +250,20 @@ def setup_sandbox(
     if not env_file.exists() and env_example.exists():
         shutil.copy2(env_example, env_file)
 
-    # Create bind-mount workspace directory for VS Code visibility
-    workspace_dir = project_path / "sandbox" / "workspace"
-    workspace_dir.mkdir(parents=True, exist_ok=True)
-    # Set WORKSPACE_PATH in .env so compose uses bind mount
-    _set_env_var(env_file, "WORKSPACE_PATH", str(workspace_dir.resolve()))
+    # Configure the sandbox .env so the compose template bind-mounts the
+    # host project dir and uses per-project persistent volumes.
+    # The container's internal sandbox/ is an anonymous volume (see compose),
+    # so we do NOT need a host workspace directory anymore.
+    _set_env_var(env_file, "PROJECT_DIR", str(project_path.resolve()))
+    project_name = project_path.resolve().name or "default"
+    vols = project_volume_names(project_name)
+    _set_env_var(env_file, "RICET_CLAUDE_VOLUME", vols["claude"])
+    _set_env_var(env_file, "RICET_PIPCACHE_VOLUME", vols["pipcache"])
+
+    # Apply resource limits (user config in ~/.ricet/sandbox.toml or auto).
+    cpu, ram_gb = load_sandbox_limits()
+    _set_env_var(env_file, "SANDBOX_CPUS", str(cpu))
+    _set_env_var(env_file, "SANDBOX_MEMORY", f"{ram_gb}G")
 
     # Copy martinprompt.md to project root as well (the overnight loop reads it there)
     martinprompt_src = template_sandbox / "martinprompt.md"
@@ -227,11 +366,7 @@ def build_sandbox(project_path: Path, print_fn=print) -> bool:
     print_fn("Building sandbox image...")
     try:
         proc = run_docker(
-            [
-                "docker", "compose",
-                "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
-                "build",
-            ],
+            _compose_base_cmd(project_path, sandbox_dir) + ["build"],
             capture_output=True, text=True, timeout=600,
         )
         if proc.returncode != 0:
@@ -295,14 +430,21 @@ def start_sandbox(
         if _cid.strip():
             run_docker(["docker", "rm", "-f", _cid.strip()], capture_output=True, timeout=10)
 
+    # Ensure the shared machine-wide volumes exist. They're marked
+    # `external: true` in docker-compose.sandbox.yml so compose won't
+    # auto-create them; we do it here (idempotent — `docker volume create`
+    # is a no-op if the volume already exists).
+    for _vol in (env.get("RICET_CLAUDE_VOLUME"), env.get("RICET_PIPCACHE_VOLUME")):
+        if _vol:
+            run_docker(
+                ["docker", "volume", "create", _vol],
+                capture_output=True, timeout=10,
+            )
+
     print_fn(f"Starting sandbox container '{container_name}'...")
     try:
         proc = run_docker(
-            [
-                "docker", "compose",
-                "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
-                "up", "-d",
-            ],
+            _compose_base_cmd(project_path, sandbox_dir) + ["up", "-d"],
             capture_output=True, text=True, timeout=120,
         )
         if proc.returncode != 0:
@@ -334,11 +476,7 @@ def stop_sandbox(project_path: Path, print_fn=print) -> bool:
     print_fn("Stopping sandbox...")
     try:
         proc = run_docker(
-            [
-                "docker", "compose",
-                "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
-                "down",
-            ],
+            _compose_base_cmd(project_path, sandbox_dir) + ["down"],
             timeout=60,
         )
         if proc.returncode == 0:
@@ -731,11 +869,7 @@ def destroy_sandbox(project_path: Path, print_fn=print) -> bool:
     print_fn("Destroying sandbox (removing volumes)...")
     try:
         proc = run_docker(
-            [
-                "docker", "compose",
-                "-f", str(sandbox_dir / "docker-compose.sandbox.yml"),
-                "down", "-v",
-            ],
+            _compose_base_cmd(project_path, sandbox_dir) + ["down", "-v"],
             timeout=60,
         )
         if proc.returncode == 0:

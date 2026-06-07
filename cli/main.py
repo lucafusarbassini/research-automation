@@ -1430,6 +1430,73 @@ def _project_port(project_name: str, base_port: int = 8777) -> int:
     return base_port + (h % 100)
 
 
+def _find_running_ricet_mobile_port():
+    # type: () -> 'int | None'
+    """Return the port of any already-running `ricet mobile serve` process
+    on this host, or None if none is found.
+
+    We pgrep for the command line, extract --port from the matches, and
+    probe each to confirm it's actually answering (guards against zombie
+    lines still in ``ps``). Used by `_start_mobile_for_up` to avoid
+    starting a second mobile server on a different port when one is
+    already owning the machine-wide state.
+    """
+    import re as _re
+    try:
+        r = subprocess.run(
+            ["pgrep", "-af", "ricet mobile serve"],
+            capture_output=True, text=True, timeout=3,
+        )
+    except Exception:
+        return None
+    for line in (r.stdout or "").splitlines():
+        m = _re.search(r"--port\s+(\d+)", line)
+        if not m:
+            continue
+        try:
+            found_port = int(m.group(1))
+        except ValueError:
+            continue
+        if _probe_ricet_mobile(found_port):
+            return found_port
+    return None
+
+
+def _probe_ricet_mobile(port: int, timeout: float = 1.0) -> bool:
+    """Return ``True`` if an existing ricet mobile server is answering on *port*.
+
+    We probe ``GET /status`` and consider it a match only if the JSON payload
+    has the ricet-specific shape (``status == "running"`` + the ``version`` /
+    ``tasks_queued`` keys). This avoids mis-identifying an unrelated service
+    squatting the port as a ricet mobile server.
+    """
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    for scheme in ("http", "https"):
+        url = f"{scheme}://127.0.0.1:{port}/status"
+        try:
+            req = urllib.request.Request(url, method="GET")
+            # Self-signed TLS is expected when scheme=https; disable verify.
+            if scheme == "https":
+                import ssl as _ssl
+                ctx = _ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = _ssl.CERT_NONE
+                resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
+            else:
+                resp = urllib.request.urlopen(req, timeout=timeout)
+            with resp:
+                body = resp.read(4096)
+            data = _json.loads(body.decode("utf-8", errors="replace"))
+            if data.get("ok") and data.get("status") == "running" and "tasks_queued" in data:
+                return True
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError):
+            continue
+    return False
+
+
 @app.command()
 def up(
     screen_name: str = typer.Option("", "--screen", "-s", help="Screen session name (default: project name)"),
@@ -1445,6 +1512,19 @@ def up(
     no_mobile: bool = typer.Option(False, "--no-mobile", help="Skip mobile server + Tailscale"),
     no_remote: bool = typer.Option(False, "--no-remote", help="Skip /remote-control auto-injection"),
     timeout_hours: int = typer.Option(24, "--timeout", "-t", help="Sandbox watchdog timeout (hours)"),
+    resume: str = typer.Option(
+        "",
+        "--resume",
+        "-r",
+        help=(
+            "Resume an EXISTING Claude session id in this screen "
+            "(claude --resume <id>) instead of starting fresh. Use to re-wire a "
+            "project label to an already-active chat. The id must exist for the "
+            "user inside the project's sandbox (run `claude --resume` with no id "
+            "to list, or check ~/.claude). A wrong id exits immediately and the "
+            "screen keep-alive loop will respawn it."
+        ),
+    ),
 ):
     """Launch a persistent Claude session with sandbox, screen, and all input channels.
 
@@ -1470,7 +1550,12 @@ def up(
     project_path = Path.cwd()
 
     # --- 0. Project identity ---
-    project_name = _derive_project_name(project_path)
+    # Name resolution: explicit --screen wins; otherwise the directory
+    # basename (lowercased). GOAL.md-header derivation used to run here
+    # but produced surprising slugs like "project-goal" whenever the
+    # auto-prefilled GOAL.md still had a generic heading, and those names
+    # leaked into the registry.
+    project_name = (screen_name or project_path.name).lower()
     if not screen_name:
         screen_name = project_name
     if port == 0:
@@ -1479,6 +1564,14 @@ def up(
 
     console.print(f"[bold]Project:[/bold] {project_name}")
     console.print(f"[bold]Screen:[/bold]  {screen_name}  |  [bold]Port:[/bold] {port}  |  [bold]Container:[/bold] {container_name}")
+
+    # --resume <id>: re-wire this screen to an already-active Claude conversation
+    # instead of starting fresh. Appended to claude_cmd below for both the docker
+    # and no-docker paths. shlex-quoted so a stray id can't inject shell.
+    import shlex as _shlex
+    _resume_suffix = f" --resume {_shlex.quote(resume)}" if resume else ""
+    if resume:
+        console.print(f"[bold]Resume:[/bold] claude --resume {resume} (re-wiring to existing session)")
 
     # Register project in global registry
     try:
@@ -1559,25 +1652,23 @@ def up(
                 _src = _tmpl / _f
                 if _src.exists():
                     _shutil.copy2(_src, _sdir / _f)
-            # Ensure WORKSPACE_PATH is set for bind mount
-            workspace_dir = project_path / "sandbox" / "workspace"
-            workspace_dir.mkdir(parents=True, exist_ok=True)
-            _set_env_var(_sdir / ".env", "WORKSPACE_PATH", str(workspace_dir.resolve()))
 
-        # Set project-specific container name and host UID/GID in sandbox .env
+        # Set project-specific container name, host UID/GID, and project dir
+        # so the compose template bind-mounts the host project into /workspace.
+        from core.sandbox import load_sandbox_limits, project_volume_names
         sandbox_env = get_sandbox_dir(project_path) / ".env"
         _set_env_var(sandbox_env, "CONTAINER_NAME", container_name)
         _set_env_var(sandbox_env, "HOST_UID", str(os.getuid()))
         _set_env_var(sandbox_env, "HOST_GID", str(os.getgid()))
-        # Auto-detect system resources for container limits
-        import multiprocessing
-        _ncpu = multiprocessing.cpu_count()
-        _set_env_var(sandbox_env, "SANDBOX_CPUS", str(_ncpu))
-        try:
-            _mem_gb = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") // (1024 ** 3)
-            _set_env_var(sandbox_env, "SANDBOX_MEMORY", f"{max(_mem_gb - 2, 2)}G")
-        except Exception:
-            _set_env_var(sandbox_env, "SANDBOX_MEMORY", "8G")
+        _set_env_var(sandbox_env, "PROJECT_DIR", str(project_path.resolve()))
+        _vols = project_volume_names(project_name)
+        _set_env_var(sandbox_env, "RICET_CLAUDE_VOLUME", _vols["claude"])
+        _set_env_var(sandbox_env, "RICET_PIPCACHE_VOLUME", _vols["pipcache"])
+        # Resource limits come from ~/.ricet/sandbox.toml (auto-created on
+        # first run) or are auto-detected as half of host CPU/RAM capped at 16G.
+        _cpu, _ram_gb = load_sandbox_limits()
+        _set_env_var(sandbox_env, "SANDBOX_CPUS", str(_cpu))
+        _set_env_var(sandbox_env, "SANDBOX_MEMORY", f"{_ram_gb}G")
 
         # Start container
         if not is_sandbox_running(project_path):
@@ -1628,18 +1719,24 @@ def up(
             _auth_ok = True
             console.print(f"  [green]Claude CLI OK: {_auth_check.stdout.strip()}[/green]")
 
-        # The claude command to run inside the container
-        # Use --continue to resume the most recent session on restart
+        # The claude command to run inside the container.
+        # NOTE: do NOT use --continue here. On a freshly adopted project there
+        # is no prior Claude session to continue, so Claude exits immediately
+        # and the outer screen loop respawns it forever. Let Claude start a
+        # fresh session; session continuity is handled by claude-flow memory.
+        # DISABLE_AUTOUPDATER: the interactive TUI otherwise auto-updates on
+        # every launch, fails ("Failed to install Anthropic marketplace"), and
+        # exits — the outer screen loop then respawns it forever (crash loop).
         claude_cmd = (
-            f"docker exec -it {container_name} {_run_as} "
-            f"claude --dangerously-skip-permissions --model opus --continue"
+            f"docker exec -it -e DISABLE_AUTOUPDATER=1 {container_name} {_run_as} "
+            f"claude --dangerously-skip-permissions --model opus{_resume_suffix}"
         )
     else:
         console.print(
             "[yellow]Running WITHOUT Docker sandbox. "
             "Claude will have full host access.[/yellow]"
         )
-        claude_cmd = "claude --dangerously-skip-permissions --model opus --continue"
+        claude_cmd = f"claude --dangerously-skip-permissions --model opus{_resume_suffix}"
 
     # --- 2. Screen session ---
     existing = subprocess.run(
@@ -1676,11 +1773,60 @@ def up(
             f'echo ""; echo "=== Claude exited. Restarting in 5s (Ctrl+C to stop) ==="; '
             f'sleep 5; done'
         )
+    # Ensure a ricet-managed screenrc exists. We DON'T touch the user's
+    # ~/.screenrc — we write our own at ~/.ricet/screenrc and pass it via
+    # `screen -c`. This gives every ricet machine:
+    #   - UTF-8 (defutf8 on, defencoding utf-8)
+    #   - altscreen on  (cures the scroll-to-top glitch when Claude's TUI
+    #     redraws: alt-screen apps like Claude Code push the terminal into
+    #     an alternate buffer; without this, screen collapses the buffer on
+    #     exit and the user's view jumps)
+    #   - deep scrollback + mouse-wheel + a small status line
+    ricet_screenrc = Path.home() / ".ricet" / "screenrc"
+    # Always regenerate: old installs had a version without `logfile flush 0`
+    # which caused the dashboard's screen view to lag 10+ seconds behind
+    # the actual session, and without `altscreen` support tuned for TUIs.
+    ricet_screenrc.parent.mkdir(parents=True, exist_ok=True)
+    ricet_screenrc.write_text(
+        "# ricet-managed screen config (do not edit; regenerated by `ricet up`)\n"
+        "defutf8 on\n"
+        "defencoding utf-8\n"
+        "altscreen on\n"
+        "defscrollback 50000\n"
+        "mousetrack on\n"
+        # Flush screen's log buffer to disk immediately instead of the
+        # default ~10s — makes /screen/capture near-real-time.
+        "logfile flush 0\n"
+        "hardstatus alwayslastline "
+        "'%{= kG}[%H] %-w%{+b r}[%n %t]%{-b}%+w'\n"
+    )
+
+    # Log the session's raw output (ANSI escapes included) to a log file so
+    # the mobile `/screen/capture` endpoint can preserve colors when serving
+    # the dashboard's live view. `screen -X hardcopy` strips ANSI; the log
+    # file does not.
+    screen_log = Path.home() / ".ricet" / "logs" / f"{screen_name}.log"
+    screen_log.parent.mkdir(parents=True, exist_ok=True)
+    # Truncate the log on a fresh `ricet up` so the dashboard starts clean.
+    screen_log.write_text("")
+
+    # -U forces UTF-8 in the screen session so Claude Code's box-drawing
+    # and unicode characters render correctly (otherwise they show as
+    # � / mojibake). -c points at ricet's own screenrc. -L writes the
+    # session's raw output (ANSI-rich) to -Logfile <path>.
     screen_cmd = [
-        "screen", "-dmS", screen_name,
+        "screen",
+        "-c", str(ricet_screenrc),
+        "-U", "-dmS", screen_name,
+        "-L", "-Logfile", str(screen_log),
         "bash", "-c", _inner_script,
     ]
-    result = subprocess.run(screen_cmd)
+    # Ensure the screen session inherits a UTF-8 locale even if the login
+    # shell doesn't have one set.
+    screen_env = dict(os.environ)
+    screen_env.setdefault("LANG", "en_US.UTF-8")
+    screen_env.setdefault("LC_ALL", "en_US.UTF-8")
+    result = subprocess.run(screen_cmd, env=screen_env)
     if result.returncode != 0:
         console.print("[red]Failed to create screen session.[/red]")
         raise typer.Exit(1)
@@ -1742,7 +1888,7 @@ def up(
         console.print(f"\n[bold]Sandbox:[/bold]")
         console.print(f"  ricet sandbox status    # Container status")
         console.print(f"  ricet sandbox logs      # Claude output")
-        console.print(f"  VS Code: open sandbox/workspace/")
+        console.print(f"  VS Code: open this project directory (bind-mounted live at /workspace in the container)")
     console.print(f"\n[bold]To stop:[/bold]  ricet down")
 
 
@@ -1756,7 +1902,8 @@ def down(
     import os as _os
     import signal as _sig
 
-    project_name = _derive_project_name(Path.cwd())
+    # Match `ricet up`: explicit --screen wins, else dir basename.
+    project_name = (screen_name or Path.cwd().name).lower()
     if not screen_name:
         screen_name = project_name
     if port == 0:
@@ -1825,12 +1972,48 @@ def _start_mobile_for_up(console: Console, screen_name: str, port: int) -> None:
 
     Launches `ricet mobile serve` as a detached background process so it
     survives after the parent exits. No fork tricks needed.
+
+    If an existing ricet mobile server is already listening on *port* (as
+    confirmed by a ``/status`` probe), we skip starting a new one — the
+    first ``ricet up`` on a machine owns the mobile server, and subsequent
+    ``ricet up`` calls just register their screen session with it.
     """
     import os as _os
     import shutil
     import time
 
-    # Kill stale processes on the port
+    # If a ricet mobile server is already up on this port, reuse it.
+    if _probe_ricet_mobile(port):
+        console.print(
+            f"  [green]Mobile server already running on :{port} — reusing.[/green]"
+        )
+        console.print(
+            "  [dim]Subsequent `ricet up` calls route to the correct "
+            "per-project screen via the name/project parameter.[/dim]"
+        )
+        return
+
+    # Also scan the ENTIRE machine for any running ricet mobile server —
+    # different project names hash to different default ports, so the first
+    # `ricet up --port 8811` on machine A starts the server on 8811, but the
+    # second `ricet up <proj-with-hash=780>` would otherwise start a NEW
+    # server on 8780 and the hub wouldn't see that project. Instead: find
+    # the existing ricet mobile server (by pgrep), verify it's alive, and
+    # refuse to start a second one.
+    existing_port = _find_running_ricet_mobile_port()
+    if existing_port is not None and existing_port != port:
+        console.print(
+            f"  [green]Mobile server already running on :{existing_port} — "
+            f"reusing instead of starting a second one on :{port}.[/green]"
+        )
+        console.print(
+            "  [dim]This project's screen session is routable from the hub "
+            f"via the existing server on :{existing_port}.[/dim]"
+        )
+        return
+
+    # Kill stale processes on the port (not a ricet mobile server — e.g.
+    # a crashed leftover, or something else squatting).
     subprocess.run(f"fuser -k {port}/tcp", shell=True, capture_output=True)
     time.sleep(0.5)
 
@@ -1847,8 +2030,13 @@ def _start_mobile_for_up(console: Console, screen_name: str, port: int) -> None:
     env = dict(_os.environ)
     env["RICET_SCREEN_SESSION"] = screen_name
 
+    # Bind to 0.0.0.0 by default so the Hub Dashboard (or any Tailscale peer)
+    # can reach this machine's mobile API. Auth is enforced by a Bearer token
+    # and the Tailscale network is private, so this is safe. Override with
+    # RICET_MOBILE_HOST=127.0.0.1 if you explicitly want localhost-only.
+    mobile_host = _os.environ.get("RICET_MOBILE_HOST", "0.0.0.0")
     mobile_proc = subprocess.Popen(
-        [ricet_bin, "mobile", "serve", "--port", str(port), "--host", "127.0.0.1", "--no-tls"],
+        [ricet_bin, "mobile", "serve", "--port", str(port), "--host", mobile_host, "--no-tls"],
         stdout=log_fd,
         stderr=log_fd,
         start_new_session=True,
@@ -2600,6 +2788,167 @@ def sandbox_destroy_cmd():
     )
     if not ok:
         raise typer.Exit(1)
+
+
+# ---------------------------------------------------------------------------
+# sandbox-doctor: quick diagnostic table for the Docker sandbox prereqs.
+# ---------------------------------------------------------------------------
+
+
+def _sd_check(label: str, fn) -> dict:
+    """Run a check function and shape the result for the doctor table.
+
+    The check function must return ``(ok: bool, fix: str)``. Exceptions are
+    caught and reported as failures.
+    """
+    try:
+        ok, fix = fn()
+    except Exception as exc:  # defensive: never let doctor itself crash
+        return {"label": label, "ok": False, "fix": f"check errored: {exc}"}
+    return {"label": label, "ok": bool(ok), "fix": fix if not ok else ""}
+
+
+@app.command("sandbox-doctor")
+def sandbox_doctor_cmd(
+    port: int = typer.Option(
+        0,
+        "--port",
+        "-p",
+        help="Port to probe on Tailscale interface (default: project port)",
+    ),
+):
+    """Diagnose Docker/Claude/Tailscale prerequisites for the ricet sandbox.
+
+    Prints a pass/fail table; each failing row gives a one-line fix.
+    Run this first on any lab machine before `ricet up`.
+    """
+    import grp
+    import os as _os
+    import socket
+    from rich.table import Table
+
+    project_path = Path.cwd().resolve()
+    project_name = _derive_project_name(project_path)
+    probe_port = port or _project_port(project_name)
+
+    # -- checks -----------------------------------------------------------
+    def check_docker_installed():
+        if shutil.which("docker") is None:
+            return False, "install docker: https://docs.docker.com/engine/install/"
+        try:
+            r = subprocess.run(
+                ["docker", "--version"], capture_output=True, text=True, timeout=5,
+            )
+            return r.returncode == 0, "docker --version failed; reinstall docker"
+        except Exception:
+            return False, "docker binary broken; reinstall docker"
+
+    def check_docker_group():
+        # True if the user can run `docker ps` without `sudo`/`sg`.
+        try:
+            gids = _os.getgroups()
+            docker_gid = grp.getgrnam("docker").gr_gid
+            if docker_gid in gids:
+                return True, ""
+        except (KeyError, OSError):
+            pass
+        return (
+            False,
+            "sudo usermod -aG docker $USER && newgrp docker  (then re-login)",
+        )
+
+    def check_daemon():
+        try:
+            r = subprocess.run(
+                ["docker", "ps"], capture_output=True, text=True, timeout=5,
+            )
+            return r.returncode == 0, "sudo systemctl start docker"
+        except Exception:
+            return False, "sudo systemctl start docker"
+
+    def check_compose_v2():
+        try:
+            r = subprocess.run(
+                ["docker", "compose", "version"],
+                capture_output=True, text=True, timeout=5,
+            )
+            return (r.returncode == 0), "sudo apt install docker-compose-plugin"
+        except Exception:
+            return False, "sudo apt install docker-compose-plugin"
+
+    def check_image():
+        try:
+            r = subprocess.run(
+                ["docker", "image", "inspect", "ricet-sandbox:latest"],
+                capture_output=True, text=True, timeout=10,
+            )
+            return (r.returncode == 0), "cd <project> && ricet sandbox setup && ricet sandbox start"
+        except Exception:
+            return False, "ricet sandbox setup && ricet sandbox start"
+
+    def check_claude_creds():
+        cred = Path.home() / ".claude" / ".credentials.json"
+        return cred.exists(), "claude auth login  (run on host, once)"
+
+    def check_tailscale():
+        if shutil.which("tailscale") is None:
+            return False, "install tailscale: curl -fsSL https://tailscale.com/install.sh | sh"
+        try:
+            r = subprocess.run(
+                ["tailscale", "ip", "--4"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if r.returncode != 0 or not r.stdout.strip():
+                return False, "sudo tailscale up"
+            return True, ""
+        except Exception:
+            return False, "sudo tailscale up"
+
+    def check_port_reachable():
+        # Probe both localhost and 0.0.0.0 binding: a listener on 0.0.0.0
+        # accepts from the tailnet; a listener on 127.0.0.1 does not.
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(2)
+                rc = s.connect_ex(("0.0.0.0", probe_port))
+            if rc == 0:
+                return True, ""
+            return (
+                False,
+                f"no ricet listener on 0.0.0.0:{probe_port}; run 'ricet up' in this project first",
+            )
+        except Exception as exc:
+            return False, f"socket probe failed: {exc}"
+
+    checks = [
+        _sd_check("docker installed",           check_docker_installed),
+        _sd_check("user in 'docker' group",     check_docker_group),
+        _sd_check("docker daemon reachable",    check_daemon),
+        _sd_check("docker compose v2 plugin",   check_compose_v2),
+        _sd_check("ricet-sandbox image local",  check_image),
+        _sd_check("~/.claude/.credentials.json", check_claude_creds),
+        _sd_check("tailscale up",               check_tailscale),
+        _sd_check(f"ricet port :{probe_port} on 0.0.0.0", check_port_reachable),
+    ]
+
+    # -- render -----------------------------------------------------------
+    table = Table(show_header=True, header_style="bold", title="ricet sandbox doctor")
+    table.add_column("Check", style="cyan", no_wrap=True)
+    table.add_column("Status", no_wrap=True)
+    table.add_column("Fix (if failing)")
+    for c in checks:
+        status = "[green]PASS[/green]" if c["ok"] else "[red]FAIL[/red]"
+        table.add_row(c["label"], status, c["fix"])
+    console.print(table)
+
+    failed = [c for c in checks if not c["ok"]]
+    if failed:
+        console.print(
+            f"\n[red]{len(failed)} check(s) failed.[/red] "
+            f"Fix the 'Fix' column entries, then re-run [bold]ricet sandbox-doctor[/bold]."
+        )
+        raise typer.Exit(1)
+    console.print("\n[green]All checks passed. You're good to 'ricet up'.[/green]")
 
 
 # ---------------------------------------------------------------------------
@@ -4317,7 +4666,14 @@ def adopt(
         console.print(
             "  2. Edit [bold]knowledge/GOAL.md[/bold] with your research description"
         )
-        console.print("  3. ricet start")
+        console.print(
+            "  3. [bold]ricet up[/bold] — launch a persistent Claude session in"
+            " screen + sandbox + mobile API (recommended for Hub Dashboard)"
+        )
+        console.print(
+            "     [dim](alternative: 'ricet start' for a legacy one-shot"
+            " interactive session)[/dim]"
+        )
     except (RuntimeError, FileNotFoundError) as exc:
         console.print(f"[red]Error: {exc}[/red]")
         raise typer.Exit(1)
@@ -5707,6 +6063,254 @@ def gstack_cmd(
     else:
         console.print(f"[red]Unknown action: {action}[/red]. Use: install, update, status")
         raise typer.Exit(1)
+
+
+@app.command(name="self-update")
+def self_update_cmd(
+    no_reinstall: bool = typer.Option(
+        False, "--no-reinstall",
+        help="Skip `pipx install -e . --force` after pulling",
+    ),
+    no_verify_remote: bool = typer.Option(
+        False, "--no-verify-remote",
+        help="Skip the origin-URL safety check (use only for forks/mirrors)",
+    ),
+):
+    """Pull the latest ricet code from GitHub and reinstall in place.
+
+    Mirrors the POST /self-update HTTP endpoint: pulls `origin/<branch>`,
+    runs `pipx install -e <repo> --force` if new commits arrived, and
+    prints old/new SHAs. Use the HTTP endpoint for remote-triggered
+    updates from the hub dashboard.
+    """
+    from core.updater import self_update
+
+    result = self_update(
+        reinstall=not no_reinstall,
+        verify_remote=not no_verify_remote,
+    )
+    if not result.get("ok"):
+        console.print(f"[red]self-update failed:[/red] {result.get('error')}")
+        if result.get("detail"):
+            console.print(f"  [dim]{result['detail']}[/dim]")
+        raise typer.Exit(1)
+
+    status = result.get("status", "up_to_date")
+    old_sha = result.get("old_sha", "")
+    new_sha = result.get("new_sha", "")
+    branch = result.get("branch", "")
+
+    if status == "up_to_date":
+        console.print(f"[green]Already up to date[/green] ({branch} @ {old_sha})")
+    else:
+        console.print(
+            f"[green]Updated[/green] ({branch}): {old_sha} -> {new_sha}"
+        )
+        console.print("  Restart any running `ricet mobile serve` processes to pick up the new code.")
+
+
+# ---------------------------------------------------------------------------
+# `ricet systemd` -- install/uninstall user-level unit files so `ricet up`
+# and the mobile server come back automatically after a reboot.
+# ---------------------------------------------------------------------------
+
+systemd_app = typer.Typer(
+    help="Install user-level systemd units so ricet survives reboots."
+)
+app.add_typer(systemd_app, name="systemd")
+
+
+def _systemd_paths() -> tuple[Path, Path]:
+    """Return (unit dir under ~/.config, template source dir in the repo)."""
+    unit_dir = Path.home() / ".config" / "systemd" / "user"
+    # templates/systemd lives next to cli/ in the installed package.
+    template_dir = Path(__file__).resolve().parent.parent / "templates" / "systemd"
+    return unit_dir, template_dir
+
+
+def _load_project_names() -> list[str]:
+    """Read project names from ~/.ricet/projects.json. Empty list if missing."""
+    registry = Path.home() / ".ricet" / "projects.json"
+    if not registry.exists():
+        return []
+    try:
+        data = json.loads(registry.read_text())
+    except json.JSONDecodeError:
+        return []
+    # Registry is either {"projects": [...]} or the legacy bare list.
+    projects = data.get("projects", []) if isinstance(data, dict) else data
+    names: list[str] = []
+    for proj in projects:
+        name = proj.get("name") if isinstance(proj, dict) else None
+        if name:
+            names.append(str(name))
+    return names
+
+
+def _run_systemctl(args: list[str]) -> tuple[int, str]:
+    """Run `systemctl --user` with the given args. Returns (rc, combined output)."""
+    try:
+        result = subprocess.run(
+            ["systemctl", "--user", *args],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return 127, "systemctl not found on PATH"
+    output = (result.stdout or "") + (result.stderr or "")
+    return result.returncode, output.strip()
+
+
+@systemd_app.command("install")
+def systemd_install(
+    mobile_port: int = typer.Option(
+        8858, "--mobile-port", help="Port for the per-machine mobile server unit"
+    ),
+    no_enable: bool = typer.Option(
+        False, "--no-enable", help="Copy unit files but do not enable/start them"
+    ),
+):
+    """Install systemd --user units for ricet-mobile and each adopted project.
+
+    Copies templates/systemd/*.service into ~/.config/systemd/user/, then
+    `systemctl --user enable`s ricet-mobile.service and one
+    ricet-up@<project>.service per entry in ~/.ricet/projects.json.
+    """
+    unit_dir, template_dir = _systemd_paths()
+
+    if not template_dir.is_dir():
+        console.print(f"[red]Templates missing:[/red] {template_dir}")
+        raise typer.Exit(1)
+
+    unit_dir.mkdir(parents=True, exist_ok=True)
+
+    sources = {
+        "ricet-mobile.service": template_dir / "ricet-mobile.service",
+        "ricet-up@.service": template_dir / "ricet-up@.service",
+    }
+    for dest_name, src in sources.items():
+        if not src.exists():
+            console.print(f"[red]Missing template:[/red] {src}")
+            raise typer.Exit(1)
+        dest = unit_dir / dest_name
+        shutil.copyfile(src, dest)
+        console.print(f"  [green]installed[/green] {dest}")
+
+    # Customise the mobile port if requested (simple in-place edit).
+    if mobile_port != 8858:
+        mobile_unit = unit_dir / "ricet-mobile.service"
+        text = mobile_unit.read_text()
+        text = text.replace(
+            "Environment=RICET_MOBILE_PORT=8858",
+            f"Environment=RICET_MOBILE_PORT={mobile_port}",
+        )
+        mobile_unit.write_text(text)
+        console.print(
+            f"  [dim]mobile port set to {mobile_port}[/dim]"
+        )
+
+    # Reload so systemd notices the new files.
+    rc, out = _run_systemctl(["daemon-reload"])
+    if rc != 0:
+        console.print(f"[yellow]daemon-reload warning:[/yellow] {out}")
+
+    if no_enable:
+        console.print("[yellow]--no-enable set; skipping enable/start.[/yellow]")
+        return
+
+    enabled: list[str] = []
+
+    # ricet-mobile (one per machine).
+    rc, out = _run_systemctl(["enable", "--now", "ricet-mobile.service"])
+    if rc == 0:
+        enabled.append("ricet-mobile.service")
+    else:
+        console.print(f"[red]failed to enable ricet-mobile:[/red] {out}")
+
+    # One ricet-up@<project>.service per registered project.
+    project_names = _load_project_names()
+    if not project_names:
+        console.print(
+            "[yellow]No projects found in ~/.ricet/projects.json; "
+            "run `ricet adopt` or `ricet init` first.[/yellow]"
+        )
+    for name in project_names:
+        unit = f"ricet-up@{name}.service"
+        rc, out = _run_systemctl(["enable", unit])
+        if rc == 0:
+            enabled.append(unit)
+        else:
+            console.print(f"[red]failed to enable {unit}:[/red] {out}")
+
+    console.print("\n[bold]Enabled:[/bold]")
+    for unit in enabled:
+        console.print(f"  [green]*[/green] {unit}")
+
+    console.print(
+        "\n[bold yellow]Heads up:[/bold yellow] user units only run while you "
+        "are logged in unless linger is enabled. To let them start on boot "
+        "before you log in, run:"
+    )
+    console.print("  [cyan]sudo loginctl enable-linger $USER[/cyan]")
+    console.print(
+        "\nVerify with:\n"
+        "  [cyan]systemctl --user status ricet-mobile[/cyan]\n"
+        "  [cyan]systemctl --user status 'ricet-up@*'[/cyan]"
+    )
+
+
+@systemd_app.command("uninstall")
+def systemd_uninstall(
+    keep_files: bool = typer.Option(
+        False, "--keep-files", help="Disable units but leave the .service files in place"
+    ),
+):
+    """Disable and remove ricet's systemd --user units."""
+    unit_dir, _ = _systemd_paths()
+
+    if not unit_dir.is_dir():
+        console.print(f"[yellow]Nothing to do; {unit_dir} does not exist.[/yellow]")
+        return
+
+    targets: list[str] = ["ricet-mobile.service"]
+    for name in _load_project_names():
+        targets.append(f"ricet-up@{name}.service")
+
+    # Also sweep any ricet-up@*.service files that aren't in the registry
+    # (e.g., if the user removed a project) so uninstall is complete.
+    for unit_file in unit_dir.glob("ricet-up@*.service"):
+        if unit_file.name not in targets:
+            targets.append(unit_file.name)
+
+    for unit in targets:
+        rc, out = _run_systemctl(["disable", "--now", unit])
+        if rc == 0:
+            console.print(f"  [green]disabled[/green] {unit}")
+        else:
+            # Not fatal -- unit may never have been enabled.
+            console.print(f"  [dim]skip {unit}: {out}[/dim]")
+
+    if not keep_files:
+        for name in ("ricet-mobile.service", "ricet-up@.service"):
+            path = unit_dir / name
+            if path.exists():
+                path.unlink()
+                console.print(f"  [green]removed[/green] {path}")
+        for unit_file in unit_dir.glob("ricet-up@*.service"):
+            # Clean up per-instance files too (systemctl disable usually does
+            # this, but be defensive).
+            unit_file.unlink()
+
+    rc, out = _run_systemctl(["daemon-reload"])
+    if rc != 0:
+        console.print(f"[yellow]daemon-reload warning:[/yellow] {out}")
+
+    console.print("[green]systemd units uninstalled.[/green]")
+    console.print(
+        "[dim]Linger (if previously enabled) is unaffected. "
+        "Disable with: sudo loginctl disable-linger $USER[/dim]"
+    )
 
 
 if __name__ == "__main__":

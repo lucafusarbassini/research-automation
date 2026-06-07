@@ -6,6 +6,20 @@
 #
 # By default uses Dockerfile.python. For Docker-in-Docker, change the
 # dockerfile line and uncomment `privileged: true`.
+#
+# ---------------------------------------------------------------------------
+# SECURITY MODEL
+# ---------------------------------------------------------------------------
+# The host project directory is BIND-MOUNTED read/write into /workspace. This
+# means the container CAN modify any file inside the project (same trust
+# model as a VS Code devcontainer). It CANNOT touch anything OUTSIDE the
+# project directory — the host filesystem, other users' projects, ~/.ssh,
+# /etc, etc. are not mounted.
+#
+# Claude credentials are mounted from a dedicated named volume (pre-seeded
+# by the entrypoint from the host's ~/.claude) so that credential rotation
+# inside the container does not leak back to the host and restarts do not
+# have to re-copy them.
 # =============================================================================
 
 services:
@@ -13,6 +27,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ${SANDBOX_IMAGE:-ricet-sandbox:latest}
+    # TODO: once a pre-built image is published, replace the build: block with
+    #   image: ghcr.io/<org>/ricet-sandbox:<tag>
+    # and add `docker pull ${SANDBOX_IMAGE}` to the entrypoint path.
     container_name: ${CONTAINER_NAME:-ricet-sandbox}
     # privileged: true                  # Uncomment for Docker-in-Docker
     environment:
@@ -20,13 +38,30 @@ services:
       - CONTAINER_NAME=${CONTAINER_NAME:-ricet-sandbox}
       - HOST_UID=${HOST_UID:-1000}
       - HOST_GID=${HOST_GID:-1000}
+      - PIP_CACHE_DIR=/home/agent/.cache/pip
+      # Force UTF-8 locale inside the container so Claude Code's box-drawing
+      # and unicode characters render correctly. Without this the container
+      # defaults to POSIX/C locale, and the output from Claude lands in
+      # screen as mojibake (replacement characters).
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - TERM=xterm-256color
     volumes:
-      # Project source (read-only, copied to workspace on start)
-      - ../:/project-source:ro
-      # Claude credentials (read-only, copied with chown on start)
+      # Project source bind-mounted read-write into /workspace.
+      # The :Z suffix is a no-op on non-SELinux hosts and relabels the bind
+      # mount on SELinux hosts so the container can access it.
+      - ${PROJECT_DIR:-..}:/workspace:Z
+      # The sandbox/ subdirectory of the project gets its own anonymous volume
+      # so the container's internal sandbox state does not overwrite the host
+      # sandbox/ layout (Dockerfile, compose, patches, etc.).
+      - sandbox-internal:/workspace/sandbox
+      # Per-project persistent credentials. Pre-seeded by entrypoint from
+      # /claude-source on first run; subsequent runs skip the copy.
       - ${HOME}/.claude:/claude-source:ro
-      # Workspace: bind mount for VS Code visibility (override with WORKSPACE_PATH)
-      - ${WORKSPACE_PATH:-sandbox-workspace}:/workspace
+      - ricet-claude:/home/agent/.claude
+      # Pip cache persists across container restarts so `pip install` does
+      # not re-download wheels every session.
+      - ricet-pipcache:/home/agent/.cache/pip
       # Persistent logs
       - sandbox-logs:/agent-logs
     deploy:
@@ -34,9 +69,12 @@ services:
         limits:
           cpus: '${SANDBOX_CPUS:-4}'
           memory: ${SANDBOX_MEMORY:-8G}
+        # Keep reservations LOW so users can set ram_gb down to 1 GiB in
+        # ~/.ricet/sandbox.toml without hitting "limit < reservation" errors.
+        # 512 MiB is enough for Claude Code + the Python entrypoint to boot.
         reservations:
-          cpus: '1'
-          memory: 2G
+          cpus: '0.5'
+          memory: 512M
     networks:
       - sandbox-net
     restart: "no"
@@ -52,5 +90,20 @@ networks:
     internal: false   # Needs internet for Claude API, pip install, etc.
 
 volumes:
-  sandbox-workspace:     # Only used if WORKSPACE_PATH is not set
+  # Anonymous volume — the container's own sandbox/ state, kept out of the
+  # host project bind mount so it doesn't pollute the host tree.
+  sandbox-internal:
   sandbox-logs:
+  # Machine-wide shared volumes — same physical volume reused across every
+  # ricet project on this host (so Claude creds + pip cache are shared).
+  # Marked `external: true` so compose doesn't try to adopt them under
+  # the CURRENT project's management — otherwise subsequent `ricet up`
+  # calls on other projects get "volume already exists but was created
+  # for project X" errors. ricet ensures these volumes exist (or creates
+  # them itself) before spinning the container up.
+  ricet-claude:
+    name: ${RICET_CLAUDE_VOLUME:-ricet_claude_default}
+    external: true
+  ricet-pipcache:
+    name: ${RICET_PIPCACHE_VOLUME:-ricet_pipcache_default}
+    external: true
