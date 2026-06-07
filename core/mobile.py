@@ -900,8 +900,6 @@ class MobileServer:
         Returns the LAST ~200 KB of the log so the browser isn't asked to
         render megabytes on every 2-second poll.
         """
-        if not self._screen_session:
-            return {"ok": True, "content": ""}
         import shutil
         import tempfile
         if not shutil.which("screen"):
@@ -909,6 +907,13 @@ class MobileServer:
 
         # Project query-param lets the hub request a specific project's log
         # once multiple screen sessions exist on the same machine.
+        #
+        # IMPORTANT: do NOT early-return on an empty self._screen_session. The
+        # fleet/main daemon is launched as `ricet mobile serve --port N` with NO
+        # --screen, so self._screen_session == "". The previous guard returned ""
+        # here before ever resolving the per-project screen, so EVERY project's
+        # dashboard pane went blank/black. Resolve the project's own screen first;
+        # only fall back to self._screen_session (the single-project case).
         project = (body or {}).get("_query", {}).get("project", "")
         target_session = _resolve_screen_session(project) if project else self._screen_session
         if not target_session:
